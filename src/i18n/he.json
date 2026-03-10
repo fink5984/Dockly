@@ -487,12 +487,14 @@
     "markWaiting": "סמן כממתין",
     "markResolved": "סמן כנפתר",
     "closeConversation": "סגור שיחה",
+    "closeRequest": "סגור פנייה",
     "open": "פתוח",
     "waitingForStaff": "ממתין לנציג",
     "waitingForClient": "ממתין ללקוח",
     "resolved": "נפתר",
     "closed": "סגור",
     "typeMessage": "הקלד הודעה...",
+    "noMessages": "אין הודעות עדיין",
     "noActiveSupport": "אין בקשת תמיכה פעילה",
     "noActiveSupportDesc": "שיחות תמיכה יופיעו כאן כאשר לקוח מבקש סיוע אנושי",
     "noSupportRequest": "אין בקשת תמיכה",
@@ -500,7 +502,8 @@
     "startConversation": "התחל שיחה",
     "newRequest": "בקשת תמיכה חדשה",
     "issueDescription": "תיאור הבעיה",
-    "activeSupportBadge": "תמיכה פעילה"
+    "activeSupportBadge": "תמיכה פעילה",
+    "messageSentToWhatsApp": "ההודעה תישלח ללקוח בוואטסאפ"
   },
   "settings": {
     "title": "הגדרות",

@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { cn, formatDate } from '@/lib/utils'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { getCases } from '@/services/casesService'
+import { getSupportRequests } from '@/services/supportService'
 import { ClipboardPlus, ClipboardList, Calendar, Eye, Download, Filter } from 'lucide-react'
 import type { CaseStatus } from '@/types'
 
@@ -29,6 +30,13 @@ export function CasesPage() {
     [],
     [wsId],
     { tables: ['cases', 'case_documents'] }
+  )
+
+  const { data: allSupportRequests } = useRealtimeData(
+    () => getSupportRequests(wsId),
+    [],
+    [wsId],
+    { tables: ['support_requests', 'support_messages'] }
   )
 
   const filtered = allCases.filter(c => {
@@ -96,12 +104,23 @@ export function CasesPage() {
             const uploaded = c.requiredDocuments.filter(d => !['missing', 'pending-upload'].includes(d.status)).length
             const approved = c.requiredDocuments.filter(d => d.status === 'approved').length
 
+            // Check for unread support messages - only show indicator if status is waiting-for-staff
+            const caseSupportRequest = allSupportRequests.find(sr => sr.caseId === c.id)
+            const unreadSupportMessages = (caseSupportRequest?.status === 'waiting-for-staff' && caseSupportRequest?.messages?.filter(
+              msg => msg.senderType === 'client' && !msg.isRead
+            ).length) || 0
+
             return (
               <Card key={c.id} hover onClick={() => navigate(`/requests/${c.id}`)}>
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="text-xs font-mono text-[var(--text-tertiary)]">{c.id}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-mono text-[var(--text-tertiary)]">{c.id}</p>
+                        {unreadSupportMessages > 0 && (
+                          <div className="w-2 h-2 rounded-full bg-red-500 shadow-md" />
+                        )}
+                      </div>
                       <p className="text-sm font-semibold mt-0.5">{c.clientName}</p>
                     </div>
                     <Badge variant="status" status={c.status}>
@@ -128,10 +147,6 @@ export function CasesPage() {
                         <Calendar className="w-3 h-3" />
                         <span>{t('cases.deadline')}: {formatDate(c.deadline)}</span>
                       </div>
-                    )}
-
-                    {c.supportRequestId && (
-                      <Badge variant="status" status="warning" size="sm">{t('support.activeSupportBadge')}</Badge>
                     )}
                   </div>
                 </div>

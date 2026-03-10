@@ -55,12 +55,50 @@ async function sendWhatsApp(to, payload) {
   return data;
 }
 
-async function sendTextMessage(to, text) {
-  return sendWhatsApp(to, { type: 'text', text: { body: text } });
+// ── Typing Indicator ────────────────────────────────────────────────────
+// WhatsApp Cloud API doesn't support a typing indicator endpoint.
+// We mark the incoming message as "read" (blue checks) immediately,
+// then add a natural delay before responding — this gives the client
+// the impression of someone reading and typing.
+async function sendTypingIndicator(to, duration = 1500) {
+  await new Promise(resolve => setTimeout(resolve, duration));
 }
 
-async function sendInteractiveButtons(to, bodyText, buttons) {
-  return sendWhatsApp(to, {
+// ── Mark Message as Read ────────────────────────────────────────────────
+export async function markMessageAsRead(messageId) {
+  const url = `${GRAPH_API}/${WA_PHONE_ID}/messages`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${WA_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: messageId,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    console.error('[WA] Mark read error:', JSON.stringify(data));
+  }
+  return data;
+}
+
+async function sendTextMessage(to, text, withTyping = true) {
+  if (withTyping) {
+    await sendTypingIndicator(to, 1500);
+  }
+  const result = await sendWhatsApp(to, { type: 'text', text: { body: text } });
+  return result;
+}
+
+async function sendInteractiveButtons(to, bodyText, buttons, withTyping = true) {
+  if (withTyping) {
+    await sendTypingIndicator(to, 1500);
+  }
+  const result = await sendWhatsApp(to, {
     type: 'interactive',
     interactive: {
       type: 'button',
@@ -68,10 +106,14 @@ async function sendInteractiveButtons(to, bodyText, buttons) {
       action: { buttons },
     },
   });
+  return result;
 }
 
-async function sendInteractiveList(to, bodyText, buttonLabel, sections) {
-  return sendWhatsApp(to, {
+async function sendInteractiveList(to, bodyText, buttonLabel, sections, withTyping = true) {
+  if (withTyping) {
+    await sendTypingIndicator(to, 1500);
+  }
+  const result = await sendWhatsApp(to, {
     type: 'interactive',
     interactive: {
       type: 'list',
@@ -79,6 +121,7 @@ async function sendInteractiveList(to, bodyText, buttonLabel, sections) {
       action: { button: buttonLabel, sections },
     },
   });
+  return result;
 }
 
 async function downloadWhatsAppMedia(mediaId) {
@@ -234,15 +277,18 @@ async function findOrCreateSupportRequest(caseId, clientId) {
   return created[0].id;
 }
 
-async function addSupportMessage(requestId, senderType, senderName, content) {
-  await pool.query(`
-    INSERT INTO support_messages (request_id, sender_type, sender_name, content)
-    VALUES ($1, $2, $3, $4)
-  `, [requestId, senderType, senderName, content]);
+async function addSupportMessage(requestId, senderType, senderName, content, whatsappMessageId = null) {
+  const { rows } = await pool.query(`
+    INSERT INTO support_messages (request_id, sender_type, sender_name, content, whatsapp_message_id)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id
+  `, [requestId, senderType, senderName, content, whatsappMessageId]);
 
   // Update request status based on who sent the message
   const newStatus = senderType === 'client' ? 'waiting-for-staff' : 'waiting-for-client';
   await pool.query(`UPDATE support_requests SET status = $1 WHERE id = $2`, [newStatus, requestId]);
+  
+  return rows[0].id; // Return the message ID
 }
 
 async function enterSupportMode(phone, state) {
@@ -481,7 +527,7 @@ async function handleMediaUpload(phone, mediaId, mimeType, fileName) {
 /**
  * Handle text messages (menu, help, etc.)
  */
-async function handleTextInput(phone, text) {
+async function handleTextInput(phone, text, messageId = null) {
   const normalized = text.trim().toLowerCase();
   const state = await getConversationState(phone);
 
@@ -496,7 +542,7 @@ async function handleTextInput(phone, text) {
   // ── If in support mode, relay message to support chat ──
   if (state?.support_mode && state?.support_request_id) {
     const clientName = await getClientName(state.client_id);
-    await addSupportMessage(state.support_request_id, 'client', clientName, text.trim());
+    await addSupportMessage(state.support_request_id, 'client', clientName, text.trim(), messageId);
     await logWhatsAppMessage(
       state.workspace_id, state.case_id, state.client_id,
       'inbound', phone, 'support_chat', text.trim(), 'delivered',
@@ -621,9 +667,20 @@ export async function handleIncoming(req, res) {
 
     for (const msg of messages) {
       const from = msg.from; // phone number (no +)
-      console.log(`[Bot] Message from ${from} — type: ${msg.type}`);
+      const messageId = msg.id;
+      console.log(`[Bot] Message from ${from} — type: ${msg.type}, id: ${messageId}`);
 
       try {
+        // Mark EVERY incoming message as read immediately (blue checks on client's WhatsApp)
+        // This works for both bot mode and support mode — the client sees their message was received
+        markMessageAsRead(messageId).catch(err => 
+          console.error('[Bot] Failed to mark message as read:', err)
+        );
+
+        // Check if user is in support mode
+        const st = await getConversationState(from);
+        const isInSupportMode = st?.support_mode;
+
         switch (msg.type) {
           case 'interactive': {
             const interactive = msg.interactive;
@@ -667,7 +724,7 @@ export async function handleIncoming(req, res) {
           }
 
           case 'text': {
-            await handleTextInput(from, msg.text.body);
+            await handleTextInput(from, msg.text.body, messageId);
             break;
           }
 
@@ -748,8 +805,8 @@ export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneN
  */
 export async function sendSupportReply({ supportRequestId, senderName, content }) {
   try {
-    // 1. Save message to support_messages
-    await addSupportMessage(supportRequestId, 'staff', senderName, content);
+    // 1. Save message to support_messages and get the message ID
+    const messageDbId = await addSupportMessage(supportRequestId, 'staff', senderName, content);
 
     // 2. Find the client's phone from conversation state
     const { rows } = await pool.query(`
@@ -777,7 +834,17 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
       if (phone.startsWith('05') && phone.length === 10) phone = '972' + phone.slice(1);
       if (!phone) return { success: false, error: 'Client has no phone number' };
 
-      await sendTextMessage(phone, `💬 *הודעה מהצוות:*\n\n${content}`);
+      // Send with typing
+      const result = await sendTextMessage(phone, `💬 *הודעה מהצוות:*\n\n${content}`);
+      
+      // Update DB with WhatsApp message ID
+      if (result.messages?.[0]?.id) {
+        await pool.query(`
+          UPDATE support_messages 
+          SET whatsapp_message_id = $1 
+          WHERE id = $2
+        `, [result.messages[0].id, messageDbId]);
+      }
 
       await logWhatsAppMessage(
         sr[0].workspace_id, sr[0].case_id, sr[0].client_id,
@@ -790,8 +857,17 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
 
     const { phone_number, case_id, client_id, workspace_id } = rows[0];
 
-    // 3. Send WhatsApp message to client
-    await sendTextMessage(phone_number, `💬 *הודעה מהצוות:*\n\n${content}`);
+    // 3. Send WhatsApp message to client with typing
+    const result = await sendTextMessage(phone_number, `💬 *הודעה מהצוות:*\n\n${content}`);
+    
+    // Update DB with WhatsApp message ID
+    if (result.messages?.[0]?.id) {
+      await pool.query(`
+        UPDATE support_messages 
+        SET whatsapp_message_id = $1 
+        WHERE id = $2
+      `, [result.messages[0].id, messageDbId]);
+    }
 
     // 4. Log
     await logWhatsAppMessage(

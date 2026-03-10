@@ -129,6 +129,33 @@ export async function markMessageRead(id: string): Promise<void> {
 }
 
 /**
+ * Mark all unread client messages in a support request as read
+ * Also marks them as read in WhatsApp (green check marks)
+ */
+export async function markClientMessagesAsRead(requestId: string): Promise<void> {
+  const { error } = await supabase
+    .from('support_messages')
+    .update({ is_read: true })
+    .eq('request_id', requestId)
+    .eq('sender_type', 'client')
+    .eq('is_read', false)
+
+  if (error) throw error
+  
+  // Also mark in WhatsApp to show green check marks to client
+  try {
+    await fetch('/api/whatsapp/support/mark-read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ supportRequestId: requestId })
+    })
+  } catch (err) {
+    console.error('Failed to mark messages as read in WhatsApp:', err)
+    // Don't throw - DB update succeeded which is most important
+  }
+}
+
+/**
  * Send a staff reply — saves to DB and sends via WhatsApp to the client.
  */
 export async function sendSupportReplyViaWhatsApp(

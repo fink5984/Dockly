@@ -384,6 +384,7 @@ export interface Database {
           sender_name: string
           content: string
           is_read: boolean
+          whatsapp_message_id: string | null
           created_at: string
         }
         Insert: {
@@ -393,6 +394,7 @@ export interface Database {
           sender_name: string
           content: string
           is_read?: boolean
+          whatsapp_message_id?: string | null
           created_at?: string
         }
         Update: {
@@ -402,6 +404,7 @@ export interface Database {
           sender_name?: string
           content?: string
           is_read?: boolean
+          whatsapp_message_id?: string | null
           created_at?: string
         }
         Relationships: []
