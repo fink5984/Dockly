@@ -47,6 +47,7 @@ export async function uploadFile(
 
 /**
  * Get a signed URL for a private file (valid for 1 hour).
+ * Returns null if the file doesn't exist in storage.
  */
 export async function getSignedUrl(
   storagePath: string,
@@ -58,6 +59,16 @@ export async function getSignedUrl(
 
   if (error) throw error
   return data.signedUrl
+}
+
+/**
+ * Get a public URL for a file (works for public buckets).
+ */
+export function getPublicUrl(storagePath: string): string {
+  const { data } = supabase.storage
+    .from(BUCKET)
+    .getPublicUrl(storagePath)
+  return data.publicUrl
 }
 
 /**

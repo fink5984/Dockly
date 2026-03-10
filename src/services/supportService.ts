@@ -11,9 +11,10 @@ export async function getSupportRequests(workspaceId: string): Promise<SupportRe
     .select(`
       *,
       clients ( name ),
-      support_messages ( * )
+      support_messages ( * ),
+      cases!inner ( workspace_id )
     `)
-    .eq('workspace_id', workspaceId)
+    .eq('cases.workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -125,4 +126,24 @@ export async function markMessageRead(id: string): Promise<void> {
     .eq('id', id)
 
   if (error) throw error
+}
+
+/**
+ * Send a staff reply — saves to DB and sends via WhatsApp to the client.
+ */
+export async function sendSupportReplyViaWhatsApp(
+  supportRequestId: string,
+  senderName: string,
+  content: string
+): Promise<{ success: boolean; error?: string }> {
+  const response = await fetch('/api/whatsapp/support/reply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ supportRequestId, senderName, content }),
+  })
+  if (!response.ok) {
+    const text = await response.text()
+    return { success: false, error: `Server error: ${response.status} - ${text}` }
+  }
+  return response.json()
 }

@@ -208,6 +208,61 @@ async function logWhatsAppMessage(workspaceId, caseId, clientId, direction, phon
   `, [workspaceId, caseId, clientId, direction, phone, msgType, content, status, metadata ? JSON.stringify(metadata) : null]);
 }
 
+// ── Support Chat helpers ────────────────────────────────────────────────
+
+async function getClientName(clientId) {
+  const { rows } = await pool.query(`SELECT name FROM clients WHERE id = $1`, [clientId]);
+  return rows[0]?.name || 'לקוח';
+}
+
+async function findOrCreateSupportRequest(caseId, clientId) {
+  // Look for an existing open support request for this case
+  const { rows: existing } = await pool.query(`
+    SELECT id FROM support_requests
+    WHERE case_id = $1 AND status NOT IN ('closed', 'resolved')
+    ORDER BY created_at DESC LIMIT 1
+  `, [caseId]);
+  if (existing.length > 0) return existing[0].id;
+
+  // Create a new one
+  const clientName = await getClientName(clientId);
+  const { rows: created } = await pool.query(`
+    INSERT INTO support_requests (case_id, client_id, subject, status, issue_description, opened_at)
+    VALUES ($1, $2, $3, 'open', $4, NOW())
+    RETURNING id
+  `, [caseId, clientId, `שיחת תמיכה – ${clientName}`, 'פנייה מוואטסאפ']);
+  return created[0].id;
+}
+
+async function addSupportMessage(requestId, senderType, senderName, content) {
+  await pool.query(`
+    INSERT INTO support_messages (request_id, sender_type, sender_name, content)
+    VALUES ($1, $2, $3, $4)
+  `, [requestId, senderType, senderName, content]);
+
+  // Update request status based on who sent the message
+  const newStatus = senderType === 'client' ? 'waiting-for-staff' : 'waiting-for-client';
+  await pool.query(`UPDATE support_requests SET status = $1 WHERE id = $2`, [newStatus, requestId]);
+}
+
+async function enterSupportMode(phone, state) {
+  const requestId = await findOrCreateSupportRequest(state.case_id, state.client_id);
+  await pool.query(`
+    UPDATE whatsapp_conversation_state
+    SET support_mode = true, support_request_id = $1, awaiting_document_id = NULL, awaiting_document_name = NULL, updated_at = NOW()
+    WHERE phone_number = $2
+  `, [requestId, phone]);
+  return requestId;
+}
+
+async function exitSupportMode(phone) {
+  await pool.query(`
+    UPDATE whatsapp_conversation_state
+    SET support_mode = false, support_request_id = NULL, updated_at = NOW()
+    WHERE phone_number = $1
+  `, [phone]);
+}
+
 // ── File extension from MIME ────────────────────────────────────────────
 
 function extFromMime(mime) {
@@ -430,6 +485,48 @@ async function handleTextInput(phone, text) {
   const normalized = text.trim().toLowerCase();
   const state = await getConversationState(phone);
 
+  // ── Exit support mode keywords ──
+  if (['חזור', 'back', 'תפריט', 'menu', 'מסמכים', 'documents', 'רשימה', 'list'].includes(normalized) && state?.support_mode) {
+    await exitSupportMode(phone);
+    await sendTextMessage(phone, '✅ יצאת ממצב תמיכה. חוזרים לתפריט הרגיל.');
+    await sendDocumentList(phone, state.case_id, state);
+    return;
+  }
+
+  // ── If in support mode, relay message to support chat ──
+  if (state?.support_mode && state?.support_request_id) {
+    const clientName = await getClientName(state.client_id);
+    await addSupportMessage(state.support_request_id, 'client', clientName, text.trim());
+    await logWhatsAppMessage(
+      state.workspace_id, state.case_id, state.client_id,
+      'inbound', phone, 'support_chat', text.trim(), 'delivered',
+      { supportRequestId: state.support_request_id }
+    );
+    await sendTextMessage(phone,
+      '✉️ ההודעה שלך נשלחה לצוות. נחזור אליך בהקדם.\n💡 כתוב *חזור* לחזור לתפריט המסמכים.'
+    );
+    return;
+  }
+
+  // ── Enter support mode keywords ──
+  if (['תמיכה', 'support', 'עזרה', 'help'].includes(normalized)) {
+    if (!state) {
+      await sendTextMessage(phone, 'אין כרגע תיק פעיל. בקש מהמשרד לשלוח לך הודעה חדשה.');
+      return;
+    }
+    const requestId = await enterSupportMode(phone, state);
+    await sendTextMessage(phone,
+      '💬 *מצב תמיכה*\n\nכתוב את ההודעה שלך והצוות יקבל התראה ויענה לך ישירות כאן.\n\n💡 כתוב *חזור* כדי לחזור לתפריט המסמכים.'
+    );
+    await logWhatsAppMessage(
+      state.workspace_id, state.case_id, state.client_id,
+      'inbound', phone, 'text', 'Entered support mode', 'delivered',
+      { supportRequestId: requestId }
+    );
+    return;
+  }
+
+  // ── Menu / docs keywords ──
   if (['תפריט', 'menu', 'מסמכים', 'documents', 'רשימה', 'list', 'start', 'hi', 'שלום'].includes(normalized)) {
     if (!state) {
       await sendTextMessage(phone,
@@ -466,21 +563,21 @@ async function handleTextInput(phone, text) {
     return;
   }
 
-  // Default response
+  // Default response — include support option
   if (state) {
     if (state.awaiting_document_id) {
       await sendTextMessage(phone,
         `📎 אני מחכה שתשלח את הקובץ עבור *${state.awaiting_document_name}*.\n` +
         `שלח תמונה 📷 או מסמך PDF 📄.\n\n` +
-        `💡 כתוב *תפריט* כדי לחזור לרשימת המסמכים.`
+        `💡 כתוב *תפריט* לרשימת המסמכים\n💡 כתוב *תמיכה* לפנייה לצוות`
       );
     } else {
       await sendInteractiveButtons(phone,
-        '👋 שלום! אני הבוט של Dockly.\n\n💡 לחץ על הכפתור כדי לראות את המסמכים שצריך להעלות.',
-        [{
-          type: 'reply',
-          reply: { id: `show_docs_${state.case_id}`, title: '📄 הצג מסמכים' },
-        }]
+        '👋 שלום! אני הבוט של Dockly.\n\n💡 לחץ על הכפתור כדי לראות את המסמכים.\n📞 כתוב *תמיכה* לשיחה עם הצוות.',
+        [
+          { type: 'reply', reply: { id: `show_docs_${state.case_id}`, title: '📄 הצג מסמכים' } },
+          { type: 'reply', reply: { id: `support_${state.case_id}`, title: '💬 תמיכה' } },
+        ]
       );
     }
   } else {
@@ -535,6 +632,19 @@ export async function handleIncoming(req, res) {
               if (buttonId.startsWith('show_docs_')) {
                 const caseId = buttonId.replace('show_docs_', '');
                 await handleShowDocuments(from, caseId);
+              } else if (buttonId.startsWith('support_')) {
+                // Enter support mode via button
+                const st = await getConversationState(from);
+                if (st) {
+                  const rid = await enterSupportMode(from, st);
+                  await sendTextMessage(from,
+                    '💬 *מצב תמיכה*\n\nכתוב את ההודעה שלך והצוות יקבל התראה ויענה לך ישירות כאן.\n\n💡 כתוב *חזור* כדי לחזור לתפריט המסמכים.'
+                  );
+                }
+              } else if (buttonId === 'exit_support') {
+                await exitSupportMode(from);
+                const st2 = await getConversationState(from);
+                if (st2) await sendDocumentList(from, st2.case_id, st2);
               }
             } else if (interactive.type === 'list_reply') {
               const listId = interactive.list_reply.id;
@@ -628,6 +738,71 @@ export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneN
     };
   } catch (err) {
     console.error('[Bot] sendInitialMessage error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Send a staff reply to a client via WhatsApp.
+ * Called from the frontend via /api/whatsapp/support/reply endpoint.
+ */
+export async function sendSupportReply({ supportRequestId, senderName, content }) {
+  try {
+    // 1. Save message to support_messages
+    await addSupportMessage(supportRequestId, 'staff', senderName, content);
+
+    // 2. Find the client's phone from conversation state
+    const { rows } = await pool.query(`
+      SELECT wcs.phone_number, wcs.case_id, wcs.client_id, wcs.workspace_id
+      FROM whatsapp_conversation_state wcs
+      WHERE wcs.support_request_id = $1
+      LIMIT 1
+    `, [supportRequestId]);
+
+    if (rows.length === 0) {
+      // Client might not be in support mode anymore — find phone from support_request → client
+      const { rows: sr } = await pool.query(`
+        SELECT sr.case_id, sr.client_id, c.phone, cas.workspace_id
+        FROM support_requests sr
+        JOIN clients c ON c.id = sr.client_id
+        JOIN cases cas ON cas.id = sr.case_id
+        WHERE sr.id = $1
+      `, [supportRequestId]);
+
+      if (sr.length === 0) {
+        return { success: false, error: 'Support request not found' };
+      }
+
+      let phone = sr[0].phone?.replace(/[^0-9]/g, '') || '';
+      if (phone.startsWith('05') && phone.length === 10) phone = '972' + phone.slice(1);
+      if (!phone) return { success: false, error: 'Client has no phone number' };
+
+      await sendTextMessage(phone, `💬 *הודעה מהצוות:*\n\n${content}`);
+
+      await logWhatsAppMessage(
+        sr[0].workspace_id, sr[0].case_id, sr[0].client_id,
+        'outbound', phone, 'support_chat', content, 'sent',
+        { supportRequestId }
+      );
+
+      return { success: true };
+    }
+
+    const { phone_number, case_id, client_id, workspace_id } = rows[0];
+
+    // 3. Send WhatsApp message to client
+    await sendTextMessage(phone_number, `💬 *הודעה מהצוות:*\n\n${content}`);
+
+    // 4. Log
+    await logWhatsAppMessage(
+      workspace_id, case_id, client_id,
+      'outbound', phone_number, 'support_chat', content, 'sent',
+      { supportRequestId }
+    );
+
+    return { success: true };
+  } catch (err) {
+    console.error('[Bot] sendSupportReply error:', err);
     return { success: false, error: err.message };
   }
 }

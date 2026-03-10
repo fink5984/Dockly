@@ -1,11 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useI18n } from '@/contexts/I18nContext'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import { Tabs, useTabState } from '@/components/ui/Tabs'
 import { Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
@@ -13,16 +12,15 @@ import { cn, formatFileSize, getStatusColor, getDocStatusKey, formatDate } from 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { getCases } from '@/services/casesService'
-import { getActivities } from '@/services/activityService'
-import { getSupportRequests } from '@/services/supportService'
+import { getSupportRequestsByCaseId, createSupportRequest, sendSupportReplyViaWhatsApp } from '@/services/supportService'
 import { getClientById } from '@/services/clientsService'
 import { sendDocumentRequest } from '@/services/whatsappService'
 import {
   ArrowLeft, ArrowRight, Copy, Send, Bell, Calendar, User, Clock, FileText, CheckCircle2, XCircle, AlertTriangle,
-  UploadCloud, Eye, Download, RotateCcw, MessageCircle, Paperclip, Link2, MoreHorizontal, Settings,
-  Shield, Trash2, ChevronDown, ExternalLink, Loader2
+  UploadCloud, Eye, Download, RotateCcw, MessageCircle, Link2, MoreHorizontal, Loader2
 } from 'lucide-react'
 import { getDocumentTypes } from '@/services/documentsService'
+import { getSignedUrl, downloadFile } from '@/services/storageService'
 import type { CaseDocument, DocumentStatus } from '@/types'
 
 const statusIcons: Record<DocumentStatus, typeof CheckCircle2> = {
@@ -55,19 +53,18 @@ export function CaseDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { t, direction, language } = useI18n()
   const navigate = useNavigate()
-  const { activeTab, setActiveTab, tabs } = useTabState([
-    { id: 'overview', label: t('cases.overview') },
-    { id: 'documents', label: t('cases.documentsTab'), badge: 0 },
-    { id: 'activity', label: t('cases.activityTab') },
-    { id: 'support', label: t('cases.supportTab') },
-    { id: 'settings', label: t('common.settings') },
-  ])
 
   const [chatMessage, setChatMessage] = useState('')
+  const [sendingChat, setSendingChat] = useState(false)
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
+  const [lightboxDoc, setLightboxDoc] = useState<string | null>(null)
+  const [docMenuOpen, setDocMenuOpen] = useState<string | null>(null)
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
   const [waSending, setWaSending] = useState(false)
   const [waResult, setWaResult] = useState<{ success: boolean; error?: string } | null>(null)
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({})
+  const [urlsLoading, setUrlsLoading] = useState(true)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
   const { user, workspace } = useAuth()
   const wsId = workspace?.id || user?.workspaceId || ''
@@ -78,18 +75,6 @@ export function CaseDetailPage() {
     [wsId],
     { tables: ['cases', 'case_documents'] }
   )
-  const { data: allActivities } = useRealtimeData(
-    () => getActivities(wsId),
-    [],
-    [wsId],
-    { tables: ['activity_log'] }
-  )
-  const { data: allSupportRequests } = useRealtimeData(
-    () => getSupportRequests(wsId),
-    [],
-    [wsId],
-    { tables: ['support_requests'] }
-  )
   const { data: allDocumentTypes } = useRealtimeData(
     () => getDocumentTypes(wsId),
     [],
@@ -99,12 +84,87 @@ export function CaseDetailPage() {
 
   // Fetch client data for WhatsApp
   const caseForClient = allCases.find(c => c.id === id)
+
+  // Fetch support requests for THIS case (realtime)
+  const { data: caseSupportRequests, refetch: refetchSupport } = useRealtimeData(
+    () => caseForClient?.id ? getSupportRequestsByCaseId(caseForClient.id) : Promise.resolve([]),
+    [],
+    [caseForClient?.id],
+    { tables: ['support_requests', 'support_messages'] }
+  )
+
   const { data: clientData } = useRealtimeData(
     () => caseForClient?.clientId ? getClientById(caseForClient.clientId) : Promise.resolve(null),
     null,
     [caseForClient?.clientId],
     { tables: ['clients'] }
   )
+
+  // Auto-scroll chat when messages change
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [caseSupportRequests])
+
+  // Handle sending a support reply
+  const handleSendSupportReply = useCallback(async (requestId: string) => {
+    if (!chatMessage.trim() || sendingChat) return
+    setSendingChat(true)
+    try {
+      const staffName = user?.name || 'צוות'
+      await sendSupportReplyViaWhatsApp(requestId, staffName, chatMessage.trim())
+      setChatMessage('')
+      // Refetch to show the new message
+      setTimeout(() => refetchSupport(), 500)
+    } catch (err) {
+      console.error('Failed to send support reply:', err)
+    } finally {
+      setSendingChat(false)
+    }
+  }, [chatMessage, sendingChat, user?.name, refetchSupport])
+
+  // Handle creating a new support request
+  const handleStartSupport = useCallback(async () => {
+    if (!caseForClient) return
+    try {
+      await createSupportRequest({
+        caseId: caseForClient.id,
+        clientId: caseForClient.clientId,
+        subject: `שיחת תמיכה – ${caseForClient.clientName}`,
+        issueDescription: 'שיחת תמיכה שנפתחה מהמערכת',
+      })
+      setTimeout(() => refetchSupport(), 500)
+    } catch (err) {
+      console.error('Failed to create support request:', err)
+    }
+  }, [caseForClient, refetchSupport])
+
+  // Fetch signed URLs for documents with storage paths
+  useEffect(() => {
+    if (!caseForClient?.requiredDocuments) return
+    
+    const loadSignedUrls = async () => {
+      setUrlsLoading(true)
+      const docsWithPaths = caseForClient.requiredDocuments.filter(d => d.storagePath)
+      const urls: Record<string, string> = {}
+      
+      await Promise.all(
+        docsWithPaths.map(async (doc) => {
+          if (!doc.storagePath) return
+          try {
+            const url = await getSignedUrl(doc.storagePath)
+            urls[doc.documentTypeId] = url
+          } catch (err) {
+            console.error('Failed to get signed URL for', doc.storagePath, err)
+          }
+        })
+      )
+      
+      setSignedUrls(urls)
+      setUrlsLoading(false)
+    }
+    
+    loadSignedUrls()
+  }, [caseForClient?.requiredDocuments])
 
   const caseData = caseForClient
   const BackArrow = direction === 'rtl' ? ArrowRight : ArrowLeft
@@ -126,13 +186,13 @@ export function CaseDetailPage() {
   const rejected = caseData.requiredDocuments.filter(d => d.status === 'rejected').length
   const missing = caseData.requiredDocuments.filter(d => ['missing', 'pending-upload'].includes(d.status)).length
 
-  const caseActivities = allActivities.filter(a => a.caseId === caseData.id)
-  const supportRequest = caseData.supportRequestId ? allSupportRequests.find(s => s.id === caseData.supportRequestId) : null
+  // Use first open support request from DB (real data)
+  const supportRequest = caseSupportRequests.length > 0 ? caseSupportRequests[0] : null
 
-  const updatedTabs = tabs.map(tab => tab.id === 'documents' ? { ...tab, badge: pendingReview } : tab)
+  const isRtl = direction === 'rtl'
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
         <button onClick={() => navigate('/cases')} className="mt-1 p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors">
@@ -152,148 +212,93 @@ export function CaseDetailPage() {
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="sm" icon={<Link2 className="w-3.5 h-3.5" />}>{t('cases.copyLink')}</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<MessageCircle className="w-3.5 h-3.5 text-green-500" />}
+            onClick={() => setShowWhatsAppModal(true)}
+          >
+            {t('cases.sendWhatsApp')}
+          </Button>
           <Button variant="outline" size="sm" icon={<Bell className="w-3.5 h-3.5" />}>{t('cases.sendReminder')}</Button>
         </div>
       </div>
 
-      {/* Progress summary */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="font-medium">{t('cases.overallProgress')}</span>
-                <span className="tabular-nums font-bold text-lg">{totalDocs > 0 ? Math.round((approvedDocs / totalDocs) * 100) : 0}%</span>
+      {/* ── Top section: Progress + Case Info side by side ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Progress summary */}
+        <Card className="lg:col-span-2">
+          <CardContent className="py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="font-medium">{t('cases.overallProgress')}</span>
+                  <span className="tabular-nums font-bold text-lg">{totalDocs > 0 ? Math.round((approvedDocs / totalDocs) * 100) : 0}%</span>
+                </div>
+                <ProgressBar value={approvedDocs} max={totalDocs} size="lg" />
               </div>
-              <ProgressBar value={approvedDocs} max={totalDocs} size="lg" />
+              <div className="flex gap-4 text-center shrink-0">
+                <div className="px-3">
+                  <p className="text-lg font-bold text-green-600">{approvedDocs}</p>
+                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.approved')}</p>
+                </div>
+                <div className="px-3 border-x border-[var(--border-primary)]">
+                  <p className="text-lg font-bold text-blue-500">{pendingReview}</p>
+                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.pending')}</p>
+                </div>
+                <div className="px-3 border-e border-[var(--border-primary)]">
+                  <p className="text-lg font-bold text-red-500">{rejected}</p>
+                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.rejected')}</p>
+                </div>
+                <div className="px-3">
+                  <p className="text-lg font-bold text-gray-400">{missing}</p>
+                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.missing')}</p>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-4 text-center shrink-0">
-              <div className="px-3">
-                <p className="text-lg font-bold text-green-600">{approvedDocs}</p>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.approved')}</p>
+          </CardContent>
+        </Card>
+
+        {/* Case info */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[var(--text-tertiary)]">{t('cases.createdAt')}</span>
+                <span className="text-sm font-medium">{formatDate(caseData.createdAt)}</span>
               </div>
-              <div className="px-3 border-x border-[var(--border-primary)]">
-                <p className="text-lg font-bold text-blue-500">{pendingReview}</p>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.pending')}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[var(--text-tertiary)]">{t('cases.lastActivity')}</span>
+                <span className="text-sm font-medium">{formatDate(caseData.lastActivityDate) || '-'}</span>
               </div>
-              <div className="px-3 border-e border-[var(--border-primary)]">
-                <p className="text-lg font-bold text-red-500">{rejected}</p>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.rejected')}</p>
-              </div>
-              <div className="px-3">
-                <p className="text-lg font-bold text-gray-400">{missing}</p>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.missing')}</p>
+              {caseData.deadline && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[var(--text-tertiary)]">{t('cases.deadline')}</span>
+                  <span className="text-sm font-medium flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(caseData.deadline)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[var(--text-tertiary)]">{t('cases.assignedTo')}</span>
+                <span className="text-sm font-medium">{caseData.assignedOwnerName}</span>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Tabs tabs={updatedTabs} activeTab={activeTab} onChange={setActiveTab} />
-
-      {/* Overview tab */}
-      {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            <Card>
-              <CardHeader title={t('cases.caseInfo')} />
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-[var(--text-tertiary)]">{t('cases.createdAt')}</p>
-                    <p className="text-sm font-medium">{formatDate(caseData.createdAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--text-tertiary)]">{t('cases.lastActivity')}</p>
-                    <p className="text-sm font-medium">{formatDate(caseData.lastActivityDate) || '-'}</p>
-                  </div>
-                  {caseData.deadline && (
-                    <div>
-                      <p className="text-xs text-[var(--text-tertiary)]">{t('cases.deadline')}</p>
-                      <p className="text-sm font-medium flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(caseData.deadline)}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-xs text-[var(--text-tertiary)]">{t('cases.assignedTo')}</p>
-                    <p className="text-sm font-medium">{caseData.assignedOwnerName}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader title={t('cases.documentStatusBreakdown')} />
-              <CardContent>
-                <div className="space-y-2">
-                  {caseData.requiredDocuments.slice(0, 5).map(doc => {
-                    const StatusIcon = statusIcons[doc.status]
-                    return (
-                      <div key={doc.documentTypeId} className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-tertiary)]">
-                        <div className="flex items-center gap-2">
-                          <StatusIcon className={cn('w-4 h-4', statusColors[doc.status])} />
-                          <span className="text-sm">{doc.documentTypeName}</span>
-                        </div>
-                        <Badge variant="status" status={doc.status} size="sm">
-                          {t(getDocStatusKey(doc.status))}
-                        </Badge>
-                      </div>
-                    )
-                  })}
-                  {caseData.requiredDocuments.length > 5 && (
-                    <button onClick={() => setActiveTab('documents')} className="text-xs text-primary-600 hover:underline w-full text-center py-2">
-                      {t('common.viewAll')} ({caseData.requiredDocuments.length})
-                    </button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-4">
-            <Card>
-              <CardHeader title={t('cases.quickActions')} />
-              <CardContent>
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={<MessageCircle className="w-3.5 h-3.5 text-green-500" />}
-                    className="w-full justify-start"
-                    onClick={() => setShowWhatsAppModal(true)}
-                  >
-                    {t('cases.sendWhatsApp')}
-                  </Button>
-                  <Button variant="outline" size="sm" icon={<Send className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.sendReminderEmail')}</Button>
-                  <Button variant="outline" size="sm" icon={<Download className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.downloadAll')}</Button>
-                  <Button variant="outline" size="sm" icon={<Copy className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.duplicateCase')}</Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader title={t('cases.recentActivity')} />
-              <CardContent>
-                <div className="space-y-3">
-                  {caseActivities.slice(0, 4).map(activity => (
-                    <div key={activity.id} className="flex gap-2 text-xs">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-1.5 shrink-0" />
-                      <div>
-                        <p>{activity.description}</p>
-                        <p className="text-[var(--text-tertiary)]">{formatDate(activity.timestamp)}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {caseActivities.length === 0 && <p className="text-xs text-[var(--text-tertiary)] text-center py-2">{t('activity.noActivity')}</p>}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      {/* ── Documents Grid ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            {t('documents.title')}
+            {pendingReview > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-bold dark:bg-blue-900 dark:text-blue-300">
+                {pendingReview}
+              </span>
+            )}
+          </h2>
+          <Button variant="outline" size="sm" icon={<Download className="w-3.5 h-3.5" />}>{t('cases.downloadAll')}</Button>
         </div>
-      )}
-
-      {/* Documents tab - Grid view with previews */}
-      {activeTab === 'documents' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {caseData.requiredDocuments.map(doc => {
             const StatusIcon = statusIcons[doc.status]
@@ -306,27 +311,32 @@ export function CaseDetailPage() {
               <Card
                 key={doc.documentTypeId}
                 hover
-                onClick={() => setExpandedDoc(expandedDoc === doc.documentTypeId ? null : doc.documentTypeId)}
-                className="overflow-hidden cursor-pointer"
+                onClick={() => {
+                  if (hasFile) setLightboxDoc(doc.documentTypeId)
+                }}
+                className="overflow-hidden cursor-pointer flex flex-col"
               >
                 {/* Preview area */}
                 <div className="relative aspect-[4/3] bg-[var(--bg-tertiary)] flex items-center justify-center overflow-hidden">
-                  {hasFile && isImage ? (
+                  {hasFile && isImage && signedUrls[doc.documentTypeId] ? (
                     <img
-                      src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`}
+                      src={signedUrls[doc.documentTypeId]}
                       alt={doc.documentTypeName}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
-                        e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                        const fallback = e.currentTarget.parentElement?.querySelector('[data-fallback]') as HTMLElement
+                        if (fallback) fallback.classList.remove('hidden')
                       }}
                     />
                   ) : null}
-                  <div className={cn(
+                  <div data-fallback className={cn(
                     'flex flex-col items-center justify-center text-[var(--text-tertiary)]',
-                    hasFile && isImage && 'hidden'
+                    hasFile && isImage && signedUrls[doc.documentTypeId] && 'hidden'
                   )}>
-                    {hasFile && isPdf ? (
+                    {hasFile && urlsLoading ? (
+                      <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+                    ) : hasFile && isPdf ? (
                       <>
                         <FileText className="w-10 h-10 mb-1 text-red-400" />
                         <span className="text-[10px] uppercase font-medium">PDF</span>
@@ -343,7 +353,6 @@ export function CaseDetailPage() {
                       </>
                     )}
                   </div>
-                  
                   {/* Status badge overlay */}
                   <div className="absolute top-2 end-2">
                     <Badge variant="status" status={doc.status} size="sm">
@@ -353,38 +362,237 @@ export function CaseDetailPage() {
                 </div>
 
                 {/* Document info */}
-                <div className="p-3">
-                  <p className="text-sm font-medium truncate" title={doc.documentTypeName}>
-                    {doc.documentTypeName}
-                  </p>
+                <div className="p-3 flex-1">
+                  <p className="text-sm font-medium truncate" title={doc.documentTypeName}>{doc.documentTypeName}</p>
                   {doc.fileName ? (
-                    <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">
-                      {doc.fileName}
-                    </p>
+                    <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{doc.fileName}</p>
                   ) : (
-                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                      {t('documents.notUploaded')}
-                    </p>
+                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{t('documents.notUploaded')}</p>
                   )}
                   {doc.uploadedAt && (
-                    <p className="text-[10px] text-[var(--text-tertiary)] mt-1">
-                      {formatDate(doc.uploadedAt)}
-                    </p>
+                    <p className="text-[10px] text-[var(--text-tertiary)] mt-1">{formatDate(doc.uploadedAt)}</p>
                   )}
                 </div>
+
+                {/* Fixed bottom action bar */}
+                {hasFile && (
+                  <div className="border-t border-[var(--border-primary)] px-2 py-1.5 flex items-center justify-between">
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          if (signedUrls[doc.documentTypeId]) {
+                            window.open(signedUrls[doc.documentTypeId], '_blank')
+                          } else if (doc.storagePath) {
+                            try {
+                              const url = await getSignedUrl(doc.storagePath)
+                              setSignedUrls(prev => ({ ...prev, [doc.documentTypeId]: url }))
+                              window.open(url, '_blank')
+                            } catch (err) { console.error('Failed to get preview URL', err) }
+                          }
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                        title={t('documents.preview')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          if (doc.storagePath) {
+                            try {
+                              const blob = await downloadFile(doc.storagePath)
+                              const url = URL.createObjectURL(blob)
+                              const link = document.createElement('a')
+                              link.href = url
+                              link.download = doc.fileName || 'document'
+                              document.body.appendChild(link)
+                              link.click()
+                              document.body.removeChild(link)
+                              URL.revokeObjectURL(url)
+                            } catch (err) { console.error('Failed to download', err) }
+                          }
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                        title={t('common.download')}
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDocMenuOpen(docMenuOpen === doc.documentTypeId ? null : doc.documentTypeId)
+                        }}
+                        className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                      {docMenuOpen === doc.documentTypeId && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setDocMenuOpen(null) }} />
+                          <div className="absolute end-0 bottom-full mb-1 z-50 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-lg shadow-lg py-1 min-w-[160px]">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDocMenuOpen(null); setExpandedDoc(doc.documentTypeId) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] transition-colors"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              {t('documents.details') || t('cases.caseInfo')}
+                            </button>
+                            {['uploaded', 'under-review'].includes(doc.status) && (
+                              <>
+                                <button onClick={(e) => { e.stopPropagation(); setDocMenuOpen(null) }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] text-green-600 transition-colors">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />{t('documents.approve')}
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); setDocMenuOpen(null) }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] text-red-600 transition-colors">
+                                  <XCircle className="w-3.5 h-3.5" />{t('documents.reject')}
+                                </button>
+                              </>
+                            )}
+                            {doc.status === 'rejected' && (
+                              <button onClick={(e) => { e.stopPropagation(); setDocMenuOpen(null) }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] transition-colors">
+                                <RotateCcw className="w-3.5 h-3.5" />{t('documents.requestReupload')}
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </Card>
             )
           })}
         </div>
-      )}
+      </div>
 
-      {/* Document Detail Modal */}
-      <Modal
-        isOpen={!!expandedDoc}
-        onClose={() => setExpandedDoc(null)}
-        title={caseData.requiredDocuments.find(d => d.documentTypeId === expandedDoc)?.documentTypeName || ''}
-        size="lg"
-      >
+      {/* ── Bottom section: Support + Quick actions ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Support Chat */}
+        <Card>
+          <CardHeader title={`💬 ${t('cases.supportTab')}`} />
+          <CardContent>
+            {supportRequest ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium truncate">{supportRequest.subject}</p>
+                  <Badge variant="status" status={supportRequest.status} size="sm">
+                    {t(`support.${supportRequest.status === 'waiting-for-staff' ? 'waitingForStaff' : supportRequest.status === 'waiting-for-client' ? 'waitingForClient' : supportRequest.status}`)}
+                  </Badge>
+                </div>
+
+                <div className="border border-[var(--border-primary)] rounded-xl overflow-hidden">
+                  <div className="max-h-64 overflow-y-auto p-3 space-y-2 bg-[var(--bg-tertiary)]">
+                    {supportRequest.messages.length === 0 ? (
+                      <p className="text-xs text-[var(--text-tertiary)] text-center py-4">{t('support.noMessages') || 'אין הודעות עדיין'}</p>
+                    ) : (
+                      supportRequest.messages.map(msg => (
+                        <div key={msg.id} className={cn('flex', msg.senderType === 'staff' ? 'justify-end' : 'justify-start')}>
+                          <div className={cn(
+                            'max-w-[85%] p-2.5 rounded-2xl text-xs',
+                            msg.senderType === 'staff'
+                              ? 'bg-primary-600 text-white rounded-br-sm'
+                              : 'bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-bl-sm'
+                          )}>
+                            <p className="font-medium mb-0.5 opacity-80">{msg.senderName}</p>
+                            <p className="whitespace-pre-wrap">{msg.body}</p>
+                            <p className="text-[10px] opacity-50 mt-1">{formatDate(msg.sentAt)}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+                  <div className="p-2 border-t border-[var(--border-primary)] bg-[var(--bg-primary)]">
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={chatMessage}
+                        onChange={e => setChatMessage(e.target.value)}
+                        placeholder={t('support.typeMessage') || 'כתוב הודעה...'}
+                        rows={1}
+                        className="flex-1 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            handleSendSupportReply(supportRequest.id)
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        icon={sendingChat ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        disabled={!chatMessage.trim() || sendingChat}
+                        onClick={() => handleSendSupportReply(supportRequest.id)}
+                      />
+                    </div>
+                    <p className="text-[10px] text-[var(--text-tertiary)] mt-1 opacity-60">
+                      ההודעה תישלח ללקוח בוואטסאפ
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <MessageCircle className="w-10 h-10 text-[var(--text-tertiary)] mx-auto mb-3 opacity-40" />
+                <p className="text-sm text-[var(--text-tertiary)] mb-1">{t('support.noSupportRequest') || 'אין שיחת תמיכה פעילה'}</p>
+                <p className="text-xs text-[var(--text-tertiary)] mb-4 opacity-60">הלקוח יכול לכתוב "תמיכה" בוואטסאפ כדי לפתוח שיחה</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={<MessageCircle className="w-3.5 h-3.5" />}
+                  onClick={handleStartSupport}
+                >
+                  {t('support.startConversation') || 'פתח שיחת תמיכה'}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick actions */}
+        <Card>
+          <CardHeader title={t('cases.quickActions')} />
+          <CardContent>
+            <div className="space-y-1.5">
+              <Button variant="outline" size="sm" icon={<Send className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.sendReminderEmail')}</Button>
+              <Button variant="outline" size="sm" icon={<Copy className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.duplicateCase')}</Button>
+              <Button variant="outline" size="sm" icon={<Link2 className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.copyLink')}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Image Lightbox ── */}
+      {lightboxDoc && (() => {
+        const doc = caseData.requiredDocuments.find(d => d.documentTypeId === lightboxDoc)
+        if (!doc) return null
+        const isImage = doc.fileType?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(doc.fileType?.toLowerCase() || '')
+        const url = signedUrls[doc.documentTypeId]
+
+        return (
+          <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 cursor-pointer" onClick={() => setLightboxDoc(null)}>
+            <button onClick={() => setLightboxDoc(null)} className="absolute top-4 end-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors z-10">
+              <XCircle className="w-6 h-6" />
+            </button>
+            <div className="max-w-[90vw] max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+              {isImage && url ? (
+                <img src={url} alt={doc.documentTypeName} className="max-w-full max-h-[90vh] object-contain rounded-lg" />
+              ) : url ? (
+                <iframe src={url} className="w-[80vw] h-[85vh] rounded-lg bg-white" title={doc.documentTypeName} />
+              ) : (
+                <div className="flex flex-col items-center text-white">
+                  <FileText className="w-20 h-20 mb-3" />
+                  <p className="text-lg">{doc.documentTypeName}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Document Detail Modal ── */}
+      <Modal isOpen={!!expandedDoc} onClose={() => setExpandedDoc(null)} title={caseData.requiredDocuments.find(d => d.documentTypeId === expandedDoc)?.documentTypeName || ''} size="lg">
         {(() => {
           const doc = caseData.requiredDocuments.find(d => d.documentTypeId === expandedDoc)
           if (!doc) return null
@@ -395,15 +603,10 @@ export function CaseDetailPage() {
 
           return (
             <div className="space-y-4">
-              {/* Large preview */}
               {hasFile && (
                 <div className="relative aspect-video bg-[var(--bg-tertiary)] rounded-lg overflow-hidden flex items-center justify-center">
-                  {isImage ? (
-                    <img
-                      src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`}
-                      alt={doc.documentTypeName}
-                      className="max-w-full max-h-full object-contain"
-                    />
+                  {isImage && signedUrls[doc.documentTypeId] ? (
+                    <img src={signedUrls[doc.documentTypeId]} alt={doc.documentTypeName} className="max-w-full max-h-full object-contain" />
                   ) : (
                     <div className="flex flex-col items-center text-[var(--text-tertiary)]">
                       <FileText className="w-16 h-16 mb-2" />
@@ -412,21 +615,11 @@ export function CaseDetailPage() {
                   )}
                 </div>
               )}
-
-              {/* Status */}
               <div className="flex items-center gap-2">
                 <StatusIcon className={cn('w-5 h-5', statusColors[doc.status])} />
-                <Badge variant="status" status={doc.status}>
-                  {t(getDocStatusKey(doc.status))}
-                </Badge>
-                {doc.fileSize && (
-                  <span className="text-xs text-[var(--text-tertiary)]">
-                    {formatFileSize(doc.fileSize)}
-                  </span>
-                )}
+                <Badge variant="status" status={doc.status}>{t(getDocStatusKey(doc.status))}</Badge>
+                {doc.fileSize && <span className="text-xs text-[var(--text-tertiary)]">{formatFileSize(doc.fileSize)}</span>}
               </div>
-
-              {/* Details grid */}
               <div className="grid grid-cols-2 gap-3">
                 {doc.uploadedAt && (
                   <div>
@@ -453,29 +646,19 @@ export function CaseDetailPage() {
                   </div>
                 )}
               </div>
-
-              {/* Rejection reason */}
               {doc.rejectionReason && (
                 <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <p className="text-xs font-medium text-red-700 dark:text-red-400">{t('documents.rejectionReason')}</p>
                   <p className="text-sm text-red-600 dark:text-red-300 mt-1">{doc.rejectionReason}</p>
                 </div>
               )}
-
-              {/* Notes */}
               {doc.notes && (
                 <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
                   <p className="text-xs font-medium text-[var(--text-secondary)]">{t('documents.notes')}</p>
                   <p className="text-sm text-[var(--text-tertiary)] mt-1">{doc.notes}</p>
                 </div>
               )}
-
-              {/* Description */}
-              {docType?.description && (
-                <p className="text-sm text-[var(--text-tertiary)] italic">{docType.description}</p>
-              )}
-
-              {/* Actions */}
+              {docType?.description && <p className="text-sm text-[var(--text-tertiary)] italic">{docType.description}</p>}
               <div className="flex gap-2 flex-wrap pt-2 border-t border-[var(--border-primary)]">
                 {['uploaded', 'under-review'].includes(doc.status) && (
                   <>
@@ -485,25 +668,18 @@ export function CaseDetailPage() {
                 )}
                 {doc.storagePath && (
                   <>
-                    <Button
-                      variant="outline"
-                      icon={<Eye className="w-4 h-4" />}
-                      onClick={() => window.open(`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`, '_blank')}
-                    >
-                      {t('documents.preview')}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      icon={<Download className="w-4 h-4" />}
-                      onClick={() => {
-                        const link = document.createElement('a')
-                        link.href = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`
-                        link.download = doc.fileName || 'document'
-                        link.click()
-                      }}
-                    >
-                      {t('common.download')}
-                    </Button>
+                    <Button variant="outline" icon={<Eye className="w-4 h-4" />} onClick={() => { setExpandedDoc(null); setLightboxDoc(doc.documentTypeId) }}>{t('documents.preview')}</Button>
+                    <Button variant="outline" icon={<Download className="w-4 h-4" />} onClick={async () => {
+                      if (doc.storagePath) {
+                        try {
+                          const blob = await downloadFile(doc.storagePath)
+                          const url = URL.createObjectURL(blob)
+                          const link = document.createElement('a')
+                          link.href = url; link.download = doc.fileName || 'document'
+                          document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url)
+                        } catch (err) { console.error('Failed to download', err) }
+                      }
+                    }}>{t('common.download')}</Button>
                   </>
                 )}
                 {doc.status === 'rejected' && (
@@ -515,153 +691,7 @@ export function CaseDetailPage() {
         })()}
       </Modal>
 
-      {/* Activity tab */}
-      {activeTab === 'activity' && (
-        <Card>
-          <CardHeader title={t('activity.title')} />
-          <CardContent>
-            {caseActivities.length === 0 ? (
-              <EmptyState icon={<Clock className="w-6 h-6" />} title={t('activity.noActivity')} />
-            ) : (
-              <div className="relative">
-                <div className="absolute top-0 bottom-0 start-4 w-0.5 bg-[var(--border-primary)]" />
-                <div className="space-y-4">
-                  {caseActivities.map(activity => (
-                    <div key={activity.id} className="relative flex gap-4 ps-10">
-                      <div className="absolute start-2.5 top-1 w-3 h-3 rounded-full bg-primary-500 border-2 border-[var(--bg-secondary)]" />
-                      <div className="flex-1 pb-4">
-                        <p className="text-sm">{activity.description}</p>
-                        <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)] mt-1">
-                          <span>{activity.performedByName}</span>
-                          <span>{formatDate(activity.timestamp)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Support tab */}
-      {activeTab === 'support' && (
-        <Card>
-          <CardContent>
-            {supportRequest ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{supportRequest.subject}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">
-                      {t('support.status')}: <Badge variant="status" status={supportRequest.status} size="sm">{t(`support.${supportRequest.status === 'waiting-for-staff' ? 'waitingForStaff' : supportRequest.status === 'waiting-for-client' ? 'waitingForClient' : supportRequest.status}`)}</Badge>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="border border-[var(--border-primary)] rounded-xl overflow-hidden">
-                  <div className="max-h-80 overflow-y-auto p-4 space-y-3 bg-[var(--bg-tertiary)]">
-                    {supportRequest.messages.map(msg => (
-                      <div key={msg.id} className={cn('flex', msg.senderType === 'staff' ? 'justify-end' : 'justify-start')}>
-                        <div className={cn(
-                          'max-w-[80%] p-3 rounded-2xl text-sm',
-                          msg.senderType === 'staff'
-                            ? 'bg-primary-600 text-white rounded-br-sm'
-                            : 'bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-bl-sm'
-                        )}>
-                          <p className="text-xs font-medium mb-1 opacity-80">{msg.senderName}</p>
-                          <p>{msg.body}</p>
-                          {msg.attachments && msg.attachments.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {msg.attachments.map(att => (
-                                <div key={att.id} className="flex items-center gap-1 text-xs opacity-80">
-                                  <Paperclip className="w-3 h-3" />
-                                  <span>{att.fileName}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-[10px] opacity-60 mt-1">{msg.sentAt}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="p-3 border-t border-[var(--border-primary)] bg-[var(--bg-primary)]">
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={chatMessage}
-                        onChange={e => setChatMessage(e.target.value)}
-                        placeholder={t('support.typeMessage')}
-                        rows={1}
-                        className="flex-1"
-                      />
-                      <Button size="sm" icon={<Send className="w-4 h-4" />} disabled={!chatMessage.trim()} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <EmptyState
-                icon={<MessageCircle className="w-6 h-6" />}
-                title={t('support.noSupportRequest')}
-                description={t('support.noSupportRequestDesc')}
-                action={<Button icon={<MessageCircle className="w-4 h-4" />}>{t('support.startConversation')}</Button>}
-              />
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Settings tab */}
-      {activeTab === 'settings' && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader title={t('cases.caseSettings')} />
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium">{t('cases.changeStatus')}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">{t('cases.changeStatusDesc')}</p>
-                  </div>
-                  <Button variant="outline" size="sm">{t('common.change')}</Button>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium">{t('cases.reassignCase')}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">{t('cases.reassignCaseDesc')}</p>
-                  </div>
-                  <Button variant="outline" size="sm">{t('common.change')}</Button>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium">{t('cases.editDeadline')}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">{formatDate(caseData.deadline) || t('cases.noDeadline')}</p>
-                  </div>
-                  <Button variant="outline" size="sm">{t('common.edit')}</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader title={t('cases.dangerZone')} />
-            <CardContent>
-              <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-red-700 dark:text-red-400">{t('cases.archiveCase')}</p>
-                  <p className="text-xs text-red-600 dark:text-red-300">{t('cases.archiveCaseDesc')}</p>
-                </div>
-                <Button variant="danger" size="sm" icon={<Trash2 className="w-3.5 h-3.5" />}>{t('cases.archive')}</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* WhatsApp Send Modal */}
+      {/* ── WhatsApp Send Modal ── */}
       <Modal isOpen={showWhatsAppModal} onClose={() => { setShowWhatsAppModal(false); setWaResult(null) }} title={t('cases.sendWhatsApp')} size="md">
         <div className="space-y-4">
           {!waResult ? (
@@ -673,7 +703,6 @@ export function CaseDetailPage() {
                   <p className="text-xs text-green-600 dark:text-green-300 mt-0.5">{t('cases.waModalDesc')}</p>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <div className="flex justify-between p-2 bg-[var(--bg-tertiary)] rounded-lg">
                   <span className="text-xs text-[var(--text-tertiary)]">{t('common.client')}</span>
@@ -688,13 +717,11 @@ export function CaseDetailPage() {
                   <span className="text-xs font-medium">{missing}</span>
                 </div>
               </div>
-
               {!clientData?.phone && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <p className="text-xs text-amber-700 dark:text-amber-400">{t('cases.noPhoneWarning')}</p>
                 </div>
               )}
-
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="ghost" onClick={() => setShowWhatsAppModal(false)}>{t('common.cancel')}</Button>
                 <Button
@@ -704,23 +731,13 @@ export function CaseDetailPage() {
                     if (!clientData?.phone) return
                     setWaSending(true)
                     try {
-                      const result = await sendDocumentRequest({
-                        workspaceId: wsId,
-                        caseId: caseData.id,
-                        clientId: caseData.clientId,
-                        phoneNumber: clientData.phone,
-                        language: language as 'en' | 'he',
-                      })
+                      const result = await sendDocumentRequest({ workspaceId: wsId, caseId: caseData.id, clientId: caseData.clientId, phoneNumber: clientData.phone, language: language as 'en' | 'he' })
                       setWaResult({ success: result.success, error: result.error })
                     } catch (err: any) {
                       setWaResult({ success: false, error: err.message || 'Failed to send' })
-                    } finally {
-                      setWaSending(false)
-                    }
+                    } finally { setWaSending(false) }
                   }}
-                >
-                  {t('cases.sendViaWhatsApp')}
-                </Button>
+                >{t('cases.sendViaWhatsApp')}</Button>
               </div>
             </>
           ) : (
@@ -746,9 +763,7 @@ export function CaseDetailPage() {
                   </div>
                 </>
               )}
-              <Button variant="ghost" onClick={() => { setShowWhatsAppModal(false); setWaResult(null) }}>
-                {t('common.close')}
-              </Button>
+              <Button variant="ghost" onClick={() => { setShowWhatsAppModal(false); setWaResult(null) }}>{t('common.close')}</Button>
             </div>
           )}
         </div>

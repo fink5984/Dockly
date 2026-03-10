@@ -9,7 +9,7 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { handleVerification, handleIncoming, sendInitialMessage, shutdown } from './whatsappBot.mjs';
+import { handleVerification, handleIncoming, sendInitialMessage, sendSupportReply, shutdown } from './whatsappBot.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -51,6 +51,21 @@ app.post('/api/whatsapp/send', async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('[API] Send WhatsApp error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── Support Chat Reply (staff → client via WhatsApp) ────────────────────
+app.post('/api/whatsapp/support/reply', async (req, res) => {
+  try {
+    const { supportRequestId, senderName, content } = req.body;
+    if (!supportRequestId || !content) {
+      return res.status(400).json({ success: false, error: 'Missing supportRequestId or content' });
+    }
+    const result = await sendSupportReply({ supportRequestId, senderName: senderName || 'צוות', content });
+    res.json(result);
+  } catch (err) {
+    console.error('[API] Support reply error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
