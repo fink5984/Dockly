@@ -8,6 +8,7 @@
     "dashboard": "Dashboard",
     "clients": "Clients",
     "cases": "Cases",
+    "requests": "Requests",
     "documents": "Documents",
     "documentTypes": "Document Library",
     "activity": "Activity",
@@ -239,7 +240,44 @@
     "reassignCase": "Reassign Case",
     "reassignCaseDesc": "Assign this case to another team member",
     "editDeadline": "Edit Deadline",
-    "duplicateCase": "Duplicate Case"
+    "duplicateCase": "Duplicate Case",
+    "sendWhatsApp": "Send WhatsApp",
+    "sendViaWhatsApp": "Send via WhatsApp",
+    "linkCopied": "Link Copied!",
+    "copied": "Copied!",
+    "pendingDocs": "Pending Documents",
+    "noPhoneWarning": "This client has no phone number. Please add a phone number in the client profile first.",
+    "waModalTitle": "Send Document Request via WhatsApp",
+    "waModalDesc": "The client will receive an interactive WhatsApp message where they can view the document list and upload files directly in the chat.",
+    "waSentSuccess": "WhatsApp message sent!",
+    "waSentSuccessDesc": "The client will receive a message with a button to view documents — uploads happen directly in WhatsApp.",
+    "waSentFailed": "Failed to send WhatsApp message"
+  },
+  "requests": {
+    "title": "Requests",
+    "newRequest": "New Request",
+    "newRequestDesc": "Create a new document collection request",
+    "client": "Client",
+    "autoLinked": "Auto-linked from client profile",
+    "searchClient": "Search and select a client...",
+    "details": "Details",
+    "requestTitle": "Request Title",
+    "requestTitlePlaceholder": "e.g. Mortgage Application, Tax Filing...",
+    "description": "Description",
+    "descriptionPlaceholder": "Add optional notes or instructions...",
+    "deadline": "Deadline",
+    "requiredDocuments": "Required Documents",
+    "requiredDocumentsDesc": "Select which documents the client needs to provide",
+    "quickAddDocType": "Quick Add Document Type",
+    "searchDocTypes": "Search document types...",
+    "selected": "selected",
+    "createRequest": "Create Request",
+    "addAndSelect": "Add & Select",
+    "createSuccess": "Request created successfully",
+    "noRequests": "No requests yet",
+    "noRequestsDesc": "Create your first request to start collecting documents",
+    "requestsList": "Requests",
+    "searchRequests": "Search requests..."
   },
   "documents": {
     "title": "Documents Center",
@@ -626,7 +664,10 @@
     "viewAll": "View All",
     "year": "year",
     "years": "years",
-    "more": "more"
+    "more": "more",
+    "copy": "Copy",
+    "client": "Client",
+    "phone": "Phone"
   },
   "businessTypes": {
     "mortgage": "Mortgage Office",
@@ -640,17 +681,5 @@
     "admin": "Administrative Services",
     "real_estate": "Real Estate",
     "other": "Other"
-  },
-  "caseTypes": {
-    "mortgage": "Mortgage Application",
-    "lawsuit": "Lawsuit",
-    "taxReturn": "Tax Return",
-    "insurance": "Insurance Claim",
-    "incorporation": "Company Incorporation",
-    "audit": "Financial Audit",
-    "realEstate": "Real Estate Transaction",
-    "immigration": "Immigration Case",
-    "compliance": "Compliance Review",
-    "general": "General Case"
   }
 }

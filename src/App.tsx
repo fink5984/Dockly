@@ -21,6 +21,9 @@ import { ActivityPage } from '@/pages/activity/ActivityPage'
 import { WhatsAppPage } from '@/pages/whatsapp/WhatsAppPage'
 import { SettingsPage } from '@/pages/settings/SettingsPage'
 
+// Public pages (no auth required)
+import { ClientUploadPortal } from '@/pages/upload/ClientUploadPortal'
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isOnboarding, isLoading } = useAuth()
   if (isLoading) return null
@@ -57,15 +60,22 @@ export function App() {
         {/* Onboarding */}
         <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
 
+        {/* Public client upload portal (no auth) */}
+        <Route path="/upload/:token" element={<ClientUploadPortal />} />
+
         {/* Protected app routes */}
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route index element={<DashboardPage />} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="clients/:id" element={<ClientProfilePage />} />
-          <Route path="cases" element={<CasesPage />} />
-          <Route path="cases/create" element={<CaseCreatePage />} />
-          <Route path="cases/:id" element={<CaseDetailPage />} />
-          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="requests" element={<CasesPage />} />
+          <Route path="requests/create" element={<CaseCreatePage />} />
+          <Route path="requests/:id" element={<CaseDetailPage />} />
+          {/* Legacy redirects */}
+          <Route path="cases" element={<Navigate to="/requests" replace />} />
+          <Route path="cases/create" element={<Navigate to="/requests/create" replace />} />
+          <Route path="cases/:id" element={<Navigate to="/requests" replace />} />
+          <Route path="documents" element={<Navigate to="/requests" replace />} />
           <Route path="document-types" element={<DocumentTypesPage />} />
           <Route path="activity" element={<ActivityPage />} />
           <Route path="whatsapp" element={<WhatsAppPage />} />

@@ -8,6 +8,7 @@
     "dashboard": "לוח בקרה",
     "clients": "לקוחות",
     "cases": "תיקים",
+    "requests": "בקשות",
     "documents": "מסמכים",
     "documentTypes": "ספריית מסמכים",
     "activity": "פעילות",
@@ -239,7 +240,44 @@
     "reassignCase": "הקצה מחדש",
     "reassignCaseDesc": "הקצה את התיק לחבר צוות אחר",
     "editDeadline": "ערוך מועד אחרון",
-    "duplicateCase": "שכפל תיק"
+    "duplicateCase": "שכפל תיק",
+    "sendWhatsApp": "שלח בוואטסאפ",
+    "sendViaWhatsApp": "שלח דרך וואטסאפ",
+    "linkCopied": "הקישור הועתק!",
+    "copied": "הועתק!",
+    "pendingDocs": "מסמכים ממתינים",
+    "noPhoneWarning": "ללקוח זה אין מספר טלפון. אנא הוסף מספר טלפון בפרופיל הלקוח קודם.",
+    "waModalTitle": "שלח בקשת מסמכים דרך וואטסאפ",
+    "waModalDesc": "הלקוח יקבל הודעה אינטראקטיבית בוואטסאפ שבה יוכל לראות את רשימת המסמכים ולהעלות אותם ישירות בצ'אט.",
+    "waSentSuccess": "הודעת וואטסאפ נשלחה!",
+    "waSentSuccessDesc": "הלקוח יקבל הודעה עם כפתור לצפייה ברשימת המסמכים — ההעלאה מתבצעת ישירות בוואטסאפ.",
+    "waSentFailed": "שליחת הודעת וואטסאפ נכשלה"
+  },
+  "requests": {
+    "title": "בקשות",
+    "newRequest": "בקשה חדשה",
+    "newRequestDesc": "צור בקשה חדשה לאיסוף מסמכים",
+    "client": "לקוח",
+    "autoLinked": "משויך אוטומטית מפרופיל הלקוח",
+    "searchClient": "חפש ובחר לקוח...",
+    "details": "פרטים",
+    "requestTitle": "כותרת הבקשה",
+    "requestTitlePlaceholder": "לדוגמה: בקשת משכנתא, הגשת מס...",
+    "description": "תיאור",
+    "descriptionPlaceholder": "הוסף הערות או הנחיות (אופציונלי)...",
+    "deadline": "מועד אחרון",
+    "requiredDocuments": "מסמכים נדרשים",
+    "requiredDocumentsDesc": "בחר אילו מסמכים הלקוח צריך לספק",
+    "quickAddDocType": "הוספה מהירה של סוג מסמך",
+    "searchDocTypes": "חפש סוגי מסמכים...",
+    "selected": "נבחרו",
+    "createRequest": "צור בקשה",
+    "addAndSelect": "הוסף ובחר",
+    "createSuccess": "הבקשה נוצרה בהצלחה",
+    "noRequests": "אין בקשות עדיין",
+    "noRequestsDesc": "צור את הבקשה הראשונה שלך כדי להתחיל לאסוף מסמכים",
+    "requestsList": "בקשות",
+    "searchRequests": "חפש בקשות..."
   },
   "documents": {
     "title": "מרכז מסמכים",
@@ -626,7 +664,10 @@
     "viewAll": "הצג הכל",
     "year": "שנה",
     "years": "שנים",
-    "more": "עוד"
+    "more": "עוד",
+    "copy": "העתק",
+    "client": "לקוח",
+    "phone": "טלפון"
   },
   "businessTypes": {
     "mortgage": "משרד משכנתאות",
@@ -640,17 +681,5 @@
     "admin": "שירותי מנהלה",
     "real_estate": "נדל\"ן",
     "other": "אחר"
-  },
-  "caseTypes": {
-    "mortgage": "בקשת משכנתא",
-    "lawsuit": "תביעה",
-    "taxReturn": "דו\"ח מס",
-    "insurance": "תביעת ביטוח",
-    "incorporation": "הקמת חברה",
-    "audit": "ביקורת פיננסית",
-    "realEstate": "עסקת נדל\"ן",
-    "immigration": "תיק הגירה",
-    "compliance": "בדיקת תאימות",
-    "general": "תיק כללי"
   }
 }

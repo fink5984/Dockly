@@ -13,6 +13,17 @@ export function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
+/** Format an ISO date string or Date to DD-MM-YYYY */
+export function formatDate(value: string | Date | undefined | null): string {
+  if (!value) return ''
+  const d = typeof value === 'string' ? new Date(value) : value
+  if (isNaN(d.getTime())) return String(value)
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  return `${day}-${month}-${year}`
+}
+
 export function generateId(): string {
   return Math.random().toString(36).substring(2, 11)
 }

@@ -4,15 +4,15 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import { cn } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { getClients } from '@/services/clientsService'
 import { getCases } from '@/services/casesService'
 import { getActivities } from '@/services/activityService'
-import { getCaseTypeConfigs } from '@/services/settingsService'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2, Calendar,
-  FolderOpen, Send, MessageCircle, Link2, User, FileCheck,
+  ClipboardList, Send, MessageCircle, Link2, User, FileCheck,
   AlertTriangle, CheckCircle, Clock,
 } from 'lucide-react'
 
@@ -20,18 +20,14 @@ export function ClientProfilePage() {
   const { id } = useParams()
   const { t, direction } = useI18n()
   const navigate = useNavigate()
+  const { user, workspace } = useAuth()
+  const wsId = workspace?.id || user?.workspaceId || ''
   const isRtl = direction === 'rtl'
   const BackArrow = isRtl ? ArrowRight : ArrowLeft
 
-  const { data: allClients } = useSupabaseData(getClients, [])
-  const { data: allCases } = useSupabaseData(getCases, [])
-  const { data: allActivities } = useSupabaseData(getActivities, [])
-  const { data: caseTypeConfigs } = useSupabaseData(getCaseTypeConfigs, [])
-
-  const getCaseTypeName = (typeId: string) => {
-    const cfg = caseTypeConfigs.find(ct => ct.id === typeId)
-    return cfg ? cfg.name : t(`caseTypes.${typeId}`)
-  }
+  const { data: allClients } = useSupabaseData(() => getClients(wsId), [], [wsId])
+  const { data: allCases } = useSupabaseData(() => getCases(wsId), [], [wsId])
+  const { data: allActivities } = useSupabaseData(() => getActivities(wsId), [], [wsId])
 
   const client = allClients.find(c => c.id === id)
   if (!client) return <div className="p-8 text-center">{t('common.noResults')}</div>
@@ -90,12 +86,12 @@ export function ClientProfilePage() {
                 <Calendar className="w-4 h-4 text-[var(--text-tertiary)]" />
                 <div>
                   <p className="text-xs text-[var(--text-tertiary)]">{t('clients.createdAt')}</p>
-                  <p className="text-sm font-medium">{client.createdAt}</p>
+                  <p className="text-sm font-medium">{formatDate(client.createdAt)}</p>
                 </div>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => navigate('/cases/create')} icon={<FolderOpen className="w-3.5 h-3.5" />}>{t('clients.createCase')}</Button>
+              <Button size="sm" onClick={() => navigate(`/requests/create?clientId=${client.id}`)} icon={<ClipboardList className="w-3.5 h-3.5" />}>{t('requests.newRequest')}</Button>
               <Button size="sm" variant="outline" icon={<Send className="w-3.5 h-3.5" />}>{t('clients.sendReminder')}</Button>
               <Button size="sm" variant="ghost" icon={<MessageCircle className="w-3.5 h-3.5" />}>{t('clients.whatsappActions')}</Button>
             </div>
@@ -118,9 +114,9 @@ export function ClientProfilePage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">{t('clients.casesList')} ({clientCases.length})</h3>
-                <Button size="sm" variant="ghost" onClick={() => navigate('/cases/create')} icon={<FolderOpen className="w-3.5 h-3.5" />}>
-                  {t('clients.createCase')}
+                <h3 className="text-sm font-semibold">{t('requests.requestsList')} ({clientCases.length})</h3>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/requests/create?clientId=${client.id}`)} icon={<ClipboardList className="w-3.5 h-3.5" />}>
+                  {t('requests.newRequest')}
                 </Button>
               </div>
             </CardHeader>
@@ -131,7 +127,7 @@ export function ClientProfilePage() {
                 return (
                   <button
                     key={c.id}
-                    onClick={() => navigate(`/cases/${c.id}`)}
+                    onClick={() => navigate(`/requests/${c.id}`)}
                     className="w-full flex items-center gap-4 px-5 py-4 hover:bg-[var(--bg-secondary)] transition-colors text-left"
                   >
                     <div className="flex-1">
@@ -143,7 +139,7 @@ export function ClientProfilePage() {
                         {c.supportRequestId && <Badge variant="status" status="warning">{t('support.activeSupportBadge')}</Badge>}
                       </div>
                       <p className="text-xs text-[var(--text-tertiary)]">
-                        {getCaseTypeName(c.caseType)} · {submitted}/{total} {t('documents.title').toLowerCase()}
+                        {c.caseType} · {submitted}/{total} {t('documents.title').toLowerCase()}
                       </p>
                     </div>
                     <ProgressBar value={submitted} max={total} className="w-24" showLabel />
@@ -182,7 +178,7 @@ export function ClientProfilePage() {
                   'document-rejected': AlertTriangle,
                   'support-opened': MessageCircle,
                   'reminder-sent': Send,
-                  'case-opened': FolderOpen,
+                  'case-opened': ClipboardList,
                 }
                 const Icon = iconMap[a.type] || Clock
                 return (
@@ -193,7 +189,7 @@ export function ClientProfilePage() {
                     )} />
                     <div>
                       <p className="text-xs font-medium">{a.description}</p>
-                      <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{a.timestamp.split('T')[0]}</p>
+                      <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{formatDate(a.timestamp)}</p>
                     </div>
                   </div>
                 )

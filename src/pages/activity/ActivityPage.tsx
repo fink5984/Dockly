@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { SearchInput, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { cn } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { getActivities } from '@/services/activityService'
 import { Clock, FileText, Upload, Download, Send, CheckCircle, XCircle, UserPlus, Settings, Bell, Activity as ActivityIcon } from 'lucide-react'
@@ -46,10 +47,12 @@ const activityColors: Partial<Record<ActivityType, string>> = {
 
 export function ActivityPage() {
   const { t } = useI18n()
+  const { user, workspace } = useAuth()
+  const wsId = workspace?.id || user?.workspaceId || ''
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
 
-  const { data: allActivities } = useSupabaseData(getActivities, [])
+  const { data: allActivities } = useSupabaseData(() => getActivities(wsId), [], [wsId])
 
   const types = Array.from(new Set(allActivities.map(a => a.type)))
 
@@ -64,7 +67,7 @@ export function ActivityPage() {
 
   // Group by date
   const grouped = filtered.reduce<Record<string, typeof filtered>>((acc, activity) => {
-    const date = activity.timestamp.split('T')[0] || activity.timestamp.split(',')[0] || 'Unknown'
+    const date = formatDate(activity.timestamp)
     if (!acc[date]) acc[date] = []
     acc[date].push(activity)
     return acc
@@ -120,7 +123,7 @@ export function ActivityPage() {
                                   {activity.caseId && <span className="font-mono">• {activity.caseId}</span>}
                                 </div>
                               </div>
-                              <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap ms-3">{activity.timestamp}</span>
+                              <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap ms-3">{formatDate(activity.timestamp)}</span>
                             </div>
                           </div>
                         </Card>

@@ -101,10 +101,11 @@ export async function createWorkspace(
 
 // ---- Case Type Configs ----
 
-export async function getCaseTypeConfigs(): Promise<CaseTypeConfig[]> {
+export async function getCaseTypeConfigs(workspaceId: string): Promise<CaseTypeConfig[]> {
   const { data, error } = await supabase
     .from('case_type_configs')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .order('name', { ascending: true })
 
   if (error) throw error
@@ -194,10 +195,11 @@ export async function upsertWhatsAppConfig(
 
 // ---- Message Templates ----
 
-export async function getMessageTemplates(): Promise<MessageTemplate[]> {
+export async function getMessageTemplates(workspaceId: string): Promise<MessageTemplate[]> {
   const { data, error } = await supabase
     .from('message_templates')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -282,10 +284,11 @@ export async function deleteMessageTemplate(id: string): Promise<void> {
 
 // ---- Automation Rules ----
 
-export async function getAutomationRules(): Promise<AutomationRule[]> {
+export async function getAutomationRules(workspaceId: string): Promise<AutomationRule[]> {
   const { data, error } = await supabase
     .from('automation_rules')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -399,7 +402,7 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
 
 // ---- Dashboard Stats (computed from live data) ----
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(workspaceId: string): Promise<DashboardStats> {
   const [
     { count: totalClients },
     { count: openCases },
@@ -407,11 +410,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     { count: delayedCases },
     { count: activeSupportRequests },
   ] = await Promise.all([
-    supabase.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase.from('cases').select('*', { count: 'exact', head: true }).in('status', ['new', 'waiting-for-client', 'partial-submission', 'awaiting-review']),
-    supabase.from('cases').select('*', { count: 'exact', head: true }).in('status', ['completed', 'closed']),
-    supabase.from('cases').select('*', { count: 'exact', head: true }).eq('status', 'delayed'),
-    supabase.from('support_requests').select('*', { count: 'exact', head: true }).in('status', ['open', 'waiting-for-staff', 'waiting-for-client']),
+    supabase.from('clients').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'active'),
+    supabase.from('cases').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).in('status', ['new', 'waiting-for-client', 'partial-submission', 'awaiting-review']),
+    supabase.from('cases').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).in('status', ['completed', 'closed']),
+    supabase.from('cases').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'delayed'),
+    supabase.from('support_requests').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).in('status', ['open', 'waiting-for-staff', 'waiting-for-client']),
   ])
 
   return {

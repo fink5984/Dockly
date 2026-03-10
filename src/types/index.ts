@@ -290,3 +290,31 @@ export interface CaseTypeConfig {
   defaultDocumentTypeIds: string[]
   isActive: boolean
 }
+
+export interface WhatsAppMessage {
+  id: string
+  workspaceId: string
+  caseId?: string | null
+  clientId?: string | null
+  direction: 'outbound' | 'inbound'
+  phoneNumber: string
+  messageType: string
+  content: string
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed'
+  waMessageId?: string | null
+  templateName?: string | null
+  errorMessage?: string | null
+  metadata?: Record<string, unknown>
+  createdAt: string
+}
+
+export interface ClientUploadToken {
+  id: string
+  workspaceId: string
+  caseId: string
+  clientId: string
+  token: string
+  expiresAt: string
+  isUsed: boolean
+  createdAt: string
+}

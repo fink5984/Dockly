@@ -23,8 +23,8 @@ export function DocumentTypesPage() {
   const { workspace, user } = useAuth()
   const wsId = workspace?.id || user?.workspaceId || ''
 
-  const { data: allDocumentTypes, refetch: refetchDocTypes } = useSupabaseData(getDocumentTypes, [])
-  const { data: allPresets, refetch: refetchPresets } = useSupabaseData(getDocumentPresets, [])
+  const { data: allDocumentTypes, refetch: refetchDocTypes } = useSupabaseData(() => getDocumentTypes(wsId), [], [wsId])
+  const { data: allPresets, refetch: refetchPresets } = useSupabaseData(() => getDocumentPresets(wsId), [], [wsId])
 
   const { activeTab, setActiveTab, tabs } = useTabState([
     { id: 'library', label: t('documentTypes.library'), badge: allDocumentTypes.length },

@@ -8,18 +8,21 @@ import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Tabs, useTabState } from '@/components/ui/Tabs'
 import { Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { cn, formatFileSize, getStatusColor, getDocStatusKey } from '@/lib/utils'
+import { Modal } from '@/components/ui/Modal'
+import { cn, formatFileSize, getStatusColor, getDocStatusKey, formatDate } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { getCases } from '@/services/casesService'
 import { getActivities } from '@/services/activityService'
 import { getSupportRequests } from '@/services/supportService'
+import { getClientById } from '@/services/clientsService'
+import { sendDocumentRequest } from '@/services/whatsappService'
 import {
   ArrowLeft, ArrowRight, Copy, Send, Bell, Calendar, User, Clock, FileText, CheckCircle2, XCircle, AlertTriangle,
   UploadCloud, Eye, Download, RotateCcw, MessageCircle, Paperclip, Link2, MoreHorizontal, Settings,
-  Shield, Trash2, ChevronDown, ExternalLink
+  Shield, Trash2, ChevronDown, ExternalLink, Loader2
 } from 'lucide-react'
 import { getDocumentTypes } from '@/services/documentsService'
-import { getCaseTypeConfigs } from '@/services/settingsService'
 import type { CaseDocument, DocumentStatus } from '@/types'
 
 const statusIcons: Record<DocumentStatus, typeof CheckCircle2> = {
@@ -50,7 +53,7 @@ const statusColors: Record<DocumentStatus, string> = {
 
 export function CaseDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { t, direction } = useI18n()
+  const { t, direction, language } = useI18n()
   const navigate = useNavigate()
   const { activeTab, setActiveTab, tabs } = useTabState([
     { id: 'overview', label: t('cases.overview') },
@@ -62,19 +65,27 @@ export function CaseDetailPage() {
 
   const [chatMessage, setChatMessage] = useState('')
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
+  const [waSending, setWaSending] = useState(false)
+  const [waResult, setWaResult] = useState<{ success: boolean; error?: string } | null>(null)
 
-  const { data: allCases } = useSupabaseData(getCases, [])
-  const { data: allActivities } = useSupabaseData(getActivities, [])
-  const { data: allSupportRequests } = useSupabaseData(getSupportRequests, [])
-  const { data: allDocumentTypes } = useSupabaseData(getDocumentTypes, [])
-  const { data: caseTypeConfigs } = useSupabaseData(getCaseTypeConfigs, [])
+  const { user, workspace } = useAuth()
+  const wsId = workspace?.id || user?.workspaceId || ''
 
-  const getCaseTypeName = (typeId: string) => {
-    const cfg = caseTypeConfigs.find(ct => ct.id === typeId)
-    return cfg ? cfg.name : t(`caseTypes.${typeId}`)
-  }
+  const { data: allCases } = useSupabaseData(() => getCases(wsId), [], [wsId])
+  const { data: allActivities } = useSupabaseData(() => getActivities(wsId), [], [wsId])
+  const { data: allSupportRequests } = useSupabaseData(() => getSupportRequests(wsId), [], [wsId])
+  const { data: allDocumentTypes } = useSupabaseData(() => getDocumentTypes(wsId), [], [wsId])
 
-  const caseData = allCases.find(c => c.id === id)
+  // Fetch client data for WhatsApp
+  const caseForClient = allCases.find(c => c.id === id)
+  const { data: clientData } = useSupabaseData(
+    () => caseForClient?.clientId ? getClientById(caseForClient.clientId) : Promise.resolve(null),
+    null,
+    [caseForClient?.clientId]
+  )
+
+  const caseData = caseForClient
   const BackArrow = direction === 'rtl' ? ArrowRight : ArrowLeft
 
   if (!caseData) {
@@ -82,7 +93,7 @@ export function CaseDetailPage() {
       <EmptyState
         icon={<FileText className="w-6 h-6" />}
         title={t('cases.notFound')}
-        action={<Button onClick={() => navigate('/cases')}>{t('common.back')}</Button>}
+        action={<Button onClick={() => navigate('/requests')}>{t('common.back')}</Button>}
       />
     )
   }
@@ -115,7 +126,7 @@ export function CaseDetailPage() {
           </div>
           <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)] mt-1">
             <span className="font-mono">{caseData.id}</span>
-            <span>{getCaseTypeName(caseData.caseType)}</span>
+            <span>{caseData.caseType}</span>
             <span className="flex items-center gap-1"><User className="w-3 h-3" />{caseData.assignedOwnerName}</span>
           </div>
         </div>
@@ -170,16 +181,16 @@ export function CaseDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-[var(--text-tertiary)]">{t('cases.createdAt')}</p>
-                    <p className="text-sm font-medium">{caseData.createdAt}</p>
+                    <p className="text-sm font-medium">{formatDate(caseData.createdAt)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--text-tertiary)]">{t('cases.lastActivity')}</p>
-                    <p className="text-sm font-medium">{caseData.lastActivityDate || '-'}</p>
+                    <p className="text-sm font-medium">{formatDate(caseData.lastActivityDate) || '-'}</p>
                   </div>
                   {caseData.deadline && (
                     <div>
                       <p className="text-xs text-[var(--text-tertiary)]">{t('cases.deadline')}</p>
-                      <p className="text-sm font-medium flex items-center gap-1"><Calendar className="w-3 h-3" />{caseData.deadline}</p>
+                      <p className="text-sm font-medium flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(caseData.deadline)}</p>
                     </div>
                   )}
                   <div>
@@ -223,8 +234,16 @@ export function CaseDetailPage() {
               <CardHeader title={t('cases.quickActions')} />
               <CardContent>
                 <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={<MessageCircle className="w-3.5 h-3.5 text-green-500" />}
+                    className="w-full justify-start"
+                    onClick={() => setShowWhatsAppModal(true)}
+                  >
+                    {t('cases.sendWhatsApp')}
+                  </Button>
                   <Button variant="outline" size="sm" icon={<Send className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.sendReminderEmail')}</Button>
-                  <Button variant="outline" size="sm" icon={<Link2 className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.copySubmissionLink')}</Button>
                   <Button variant="outline" size="sm" icon={<Download className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.downloadAll')}</Button>
                   <Button variant="outline" size="sm" icon={<Copy className="w-3.5 h-3.5" />} className="w-full justify-start">{t('cases.duplicateCase')}</Button>
                 </div>
@@ -240,7 +259,7 @@ export function CaseDetailPage() {
                       <div className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-1.5 shrink-0" />
                       <div>
                         <p>{activity.description}</p>
-                        <p className="text-[var(--text-tertiary)]">{activity.timestamp}</p>
+                        <p className="text-[var(--text-tertiary)]">{formatDate(activity.timestamp)}</p>
                       </div>
                     </div>
                   ))}
@@ -377,7 +396,7 @@ export function CaseDetailPage() {
                         <p className="text-sm">{activity.description}</p>
                         <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)] mt-1">
                           <span>{activity.performedByName}</span>
-                          <span>{activity.timestamp}</span>
+                          <span>{formatDate(activity.timestamp)}</span>
                         </div>
                       </div>
                     </div>
@@ -482,7 +501,7 @@ export function CaseDetailPage() {
                 <div className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
                   <div>
                     <p className="text-sm font-medium">{t('cases.editDeadline')}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">{caseData.deadline || t('cases.noDeadline')}</p>
+                    <p className="text-xs text-[var(--text-tertiary)]">{formatDate(caseData.deadline) || t('cases.noDeadline')}</p>
                   </div>
                   <Button variant="outline" size="sm">{t('common.edit')}</Button>
                 </div>
@@ -504,6 +523,99 @@ export function CaseDetailPage() {
           </Card>
         </div>
       )}
+
+      {/* WhatsApp Send Modal */}
+      <Modal isOpen={showWhatsAppModal} onClose={() => { setShowWhatsAppModal(false); setWaResult(null) }} title={t('cases.sendWhatsApp')} size="md">
+        <div className="space-y-4">
+          {!waResult ? (
+            <>
+              <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/20 rounded-xl border border-green-200 dark:border-green-800">
+                <MessageCircle className="w-8 h-8 text-green-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-700 dark:text-green-400">{t('cases.waModalTitle')}</p>
+                  <p className="text-xs text-green-600 dark:text-green-300 mt-0.5">{t('cases.waModalDesc')}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between p-2 bg-[var(--bg-tertiary)] rounded-lg">
+                  <span className="text-xs text-[var(--text-tertiary)]">{t('common.client')}</span>
+                  <span className="text-xs font-medium">{caseData.clientName}</span>
+                </div>
+                <div className="flex justify-between p-2 bg-[var(--bg-tertiary)] rounded-lg">
+                  <span className="text-xs text-[var(--text-tertiary)]">{t('common.phone')}</span>
+                  <span className="text-xs font-medium">{clientData?.phone || '—'}</span>
+                </div>
+                <div className="flex justify-between p-2 bg-[var(--bg-tertiary)] rounded-lg">
+                  <span className="text-xs text-[var(--text-tertiary)]">{t('cases.pendingDocs')}</span>
+                  <span className="text-xs font-medium">{missing}</span>
+                </div>
+              </div>
+
+              {!clientData?.phone && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-xs text-amber-700 dark:text-amber-400">{t('cases.noPhoneWarning')}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={() => setShowWhatsAppModal(false)}>{t('common.cancel')}</Button>
+                <Button
+                  icon={waSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                  disabled={waSending || !clientData?.phone}
+                  onClick={async () => {
+                    if (!clientData?.phone) return
+                    setWaSending(true)
+                    try {
+                      const result = await sendDocumentRequest({
+                        workspaceId: wsId,
+                        caseId: caseData.id,
+                        clientId: caseData.clientId,
+                        phoneNumber: clientData.phone,
+                        language: language as 'en' | 'he',
+                      })
+                      setWaResult({ success: result.success, error: result.error })
+                    } catch (err: any) {
+                      setWaResult({ success: false, error: err.message || 'Failed to send' })
+                    } finally {
+                      setWaSending(false)
+                    }
+                  }}
+                >
+                  {t('cases.sendViaWhatsApp')}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center space-y-4">
+              {waResult.success ? (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-green-700 dark:text-green-400">{t('cases.waSentSuccess')}</p>
+                    <p className="text-xs text-[var(--text-tertiary)] mt-1">{t('cases.waSentSuccessDesc')}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mx-auto">
+                    <XCircle className="w-8 h-8 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-red-700 dark:text-red-400">{t('cases.waSentFailed')}</p>
+                    <p className="text-xs text-[var(--text-tertiary)] mt-1">{waResult.error}</p>
+                  </div>
+                </>
+              )}
+              <Button variant="ghost" onClick={() => { setShowWhatsAppModal(false); setWaResult(null) }}>
+                {t('common.close')}
+              </Button>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }

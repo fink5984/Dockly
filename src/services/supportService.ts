@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { mapSupportRequest, mapSupportMessage } from '@/lib/mappers'
 import type { SupportRequest, SupportMessage } from '@/types'
 
-export async function getSupportRequests(): Promise<SupportRequest[]> {
+export async function getSupportRequests(workspaceId: string): Promise<SupportRequest[]> {
   const { data, error } = await supabase
     .from('support_requests')
     .select(`
@@ -13,6 +13,7 @@ export async function getSupportRequests(): Promise<SupportRequest[]> {
       clients ( name ),
       support_messages ( * )
     `)
+    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

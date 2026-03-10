@@ -5,10 +5,11 @@ import { supabase } from '@/lib/supabase'
 import { mapActivityEvent } from '@/lib/mappers'
 import type { ActivityEvent, ActivityType } from '@/types'
 
-export async function getActivities(limit = 100): Promise<ActivityEvent[]> {
+export async function getActivities(workspaceId: string, limit = 100): Promise<ActivityEvent[]> {
   const { data, error } = await supabase
     .from('activity_events')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
     .limit(limit)
 

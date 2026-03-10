@@ -26,8 +26,9 @@ export function WhatsAppPage() {
     null,
     [workspace?.id]
   )
-  const { data: templates } = useSupabaseData(getMessageTemplates, [])
-  const { data: rules } = useSupabaseData(getAutomationRules, [])
+  const wsId = workspace?.id || ''
+  const { data: templates } = useSupabaseData(() => getMessageTemplates(wsId), [], [wsId])
+  const { data: rules } = useSupabaseData(() => getAutomationRules(wsId), [], [wsId])
 
   const whatsappConfig = waConfig ?? defaultWaConfig
 

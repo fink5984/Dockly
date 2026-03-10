@@ -8,7 +8,7 @@ import type { Case, CaseDocument } from '@/types'
 /**
  * Fetch all cases for the current workspace, joined with client name and documents.
  */
-export async function getCases(): Promise<Case[]> {
+export async function getCases(workspaceId: string): Promise<Case[]> {
   const { data, error } = await supabase
     .from('cases')
     .select(`
@@ -19,6 +19,7 @@ export async function getCases(): Promise<Case[]> {
         document_types ( name, category )
       )
     `)
+    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

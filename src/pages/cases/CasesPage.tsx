@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { SearchInput } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { cn } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { getCases } from '@/services/casesService'
-import { getCaseTypeConfigs } from '@/services/settingsService'
-import { FolderPlus, FolderOpen, Calendar, Eye, Download, Filter } from 'lucide-react'
+import { ClipboardPlus, ClipboardList, Calendar, Eye, Download, Filter } from 'lucide-react'
 import type { CaseStatus } from '@/types'
 
 type CaseFilter = 'all' | CaseStatus
@@ -19,16 +19,12 @@ type CaseFilter = 'all' | CaseStatus
 export function CasesPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
+  const { user, workspace } = useAuth()
+  const wsId = workspace?.id || user?.workspaceId || ''
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<CaseFilter>('all')
 
-  const { data: allCases } = useSupabaseData(getCases, [])
-  const { data: caseTypeConfigs } = useSupabaseData(getCaseTypeConfigs, [])
-
-  const getCaseTypeName = (id: string) => {
-    const cfg = caseTypeConfigs.find(ct => ct.id === id)
-    return cfg ? cfg.name : t(`caseTypes.${id}`)
-  }
+  const { data: allCases } = useSupabaseData(() => getCases(wsId), [], [wsId])
 
   const filtered = allCases.filter(c => {
     if (search && !c.clientName.toLowerCase().includes(search.toLowerCase()) && !c.id.includes(search)) return false
@@ -50,12 +46,12 @@ export function CasesPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('cases.title')}</h1>
+          <h1 className="text-2xl font-bold">{t('requests.title')}</h1>
           <p className="text-sm text-[var(--text-tertiary)] mt-1">{allCases.length} {t('common.total').toLowerCase()}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" icon={<Download className="w-3.5 h-3.5" />}>{t('common.export')}</Button>
-          <Button onClick={() => navigate('/cases/create')} icon={<FolderPlus className="w-4 h-4" />}>{t('cases.createCase')}</Button>
+          <Button onClick={() => navigate('/requests/create')} icon={<ClipboardPlus className="w-4 h-4" />}>{t('requests.newRequest')}</Button>
         </div>
       </div>
 
@@ -82,10 +78,10 @@ export function CasesPage() {
 
       {filtered.length === 0 ? (
         <EmptyState
-          icon={<FolderOpen className="w-6 h-6" />}
-          title={t('cases.noCases')}
-          description={t('cases.noCasesDesc')}
-          action={<Button onClick={() => navigate('/cases/create')} icon={<FolderPlus className="w-4 h-4" />}>{t('cases.createCase')}</Button>}
+          icon={<ClipboardList className="w-6 h-6" />}
+          title={t('requests.noRequests')}
+          description={t('requests.noRequestsDesc')}
+          action={<Button onClick={() => navigate('/requests/create')} icon={<ClipboardPlus className="w-4 h-4" />}>{t('requests.newRequest')}</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -95,7 +91,7 @@ export function CasesPage() {
             const approved = c.requiredDocuments.filter(d => d.status === 'approved').length
 
             return (
-              <Card key={c.id} hover onClick={() => navigate(`/cases/${c.id}`)}>
+              <Card key={c.id} hover onClick={() => navigate(`/requests/${c.id}`)}>
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div>
@@ -109,7 +105,7 @@ export function CasesPage() {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
-                      <span>{getCaseTypeName(c.caseType)}</span>
+                      <span className="truncate">{c.caseType}</span>
                       <span>{c.assignedOwnerName}</span>
                     </div>
 
@@ -124,7 +120,7 @@ export function CasesPage() {
                     {c.deadline && (
                       <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
                         <Calendar className="w-3 h-3" />
-                        <span>{t('cases.deadline')}: {c.deadline}</span>
+                        <span>{t('cases.deadline')}: {formatDate(c.deadline)}</span>
                       </div>
                     )}
 

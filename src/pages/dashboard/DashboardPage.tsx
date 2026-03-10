@@ -12,7 +12,7 @@ import { getActivities } from '@/services/activityService'
 import { getSupportRequests } from '@/services/supportService'
 import { getDashboardStats } from '@/services/settingsService'
 import {
-  Users, FolderOpen, CheckCircle, AlertTriangle, Clock, FileX, FileCheck,
+  Users, ClipboardList, CheckCircle, AlertTriangle, Clock, FileX, FileCheck,
   MessageCircle, ArrowUpRight, TrendingUp, Eye, Bell,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
@@ -35,13 +35,14 @@ const defaultStats = {
 
 export function DashboardPage() {
   const { t } = useI18n()
-  const { user } = useAuth()
+  const { user, workspace } = useAuth()
   const navigate = useNavigate()
+  const wsId = workspace?.id || user?.workspaceId || ''
 
-  const { data: stats } = useSupabaseData(getDashboardStats, defaultStats)
-  const { data: cases } = useSupabaseData(getCases, [])
-  const { data: activities } = useSupabaseData(() => getActivities(10), [])
-  const { data: supportRequests } = useSupabaseData(getSupportRequests, [])
+  const { data: stats } = useSupabaseData(() => getDashboardStats(wsId), defaultStats, [wsId])
+  const { data: cases } = useSupabaseData(() => getCases(wsId), [], [wsId])
+  const { data: activities } = useSupabaseData(() => getActivities(wsId, 10), [], [wsId])
+  const { data: supportRequests } = useSupabaseData(() => getSupportRequests(wsId), [], [wsId])
 
   // Find clients needing attention (no submission or delayed)
   const attentionClients = cases
@@ -93,7 +94,7 @@ export function DashboardPage() {
 
   const kpiCards = [
     { key: 'totalClients', value: stats.totalClients, icon: Users, color: 'text-primary-600', bg: 'bg-primary-50 dark:bg-primary-900/20' },
-    { key: 'openCases', value: stats.openCases, icon: FolderOpen, color: 'text-info', bg: 'bg-info-light dark:bg-blue-900/20' },
+    { key: 'openCases', value: stats.openCases, icon: ClipboardList, color: 'text-info', bg: 'bg-info-light dark:bg-blue-900/20' },
     { key: 'completedCases', value: stats.completedCases, icon: CheckCircle, color: 'text-success', bg: 'bg-success-light dark:bg-green-900/20' },
     { key: 'delayedCases', value: stats.delayedCases, icon: AlertTriangle, color: 'text-danger', bg: 'bg-danger-light dark:bg-red-900/20' },
     { key: 'noSubmission', value: stats.noSubmissionClients, icon: FileX, color: 'text-surface-500', bg: 'bg-surface-100 dark:bg-surface-800' },
@@ -116,8 +117,8 @@ export function DashboardPage() {
           <Button variant="outline" size="sm" icon={<Bell className="w-3.5 h-3.5" />}>
             {t('cases.sendReminder')}
           </Button>
-          <Button size="sm" onClick={() => navigate('/cases/create')} icon={<FolderOpen className="w-3.5 h-3.5" />}>
-            {t('cases.createCase')}
+          <Button size="sm" onClick={() => navigate('/requests/create')} icon={<ClipboardList className="w-3.5 h-3.5" />}>
+            {t('requests.newRequest')}
           </Button>
         </div>
       </div>
@@ -230,7 +231,7 @@ export function DashboardPage() {
               return (
                 <button
                   key={c.id}
-                  onClick={() => navigate(`/cases/${c.id}`)}
+                  onClick={() => navigate(`/requests/${c.id}`)}
                   className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--bg-secondary)] transition-colors text-left"
                 >
                   <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
@@ -286,7 +287,7 @@ export function DashboardPage() {
                 'document-rejected': AlertTriangle,
                 'support-opened': MessageCircle,
                 'reminder-sent': Bell,
-                'case-opened': FolderOpen,
+                'case-opened': ClipboardList,
                 'case-closed': CheckCircle,
                 'client-created': Users,
                 'note-added': FileCheck,
@@ -324,7 +325,7 @@ export function DashboardPage() {
             {supportRequests.map(sr => (
               <button
                 key={sr.id}
-                onClick={() => navigate(`/cases/${sr.caseId}`)}
+                onClick={() => navigate(`/requests/${sr.caseId}`)}
                 className="w-full flex items-center gap-4 px-5 py-4 hover:bg-[var(--bg-secondary)] transition-colors text-left"
               >
                 <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">

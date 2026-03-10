@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Tabs, useTabState } from '@/components/ui/Tabs'
 import { cn } from '@/lib/utils'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
-import { getCaseTypeConfigs, updateWorkspace, upsertCaseTypeConfig, deleteCaseTypeConfig } from '@/services/settingsService'
+import { updateWorkspace } from '@/services/settingsService'
 import { getDocumentTypes, createDocumentType, updateDocumentType, deleteDocumentType } from '@/services/documentsService'
 import {
   Building, Users, Shield, FileText, Bell, Clock, Link, Palette, Globe, Lock,
@@ -22,15 +22,8 @@ export function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { user, workspace, refreshProfile } = useAuth()
 
-  const { data: allCaseTypeConfigs, refetch: refetchCaseTypes } = useSupabaseData(getCaseTypeConfigs, [])
-  const { data: allDocumentTypes, refetch: refetchDocTypes } = useSupabaseData(getDocumentTypes, [])
-
-  // Case type modal state
-  const [caseTypeModalOpen, setCaseTypeModalOpen] = useState(false)
-  const [editingCaseType, setEditingCaseType] = useState<{ id: string; name: string; nameHe: string; color: string; isActive: boolean } | null>(null)
-  const [caseTypeForm, setCaseTypeForm] = useState({ name: '', color: 'bg-blue-500' })
-  const [caseTypeSaving, setCaseTypeSaving] = useState(false)
-  const [caseTypeError, setCaseTypeError] = useState('')
+  const wsId = workspace?.id || user?.workspaceId || ''
+  const { data: allDocumentTypes, refetch: refetchDocTypes } = useSupabaseData(() => getDocumentTypes(wsId), [], [wsId])
 
   // Document type modal state
   const [docTypeModalOpen, setDocTypeModalOpen] = useState(false)
@@ -39,17 +32,6 @@ export function SettingsPage() {
   const [docTypeSaving, setDocTypeSaving] = useState(false)
   const [docTypeError, setDocTypeError] = useState('')
 
-  const CASE_TYPE_COLORS = [
-    { value: 'bg-blue-500', label: 'Blue' },
-    { value: 'bg-green-500', label: 'Green' },
-    { value: 'bg-purple-500', label: 'Purple' },
-    { value: 'bg-orange-500', label: 'Orange' },
-    { value: 'bg-red-500', label: 'Red' },
-    { value: 'bg-teal-500', label: 'Teal' },
-    { value: 'bg-pink-500', label: 'Pink' },
-    { value: 'bg-indigo-500', label: 'Indigo' },
-  ]
-
   const DOC_CATEGORIES = [
     { value: 'general', label: t('settings.docCatGeneral') },
     { value: 'identity', label: t('settings.docCatIdentity') },
@@ -57,55 +39,6 @@ export function SettingsPage() {
     { value: 'legal', label: t('settings.docCatLegal') },
     { value: 'property', label: t('settings.docCatProperty') },
   ]
-
-  const openAddCaseType = () => {
-    setCaseTypeForm({ name: '', color: 'bg-blue-500' })
-    setEditingCaseType(null)
-    setCaseTypeError('')
-    setCaseTypeModalOpen(true)
-  }
-
-  const openEditCaseType = (ct: { id: string; name: string; nameHe: string; color: string; isActive: boolean }) => {
-    setCaseTypeForm({ name: ct.name, color: ct.color })
-    setEditingCaseType(ct)
-    setCaseTypeError('')
-    setCaseTypeModalOpen(true)
-  }
-
-  const handleSaveCaseType = async () => {
-    if (!caseTypeForm.name.trim()) {
-      setCaseTypeError(t('settings.caseTypeNameRequired'))
-      return
-    }
-    const wsId = workspace?.id || user?.workspaceId || ''
-    if (!wsId) return
-    setCaseTypeSaving(true)
-    setCaseTypeError('')
-    try {
-      const id = editingCaseType?.id || caseTypeForm.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-      await upsertCaseTypeConfig(wsId, {
-        id,
-        name: caseTypeForm.name.trim(),
-        color: caseTypeForm.color,
-        isActive: editingCaseType?.isActive ?? true,
-      })
-      setCaseTypeModalOpen(false)
-      refetchCaseTypes()
-    } catch (err: any) {
-      setCaseTypeError(err?.message || 'Failed to save')
-    } finally {
-      setCaseTypeSaving(false)
-    }
-  }
-
-  const handleDeleteCaseType = async (id: string) => {
-    try {
-      await deleteCaseTypeConfig(id)
-      refetchCaseTypes()
-    } catch (err) {
-      console.error('Failed to delete case type:', err)
-    }
-  }
 
   // Document type handlers
   const openAddDocType = () => {
@@ -214,7 +147,6 @@ export function SettingsPage() {
   const { activeTab, setActiveTab, tabs } = useTabState([
     { id: 'workspace', label: t('settings.workspace') },
     { id: 'staff', label: t('settings.staff') },
-    { id: 'case-types', label: t('settings.caseTypes') },
     { id: 'doc-types', label: t('settings.documentTypes') },
     { id: 'notifications', label: t('settings.notifications') },
     { id: 'appearance', label: t('settings.appearance') },
@@ -251,7 +183,7 @@ export function SettingsPage() {
               >
                 {tab.id === 'workspace' && <Building className="w-4 h-4" />}
                 {tab.id === 'staff' && <Users className="w-4 h-4" />}
-                {tab.id === 'case-types' && <FileText className="w-4 h-4" />}
+                {tab.id === 'doc-types' && <FileText className="w-4 h-4" />}
                 {tab.id === 'notifications' && <Bell className="w-4 h-4" />}
                 {tab.id === 'appearance' && <Palette className="w-4 h-4" />}
                 {tab.id === 'integrations' && <Link className="w-4 h-4" />}
@@ -360,51 +292,6 @@ export function SettingsPage() {
                   </Card>
                 ))}
               </div>
-            </>
-          )}
-
-          {activeTab === 'case-types' && (
-            <>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-[var(--text-tertiary)]">{allCaseTypeConfigs.length} {t('settings.caseTypesConfigured')}</p>
-                <Button onClick={openAddCaseType} icon={<Plus className="w-4 h-4" />} size="sm">{t('settings.addCaseType')}</Button>
-              </div>
-
-              {allCaseTypeConfigs.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FileText className="w-10 h-10 text-[var(--text-tertiary)] mx-auto mb-3" />
-                    <p className="text-sm font-medium mb-1">{t('settings.noCaseTypes')}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] mb-4">{t('settings.noCaseTypesDesc')}</p>
-                    <Button onClick={openAddCaseType} icon={<Plus className="w-4 h-4" />} size="sm">{t('settings.addCaseType')}</Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  {allCaseTypeConfigs.map(ct => (
-                    <Card key={ct.id}>
-                      <div className="flex items-center gap-4 p-4">
-                        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-white', ct.color)}>
-                          <FileText className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{ct.name}</p>
-                          {ct.nameHe && <p className="text-xs text-[var(--text-tertiary)]">{ct.nameHe}</p>}
-                        </div>
-                        <Badge variant="status" status={ct.isActive ? 'approved' : 'missing'} size="sm">
-                          {ct.isActive ? t('common.active') : t('common.inactive')}
-                        </Badge>
-                        <button onClick={() => openEditCaseType(ct)} className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]">
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => handleDeleteCaseType(ct.id)} className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-red-400">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
             </>
           )}
 
@@ -559,52 +446,6 @@ export function SettingsPage() {
           )}
         </div>
       </div>
-
-      {/* Case Type Modal */}
-      <Modal
-        isOpen={caseTypeModalOpen}
-        onClose={() => setCaseTypeModalOpen(false)}
-        title={editingCaseType ? t('settings.editCaseType') : t('settings.addCaseType')}
-        size="sm"
-      >
-        <div className="space-y-5 p-6">
-          {caseTypeError && (
-            <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg text-sm">{caseTypeError}</div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5">{t('settings.caseTypeName')}</label>
-            <Input
-              value={caseTypeForm.name}
-              onChange={(e) => setCaseTypeForm(f => ({ ...f, name: e.target.value }))}
-              placeholder={t('settings.caseTypeNamePlaceholder')}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">{t('settings.color')}</label>
-            <div className="flex flex-wrap gap-2.5">
-              {CASE_TYPE_COLORS.map(c => (
-                <button
-                  key={c.value}
-                  onClick={() => setCaseTypeForm(f => ({ ...f, color: c.value }))}
-                  className={cn(
-                    'w-9 h-9 rounded-xl transition-all',
-                    c.value,
-                    caseTypeForm.color === c.value ? 'ring-2 ring-offset-2 ring-primary-500 scale-110' : 'opacity-60 hover:opacity-100'
-                  )}
-                  title={c.label}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-[var(--border-primary)]">
-            <Button variant="outline" onClick={() => setCaseTypeModalOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={handleSaveCaseType} loading={caseTypeSaving} icon={<Save className="w-4 h-4" />}>{t('common.save')}</Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Document Type Modal */}
       <Modal

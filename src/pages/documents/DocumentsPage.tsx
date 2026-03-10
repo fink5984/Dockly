@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -45,11 +46,13 @@ const statusBg: Record<DocumentStatus, string> = {
 
 export function DocumentsPage() {
   const { t } = useI18n()
+  const { user, workspace } = useAuth()
+  const wsId = workspace?.id || user?.workspaceId || ''
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all')
   const [view, setView] = useState<'grid' | 'table'>('table')
 
-  const { data: allCases } = useSupabaseData(getCases, [])
+  const { data: allCases } = useSupabaseData(() => getCases(wsId), [], [wsId])
 
   // Flatten all documents from all cases
   const allDocs: FlatDocument[] = allCases.flatMap(c =>

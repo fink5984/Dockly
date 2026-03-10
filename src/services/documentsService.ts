@@ -7,10 +7,11 @@ import type { DocumentType, DocumentPreset } from '@/types'
 
 // ---- Document Types ----
 
-export async function getDocumentTypes(): Promise<DocumentType[]> {
+export async function getDocumentTypes(workspaceId: string): Promise<DocumentType[]> {
   const { data, error } = await supabase
     .from('document_types')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .order('sort_order', { ascending: true })
 
   if (error) throw error
@@ -118,10 +119,11 @@ export async function deleteDocumentType(id: string): Promise<void> {
 
 // ---- Document Presets ----
 
-export async function getDocumentPresets(): Promise<DocumentPreset[]> {
+export async function getDocumentPresets(workspaceId: string): Promise<DocumentPreset[]> {
   const { data, error } = await supabase
     .from('document_presets')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

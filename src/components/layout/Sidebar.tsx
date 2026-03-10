@@ -3,15 +3,14 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useApp } from '@/contexts/AppContext'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, Users, FolderOpen, FileText, FileArchive,
+  LayoutDashboard, Users, ClipboardList, FileArchive,
   Activity, MessageCircle, Settings, X, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
 const navItems = [
   { key: 'dashboard', path: '/', icon: LayoutDashboard },
   { key: 'clients', path: '/clients', icon: Users },
-  { key: 'cases', path: '/cases', icon: FolderOpen },
-  { key: 'documents', path: '/documents', icon: FileText },
+  { key: 'requests', path: '/requests', icon: ClipboardList },
   { key: 'documentTypes', path: '/document-types', icon: FileArchive },
   { key: 'activity', path: '/activity', icon: Activity },
   { key: 'whatsapp', path: '/whatsapp', icon: MessageCircle },

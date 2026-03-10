@@ -655,12 +655,108 @@ export interface Database {
         }
         Relationships: []
       }
+      client_upload_tokens: {
+        Row: {
+          id: string
+          workspace_id: string
+          case_id: string
+          client_id: string
+          token: string
+          expires_at: string
+          is_used: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          case_id: string
+          client_id: string
+          token: string
+          expires_at: string
+          is_used?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          case_id?: string
+          client_id?: string
+          token?: string
+          expires_at?: string
+          is_used?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          id: string
+          workspace_id: string
+          case_id: string | null
+          client_id: string | null
+          direction: string
+          phone_number: string
+          message_type: string
+          content: string
+          status: string
+          wa_message_id: string | null
+          template_name: string | null
+          error_message: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          case_id?: string | null
+          client_id?: string | null
+          direction: string
+          phone_number: string
+          message_type: string
+          content: string
+          status?: string
+          wa_message_id?: string | null
+          template_name?: string | null
+          error_message?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          case_id?: string | null
+          client_id?: string | null
+          direction?: string
+          phone_number?: string
+          message_type?: string
+          content?: string
+          status?: string
+          wa_message_id?: string | null
+          template_name?: string | null
+          error_message?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      send_whatsapp_document_request: {
+        Args: {
+          p_workspace_id: string
+          p_case_id: string
+          p_client_id: string
+          p_phone_number: string
+          p_language?: string
+          p_upload_url?: string
+          p_pending_count?: number
+          p_case_title?: string
+        }
+        Returns: Record<string, unknown>
+      }
     }
     Enums: {
       [_ in never]: never

@@ -5,10 +5,11 @@ import { supabase } from '@/lib/supabase'
 import { mapClient } from '@/lib/mappers'
 import type { Client } from '@/types'
 
-export async function getClients(): Promise<Client[]> {
+export async function getClients(workspaceId: string): Promise<Client[]> {
   const { data, error } = await supabase
     .from('clients')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

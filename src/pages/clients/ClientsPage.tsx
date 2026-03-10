@@ -13,10 +13,9 @@ import { cn } from '@/lib/utils'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { getClients, createClient } from '@/services/clientsService'
 import { getCases } from '@/services/casesService'
-import { getCaseTypeConfigs } from '@/services/settingsService'
 import { useAuth } from '@/contexts/AuthContext'
 import {
-  UserPlus, MoreHorizontal, Eye, FolderOpen, Send, FileText,
+  UserPlus, MoreHorizontal, Eye, ClipboardList, Send, FileText,
   CheckCircle, Clock, Users, Filter,
 } from 'lucide-react'
 
@@ -33,14 +32,9 @@ export function ClientsPage() {
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
 
-  const { data: clients, refetch: refetchClients } = useSupabaseData(getClients, [])
-  const { data: cases } = useSupabaseData(getCases, [])
-  const { data: caseTypeConfigs } = useSupabaseData(getCaseTypeConfigs, [])
-
-  const getCaseTypeName = (id: string) => {
-    const cfg = caseTypeConfigs.find(ct => ct.id === id)
-    return cfg ? cfg.name : t(`caseTypes.${id}`)
-  }
+  const wsId = workspace?.id || user?.workspaceId || ''
+  const { data: clients, refetch: refetchClients } = useSupabaseData(() => getClients(wsId), [], [wsId])
+  const { data: cases } = useSupabaseData(() => getCases(wsId), [], [wsId])
 
   // Compute client data with case info
   const clientsWithData = clients.map(client => {
@@ -61,7 +55,6 @@ export function ClientsPage() {
 
     return {
       ...client, latestCase, totalRequired, totalReceived, submissionStatus, hasSupport,
-      caseType: latestCase?.caseType || '',
     }
   })
 
@@ -141,13 +134,12 @@ export function ClientsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border-primary)]">
-                  <th className="text-left text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3">{t('clients.clientName')}</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3 hidden md:table-cell">{t('clients.phone')}</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3 hidden lg:table-cell">{t('clients.caseType')}</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3">{t('clients.progress')}</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3 hidden md:table-cell">{t('clients.status')}</th>
-                  <th className="text-left text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3 hidden xl:table-cell">{t('clients.assignedOwner')}</th>
-                  <th className="text-right text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3">{t('clients.actions')}</th>
+                  <th className="text-start text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3">{t('clients.clientName')}</th>
+                  <th className="text-start text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3 hidden md:table-cell">{t('clients.phone')}</th>
+                  <th className="text-start text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3">{t('clients.progress')}</th>
+                  <th className="text-start text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3 hidden md:table-cell">{t('clients.status')}</th>
+                  <th className="text-start text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3 hidden xl:table-cell">{t('clients.assignedOwner')}</th>
+                  <th className="text-end text-xs font-semibold text-[var(--text-tertiary)] px-5 py-3">{t('clients.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-secondary)]">
@@ -170,11 +162,6 @@ export function ClientsPage() {
                     <td className="px-5 py-3.5 hidden md:table-cell">
                       <span className="text-sm text-[var(--text-secondary)]">{client.phone}</span>
                     </td>
-                    <td className="px-5 py-3.5 hidden lg:table-cell">
-                      {client.caseType && (
-                        <span className="text-sm text-[var(--text-secondary)]">{getCaseTypeName(client.caseType)}</span>
-                      )}
-                    </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2 min-w-[120px]">
                         <ProgressBar value={client.totalReceived} max={client.totalRequired || 1} className="flex-1" />
@@ -193,14 +180,14 @@ export function ClientsPage() {
                     <td className="px-5 py-3.5 hidden xl:table-cell">
                       <span className="text-sm text-[var(--text-secondary)]">{client.assignedOwner}</span>
                     </td>
-                    <td className="px-5 py-3.5 text-right" onClick={e => e.stopPropagation()}>
+                    <td className="px-5 py-3.5 text-end" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => navigate(`/clients/${client.id}`)} className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]" title={t('clients.openClient')}>
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                         {client.latestCase && (
-                          <button onClick={() => navigate(`/cases/${client.latestCase!.id}`)} className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]" title={t('clients.openCase')}>
-                            <FolderOpen className="w-3.5 h-3.5" />
+                          <button onClick={() => navigate(`/requests/${client.latestCase!.id}`)} className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]" title={t('clients.openCase')}>
+                            <ClipboardList className="w-3.5 h-3.5" />
                           </button>
                         )}
                         <button className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)]" title={t('clients.sendReminder')}>
