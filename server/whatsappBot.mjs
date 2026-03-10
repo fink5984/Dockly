@@ -320,8 +320,11 @@ async function handleMediaUpload(phone, mediaId, mimeType, fileName) {
   }
 
   const ext = extFromMime(media.mimeType);
-  const safeName = fileName || `${state.awaiting_document_name || 'document'}_${Date.now()}.${ext}`;
-  const storagePath = `${state.workspace_id}/${state.case_id}/${state.awaiting_document_id}/${safeName}`;
+  // Use UUID-based filename for storage (Supabase doesn't allow Hebrew chars)
+  const safeFileName = `${state.awaiting_document_id}_${Date.now()}.${ext}`;
+  const storagePath = `${state.workspace_id}/${state.case_id}/${state.awaiting_document_id}/${safeFileName}`;
+  // Keep original name for display
+  const displayName = fileName || state.awaiting_document_name || 'document';
 
   try {
     // Upload to Supabase Storage
@@ -342,7 +345,7 @@ async function handleMediaUpload(phone, mediaId, mimeType, fileName) {
     // Update case_documents
     await markDocumentUploaded(
       state.awaiting_document_id,
-      safeName,
+      displayName,
       media.mimeType,
       media.fileSize,
       storagePath,
@@ -353,7 +356,7 @@ async function handleMediaUpload(phone, mediaId, mimeType, fileName) {
     await logWhatsAppMessage(
       state.workspace_id, state.case_id, state.client_id,
       'inbound', phone, 'media',
-      `Uploaded: ${state.awaiting_document_name} (${safeName})`, 'delivered',
+      `Uploaded: ${state.awaiting_document_name} (${safeFileName})`, 'delivered',
       { mediaId, storagePath, docId: state.awaiting_document_id }
     );
 
