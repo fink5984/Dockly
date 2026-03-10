@@ -45,28 +45,48 @@ export async function sendDocumentRequest(
     .eq('id', params.caseId)
     .single()
 
-  // 3. Call the DB function that sends WA interactive button via pg_net
-  const { data, error } = await supabase.rpc('send_whatsapp_document_request', {
-    p_workspace_id: params.workspaceId,
-    p_case_id: params.caseId,
-    p_client_id: params.clientId,
-    p_phone_number: params.phoneNumber,
-    p_language: params.language || 'he',
-    p_upload_url: '',
-    p_pending_count: count ?? 0,
-    p_case_title: caseRow?.case_type || '',
-  })
+  // 3. Call the server endpoint (uses ENV token, not DB)
+  try {
+    const response = await fetch('/api/whatsapp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workspaceId: params.workspaceId,
+        caseId: params.caseId,
+        clientId: params.clientId,
+        phoneNumber: params.phoneNumber,
+        language: params.language || 'he',
+        caseTitle: caseRow?.case_type || '',
+        pendingCount: count ?? 0,
+      }),
+    })
 
-  if (error) throw error
+    if (!response.ok) {
+      const text = await response.text()
+      return {
+        success: false,
+        status: 'failed',
+        pendingDocuments: count ?? 0,
+        error: `Server error: ${response.status} - ${text}`,
+      }
+    }
 
-  const result = data as { success: boolean; messageId?: string; error?: string; status?: string }
+    const result = await response.json()
 
-  return {
-    success: result.success,
-    messageId: result.messageId,
-    status: (result.status as 'sent' | 'pending' | 'failed') || (result.success ? 'sent' : 'failed'),
-    pendingDocuments: count ?? 0,
-    error: result.error,
+    return {
+      success: result.success,
+      messageId: result.messageId,
+      status: result.success ? 'sent' : 'failed',
+      pendingDocuments: count ?? 0,
+      error: result.error,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      status: 'failed',
+      pendingDocuments: count ?? 0,
+      error: err.message || 'Network error',
+    }
   }
 }
 

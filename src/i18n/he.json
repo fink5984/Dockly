@@ -313,6 +313,8 @@
     "preview": "תצוגה מקדימה",
     "rejectionReason": "סיבת דחייה",
     "requestReupload": "בקש העלאה מחדש",
+    "noFile": "ללא קובץ",
+    "notUploaded": "לא הועלה",
     "statusMissing": "חסר",
     "statusPendingUpload": "ממתין להעלאה",
     "statusUploaded": "הועלה",

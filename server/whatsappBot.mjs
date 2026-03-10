@@ -173,6 +173,33 @@ async function markDocumentUploaded(docId, fileName, fileType, fileSize, storage
   `, [docId, fileName, fileType, fileSize, storagePath, `whatsapp:${clientId}`]);
 }
 
+async function updateCaseStatus(caseId) {
+  // Get all documents for this case
+  const { rows } = await pool.query(`
+    SELECT status FROM case_documents WHERE case_id = $1
+  `, [caseId]);
+
+  const total = rows.length;
+  const pending = rows.filter(d => ['missing', 'pending-upload', 'rejected'].includes(d.status)).length;
+  const uploaded = rows.filter(d => ['uploaded', 'under-review'].includes(d.status)).length;
+  const approved = rows.filter(d => d.status === 'approved').length;
+
+  let newStatus;
+  if (approved === total && total > 0) {
+    newStatus = 'completed';
+  } else if (uploaded > 0 && pending === 0) {
+    newStatus = 'awaiting-review';
+  } else if (uploaded > 0 || approved > 0) {
+    newStatus = 'partial-submission';
+  } else {
+    newStatus = 'waiting-for-client';
+  }
+
+  await pool.query(`
+    UPDATE cases SET status = $1, updated_at = NOW() WHERE id = $2
+  `, [newStatus, caseId]);
+}
+
 async function logWhatsAppMessage(workspaceId, caseId, clientId, direction, phone, msgType, content, status, metadata) {
   await pool.query(`
     INSERT INTO whatsapp_messages
@@ -351,6 +378,9 @@ async function handleMediaUpload(phone, mediaId, mimeType, fileName) {
       storagePath,
       state.client_id
     );
+
+    // Update case status based on documents progress
+    await updateCaseStatus(state.case_id);
 
     // Log inbound media
     await logWhatsAppMessage(
@@ -541,6 +571,64 @@ export async function handleIncoming(req, res) {
     }
   } catch (err) {
     console.error('[Webhook] Error processing request:', err);
+  }
+}
+
+// ── Send Initial Message (from frontend) ───────────────────────────────
+
+/**
+ * Send the initial WhatsApp message to a client with a button to view documents.
+ * Called from the frontend via /api/whatsapp/send endpoint.
+ */
+export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneNumber, language, caseTitle, pendingCount }) {
+  try {
+    // Format phone number: remove non-digits, convert Israeli local to international
+    let phone = phoneNumber.replace(/[^0-9]/g, '');
+    // Israeli local numbers: 05x → 9725x
+    if (phone.startsWith('05') && phone.length === 10) {
+      phone = '972' + phone.slice(1);
+    } else if (phone.startsWith('00')) {
+      phone = phone.slice(2);
+    }
+
+    // Build message text
+    const isHebrew = language === 'he';
+    const bodyText = isHebrew
+      ? `שלום! 👋\n\nיש מסמכים שצריך להעלות עבור התיק: *${caseTitle}*\n📄 מספר מסמכים להעלאה: *${pendingCount}*\n\nלחץ על הכפתור למטה כדי לראות את רשימת המסמכים ולהעלות אותם ישירות כאן בוואטסאפ.`
+      : `Hello! 👋\n\nThere are documents to upload for case: *${caseTitle}*\n📄 Documents to upload: *${pendingCount}*\n\nClick the button below to see the document list and upload them directly here in WhatsApp.`;
+
+    const buttonTitle = isHebrew ? 'הצג מסמכים' : 'Show Documents';
+
+    // Send interactive button message
+    const result = await sendInteractiveButtons(phone, bodyText, [
+      {
+        type: 'reply',
+        reply: {
+          id: `show_docs_${caseId}`,
+          title: buttonTitle,
+        },
+      },
+    ]);
+
+    // Set conversation state
+    await setConversationState(phone, caseId, clientId, workspaceId, null, null);
+
+    // Log outbound message
+    await logWhatsAppMessage(
+      workspaceId, caseId, clientId,
+      'outbound', phone, 'interactive_button',
+      `Initial message sent for ${caseTitle}`, 'sent',
+      { pendingCount, language }
+    );
+
+    return {
+      success: !result.error,
+      messageId: result.messages?.[0]?.id,
+      error: result.error?.message,
+    };
+  } catch (err) {
+    console.error('[Bot] sendInitialMessage error:', err);
+    return { success: false, error: err.message };
   }
 }
 

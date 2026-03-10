@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
-import { useSupabaseData } from '@/hooks/useSupabaseData'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { getClients, createClient } from '@/services/clientsService'
 import { getCases } from '@/services/casesService'
 import { useAuth } from '@/contexts/AuthContext'
@@ -33,8 +33,18 @@ export function ClientsPage() {
   const [createError, setCreateError] = useState('')
 
   const wsId = workspace?.id || user?.workspaceId || ''
-  const { data: clients, refetch: refetchClients } = useSupabaseData(() => getClients(wsId), [], [wsId])
-  const { data: cases } = useSupabaseData(() => getCases(wsId), [], [wsId])
+  const { data: clients, refetch: refetchClients } = useRealtimeData(
+    () => getClients(wsId),
+    [],
+    [wsId],
+    { tables: ['clients'] }
+  )
+  const { data: cases } = useRealtimeData(
+    () => getCases(wsId),
+    [],
+    [wsId],
+    { tables: ['cases', 'case_documents'] }
+  )
 
   // Compute client data with case info
   const clientsWithData = clients.map(client => {

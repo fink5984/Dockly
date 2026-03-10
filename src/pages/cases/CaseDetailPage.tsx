@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { cn, formatFileSize, getStatusColor, getDocStatusKey, formatDate } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
-import { useSupabaseData } from '@/hooks/useSupabaseData'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { getCases } from '@/services/casesService'
 import { getActivities } from '@/services/activityService'
 import { getSupportRequests } from '@/services/supportService'
@@ -72,17 +72,38 @@ export function CaseDetailPage() {
   const { user, workspace } = useAuth()
   const wsId = workspace?.id || user?.workspaceId || ''
 
-  const { data: allCases } = useSupabaseData(() => getCases(wsId), [], [wsId])
-  const { data: allActivities } = useSupabaseData(() => getActivities(wsId), [], [wsId])
-  const { data: allSupportRequests } = useSupabaseData(() => getSupportRequests(wsId), [], [wsId])
-  const { data: allDocumentTypes } = useSupabaseData(() => getDocumentTypes(wsId), [], [wsId])
+  const { data: allCases } = useRealtimeData(
+    () => getCases(wsId),
+    [],
+    [wsId],
+    { tables: ['cases', 'case_documents'] }
+  )
+  const { data: allActivities } = useRealtimeData(
+    () => getActivities(wsId),
+    [],
+    [wsId],
+    { tables: ['activity_log'] }
+  )
+  const { data: allSupportRequests } = useRealtimeData(
+    () => getSupportRequests(wsId),
+    [],
+    [wsId],
+    { tables: ['support_requests'] }
+  )
+  const { data: allDocumentTypes } = useRealtimeData(
+    () => getDocumentTypes(wsId),
+    [],
+    [wsId],
+    { tables: ['document_types'] }
+  )
 
   // Fetch client data for WhatsApp
   const caseForClient = allCases.find(c => c.id === id)
-  const { data: clientData } = useSupabaseData(
+  const { data: clientData } = useRealtimeData(
     () => caseForClient?.clientId ? getClientById(caseForClient.clientId) : Promise.resolve(null),
     null,
-    [caseForClient?.clientId]
+    [caseForClient?.clientId],
+    { tables: ['clients'] }
   )
 
   const caseData = caseForClient
@@ -271,112 +292,228 @@ export function CaseDetailPage() {
         </div>
       )}
 
-      {/* Documents tab */}
+      {/* Documents tab - Grid view with previews */}
       {activeTab === 'documents' && (
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {caseData.requiredDocuments.map(doc => {
             const StatusIcon = statusIcons[doc.status]
-            const isExpanded = expandedDoc === doc.documentTypeId
             const docType = allDocumentTypes.find(dt => dt.id === doc.documentTypeId)
+            const hasFile = !!doc.storagePath
+            const isImage = doc.fileType?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(doc.fileType?.toLowerCase() || '')
+            const isPdf = doc.fileType === 'application/pdf' || doc.fileType?.toLowerCase() === 'pdf'
 
             return (
-              <Card key={doc.documentTypeId}>
-                <button
-                  onClick={() => setExpandedDoc(isExpanded ? null : doc.documentTypeId)}
-                  className="w-full text-start p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <StatusIcon className={cn('w-5 h-5 shrink-0', statusColors[doc.status])} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{doc.documentTypeName}</p>
-                        {doc.fileName && (
-                          <p className="text-xs text-[var(--text-tertiary)] truncate">{doc.fileName} {doc.fileSize ? `(${formatFileSize(doc.fileSize)})` : ''}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="status" status={doc.status} size="sm">
-                        {t(getDocStatusKey(doc.status))}
-                      </Badge>
-                      <ChevronDown className={cn('w-4 h-4 transition-transform text-[var(--text-tertiary)]', isExpanded && 'rotate-180')} />
-                    </div>
+              <Card
+                key={doc.documentTypeId}
+                hover
+                onClick={() => setExpandedDoc(expandedDoc === doc.documentTypeId ? null : doc.documentTypeId)}
+                className="overflow-hidden cursor-pointer"
+              >
+                {/* Preview area */}
+                <div className="relative aspect-[4/3] bg-[var(--bg-tertiary)] flex items-center justify-center overflow-hidden">
+                  {hasFile && isImage ? (
+                    <img
+                      src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`}
+                      alt={doc.documentTypeName}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                      }}
+                    />
+                  ) : null}
+                  <div className={cn(
+                    'flex flex-col items-center justify-center text-[var(--text-tertiary)]',
+                    hasFile && isImage && 'hidden'
+                  )}>
+                    {hasFile && isPdf ? (
+                      <>
+                        <FileText className="w-10 h-10 mb-1 text-red-400" />
+                        <span className="text-[10px] uppercase font-medium">PDF</span>
+                      </>
+                    ) : hasFile ? (
+                      <>
+                        <FileText className="w-10 h-10 mb-1" />
+                        <span className="text-[10px] uppercase font-medium">{doc.fileType?.split('/').pop() || '?'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-10 h-10 mb-1 opacity-50" />
+                        <span className="text-[10px]">{t('documents.noFile')}</span>
+                      </>
+                    )}
                   </div>
-                </button>
-
-                {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-[var(--border-primary)]">
-                    <div className="pt-3 space-y-3">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {doc.uploadedAt && (
-                          <div>
-                            <p className="text-[10px] uppercase text-[var(--text-tertiary)] tracking-wider">{t('documents.uploadedAt')}</p>
-                            <p className="text-xs font-medium mt-0.5">{doc.uploadedAt}</p>
-                          </div>
-                        )}
-                        {doc.reviewedAt && (
-                          <div>
-                            <p className="text-[10px] uppercase text-[var(--text-tertiary)] tracking-wider">{t('documents.reviewedAt')}</p>
-                            <p className="text-xs font-medium mt-0.5">{doc.reviewedAt}</p>
-                          </div>
-                        )}
-                        {doc.reviewedByName && (
-                          <div>
-                            <p className="text-[10px] uppercase text-[var(--text-tertiary)] tracking-wider">{t('documents.reviewedBy')}</p>
-                            <p className="text-xs font-medium mt-0.5">{doc.reviewedByName}</p>
-                          </div>
-                        )}
-                        {doc.fileType && (
-                          <div>
-                            <p className="text-[10px] uppercase text-[var(--text-tertiary)] tracking-wider">{t('documents.fileType')}</p>
-                            <p className="text-xs font-medium mt-0.5 uppercase">{doc.fileType}</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {doc.rejectionReason && (
-                        <div className="p-2.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                          <p className="text-xs font-medium text-red-700 dark:text-red-400">{t('documents.rejectionReason')}</p>
-                          <p className="text-xs text-red-600 dark:text-red-300 mt-0.5">{doc.rejectionReason}</p>
-                        </div>
-                      )}
-
-                      {doc.notes && (
-                        <div className="p-2.5 bg-[var(--bg-tertiary)] rounded-lg">
-                          <p className="text-xs font-medium text-[var(--text-secondary)]">{t('documents.notes')}</p>
-                          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{doc.notes}</p>
-                        </div>
-                      )}
-
-                      {docType?.description && (
-                        <p className="text-xs text-[var(--text-tertiary)] italic">{docType.description}</p>
-                      )}
-
-                      <div className="flex gap-2 flex-wrap">
-                        {['uploaded', 'under-review'].includes(doc.status) && (
-                          <>
-                            <Button size="sm" icon={<CheckCircle2 className="w-3.5 h-3.5" />}>{t('documents.approve')}</Button>
-                            <Button variant="danger" size="sm" icon={<XCircle className="w-3.5 h-3.5" />}>{t('documents.reject')}</Button>
-                          </>
-                        )}
-                        {doc.fileName && (
-                          <>
-                            <Button variant="outline" size="sm" icon={<Eye className="w-3.5 h-3.5" />}>{t('documents.preview')}</Button>
-                            <Button variant="outline" size="sm" icon={<Download className="w-3.5 h-3.5" />}>{t('common.download')}</Button>
-                          </>
-                        )}
-                        {doc.status === 'rejected' && (
-                          <Button variant="outline" size="sm" icon={<RotateCcw className="w-3.5 h-3.5" />}>{t('documents.requestReupload')}</Button>
-                        )}
-                      </div>
-                    </div>
+                  
+                  {/* Status badge overlay */}
+                  <div className="absolute top-2 end-2">
+                    <Badge variant="status" status={doc.status} size="sm">
+                      {t(getDocStatusKey(doc.status))}
+                    </Badge>
                   </div>
-                )}
+                </div>
+
+                {/* Document info */}
+                <div className="p-3">
+                  <p className="text-sm font-medium truncate" title={doc.documentTypeName}>
+                    {doc.documentTypeName}
+                  </p>
+                  {doc.fileName ? (
+                    <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">
+                      {doc.fileName}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+                      {t('documents.notUploaded')}
+                    </p>
+                  )}
+                  {doc.uploadedAt && (
+                    <p className="text-[10px] text-[var(--text-tertiary)] mt-1">
+                      {formatDate(doc.uploadedAt)}
+                    </p>
+                  )}
+                </div>
               </Card>
             )
           })}
         </div>
       )}
+
+      {/* Document Detail Modal */}
+      <Modal
+        isOpen={!!expandedDoc}
+        onClose={() => setExpandedDoc(null)}
+        title={caseData.requiredDocuments.find(d => d.documentTypeId === expandedDoc)?.documentTypeName || ''}
+        size="lg"
+      >
+        {(() => {
+          const doc = caseData.requiredDocuments.find(d => d.documentTypeId === expandedDoc)
+          if (!doc) return null
+          const StatusIcon = statusIcons[doc.status]
+          const docType = allDocumentTypes.find(dt => dt.id === doc.documentTypeId)
+          const hasFile = !!doc.storagePath
+          const isImage = doc.fileType?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(doc.fileType?.toLowerCase() || '')
+
+          return (
+            <div className="space-y-4">
+              {/* Large preview */}
+              {hasFile && (
+                <div className="relative aspect-video bg-[var(--bg-tertiary)] rounded-lg overflow-hidden flex items-center justify-center">
+                  {isImage ? (
+                    <img
+                      src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`}
+                      alt={doc.documentTypeName}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center text-[var(--text-tertiary)]">
+                      <FileText className="w-16 h-16 mb-2" />
+                      <span className="text-sm uppercase">{doc.fileType?.split('/').pop() || 'File'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <StatusIcon className={cn('w-5 h-5', statusColors[doc.status])} />
+                <Badge variant="status" status={doc.status}>
+                  {t(getDocStatusKey(doc.status))}
+                </Badge>
+                {doc.fileSize && (
+                  <span className="text-xs text-[var(--text-tertiary)]">
+                    {formatFileSize(doc.fileSize)}
+                  </span>
+                )}
+              </div>
+
+              {/* Details grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {doc.uploadedAt && (
+                  <div>
+                    <p className="text-[10px] uppercase text-[var(--text-tertiary)] tracking-wider">{t('documents.uploadedAt')}</p>
+                    <p className="text-sm font-medium mt-0.5">{formatDate(doc.uploadedAt)}</p>
+                  </div>
+                )}
+                {doc.reviewedAt && (
+                  <div>
+                    <p className="text-[10px] uppercase text-[var(--text-tertiary)] tracking-wider">{t('documents.reviewedAt')}</p>
+                    <p className="text-sm font-medium mt-0.5">{formatDate(doc.reviewedAt)}</p>
+                  </div>
+                )}
+                {doc.reviewedByName && (
+                  <div>
+                    <p className="text-[10px] uppercase text-[var(--text-tertiary)] tracking-wider">{t('documents.reviewedBy')}</p>
+                    <p className="text-sm font-medium mt-0.5">{doc.reviewedByName}</p>
+                  </div>
+                )}
+                {doc.fileType && (
+                  <div>
+                    <p className="text-[10px] uppercase text-[var(--text-tertiary)] tracking-wider">{t('documents.fileType')}</p>
+                    <p className="text-sm font-medium mt-0.5 uppercase">{doc.fileType}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Rejection reason */}
+              {doc.rejectionReason && (
+                <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-xs font-medium text-red-700 dark:text-red-400">{t('documents.rejectionReason')}</p>
+                  <p className="text-sm text-red-600 dark:text-red-300 mt-1">{doc.rejectionReason}</p>
+                </div>
+              )}
+
+              {/* Notes */}
+              {doc.notes && (
+                <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
+                  <p className="text-xs font-medium text-[var(--text-secondary)]">{t('documents.notes')}</p>
+                  <p className="text-sm text-[var(--text-tertiary)] mt-1">{doc.notes}</p>
+                </div>
+              )}
+
+              {/* Description */}
+              {docType?.description && (
+                <p className="text-sm text-[var(--text-tertiary)] italic">{docType.description}</p>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 flex-wrap pt-2 border-t border-[var(--border-primary)]">
+                {['uploaded', 'under-review'].includes(doc.status) && (
+                  <>
+                    <Button icon={<CheckCircle2 className="w-4 h-4" />}>{t('documents.approve')}</Button>
+                    <Button variant="danger" icon={<XCircle className="w-4 h-4" />}>{t('documents.reject')}</Button>
+                  </>
+                )}
+                {doc.storagePath && (
+                  <>
+                    <Button
+                      variant="outline"
+                      icon={<Eye className="w-4 h-4" />}
+                      onClick={() => window.open(`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`, '_blank')}
+                    >
+                      {t('documents.preview')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      icon={<Download className="w-4 h-4" />}
+                      onClick={() => {
+                        const link = document.createElement('a')
+                        link.href = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`
+                        link.download = doc.fileName || 'document'
+                        link.click()
+                      }}
+                    >
+                      {t('common.download')}
+                    </Button>
+                  </>
+                )}
+                {doc.status === 'rejected' && (
+                  <Button variant="outline" icon={<RotateCcw className="w-4 h-4" />}>{t('documents.requestReupload')}</Button>
+                )}
+              </div>
+            </div>
+          )
+        })()}
+      </Modal>
 
       {/* Activity tab */}
       {activeTab === 'activity' && (

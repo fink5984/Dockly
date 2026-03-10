@@ -9,7 +9,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar'
 import { SearchInput } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { cn, formatDate } from '@/lib/utils'
-import { useSupabaseData } from '@/hooks/useSupabaseData'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { getCases } from '@/services/casesService'
 import { ClipboardPlus, ClipboardList, Calendar, Eye, Download, Filter } from 'lucide-react'
 import type { CaseStatus } from '@/types'
@@ -24,7 +24,12 @@ export function CasesPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<CaseFilter>('all')
 
-  const { data: allCases } = useSupabaseData(() => getCases(wsId), [], [wsId])
+  const { data: allCases } = useRealtimeData(
+    () => getCases(wsId),
+    [],
+    [wsId],
+    { tables: ['cases', 'case_documents'] }
+  )
 
   const filtered = allCases.filter(c => {
     if (search && !c.clientName.toLowerCase().includes(search.toLowerCase()) && !c.id.includes(search)) return false
@@ -86,8 +91,9 @@ export function CasesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(c => {
-            const submitted = c.requiredDocuments.filter(d => d.status !== 'missing').length
             const total = c.requiredDocuments.length
+            // Count documents that are not missing/pending - i.e., have been uploaded
+            const uploaded = c.requiredDocuments.filter(d => !['missing', 'pending-upload'].includes(d.status)).length
             const approved = c.requiredDocuments.filter(d => d.status === 'approved').length
 
             return (
@@ -112,9 +118,9 @@ export function CasesPage() {
                     <div>
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-[var(--text-tertiary)]">{t('cases.completion')}</span>
-                        <span className="font-medium tabular-nums">{approved}/{total}</span>
+                        <span className="font-medium tabular-nums">{uploaded}/{total}</span>
                       </div>
-                      <ProgressBar value={approved} max={total} />
+                      <ProgressBar value={uploaded} max={total} />
                     </div>
 
                     {c.deadline && (

@@ -9,7 +9,7 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { handleVerification, handleIncoming, shutdown } from './whatsappBot.mjs';
+import { handleVerification, handleIncoming, sendInitialMessage, shutdown } from './whatsappBot.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -28,6 +28,32 @@ app.get('/api/health', (_req, res) => {
 // ── WhatsApp Webhook ────────────────────────────────────────────────────
 app.get('/api/whatsapp/webhook', handleVerification);
 app.post('/api/whatsapp/webhook', handleIncoming);
+
+// ── WhatsApp Send Initial Message (from frontend) ──────────────────────
+app.post('/api/whatsapp/send', async (req, res) => {
+  try {
+    const { workspaceId, caseId, clientId, phoneNumber, language, caseTitle, pendingCount } = req.body;
+    
+    if (!phoneNumber || !caseId || !workspaceId || !clientId) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    const result = await sendInitialMessage({
+      workspaceId,
+      caseId,
+      clientId,
+      phoneNumber,
+      language: language || 'he',
+      caseTitle: caseTitle || '',
+      pendingCount: pendingCount || 0,
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('[API] Send WhatsApp error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // ── Serve Static Files (Vite build output) ──────────────────────────────
 const distPath = join(__dirname, '..', 'dist');

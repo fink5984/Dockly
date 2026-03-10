@@ -10,4 +10,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://dockly-production-8797.up.railway.app',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 })

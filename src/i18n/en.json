@@ -313,6 +313,8 @@
     "preview": "Preview",
     "rejectionReason": "Rejection Reason",
     "requestReupload": "Request Re-upload",
+    "noFile": "No file",
+    "notUploaded": "Not uploaded",
     "statusMissing": "Missing",
     "statusPendingUpload": "Pending Upload",
     "statusUploaded": "Uploaded",
