@@ -115,12 +115,12 @@ export function CasesPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-xs font-mono text-[var(--text-tertiary)]">{c.id}</p>
+                        <p className="text-sm font-semibold">{c.clientName}</p>
                         {unreadSupportMessages > 0 && (
                           <div className="w-2 h-2 rounded-full bg-red-500 shadow-md" />
                         )}
                       </div>
-                      <p className="text-sm font-semibold mt-0.5">{c.clientName}</p>
+                      <p className="text-xs text-[var(--text-secondary)] mt-0.5">{c.caseType}</p>
                     </div>
                     <Badge variant="status" status={c.status}>
                       {t(`cases.${c.status === 'waiting-for-client' ? 'waitingForClient' : c.status === 'partial-submission' ? 'partialSubmission' : c.status}`)}
@@ -128,9 +128,9 @@ export function CasesPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
-                      <span className="truncate">{c.caseType}</span>
-                      <span>{c.assignedOwnerName}</span>
+                    <div className="flex items-center text-xs text-[var(--text-tertiary)]">
+                      <Calendar className="w-3 h-3 me-1" />
+                      <span>{formatDate(c.createdAt)}</span>
                     </div>
 
                     <div>
@@ -140,13 +140,6 @@ export function CasesPage() {
                       </div>
                       <ProgressBar value={uploaded} max={total} />
                     </div>
-
-                    {c.deadline && (
-                      <div className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
-                        <Calendar className="w-3 h-3" />
-                        <span>{t('cases.deadline')}: {formatDate(c.deadline)}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </Card>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   getCaseByPublicToken,
@@ -9,9 +9,9 @@ import {
   type PublicDocument,
 } from '@/services/publicPortalService'
 import {
-  Upload, CheckCircle2, XCircle, Clock, FileText, AlertTriangle,
-  Loader2, Shield, ArrowUpCircle, Camera, File, Eye, RefreshCw,
-  ChevronDown, ChevronUp, Image, FileIcon,
+  CheckCircle2, FileText, AlertTriangle,
+  Loader2, Shield, UploadCloud, Eye, RefreshCw,
+  X, XCircle, ChevronLeft, ChevronRight, Download,
 } from 'lucide-react'
 
 type PortalState = 'loading' | 'valid' | 'not-found'
@@ -25,8 +25,9 @@ export function PublicCasePortal() {
   const [justUploaded, setJustUploaded] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({})
-  const [expandedPreview, setExpandedPreview] = useState<string | null>(null)
+  const [lightboxDoc, setLightboxDoc] = useState<string | null>(null)
   const [loadingPreviews, setLoadingPreviews] = useState(false)
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   // Detect language from browser
   const isHebrew = navigator.language.startsWith('he')
@@ -35,78 +36,64 @@ export function PublicCasePortal() {
   const t = useCallback((key: string) => {
     const translations: Record<string, Record<string, string>> = {
       en: {
-        title: 'Document Upload Portal',
-        subtitle: 'Upload your required documents securely',
-        caseLabel: 'Case',
+        overallProgress: 'Overall Progress',
+        uploaded: 'Uploaded',
+        missingLabel: 'Missing',
+        documentCenter: 'Document Center',
         notFound: 'Page not found',
         notFoundDesc: 'This link is not valid. Please check the link or contact your service provider.',
-        required: 'Required',
-        optional: 'Optional',
-        upload: 'Upload',
+        statusMissing: 'Missing',
+        statusUploaded: 'Uploaded',
+        statusApproved: 'Approved',
+        statusRejected: 'Rejected',
+        statusReview: 'In Review',
+        noFile: 'No file',
+        notUploaded: 'Not uploaded',
         uploading: 'Uploading...',
-        uploaded: 'Uploaded',
-        approved: 'Approved',
-        rejected: 'Needs Re-upload',
-        underReview: 'Under Review',
-        pending: 'Pending',
-        missing: 'Missing',
-        dragDrop: 'Drag & drop or click to upload',
-        maxSize: 'Max file size',
-        formats: 'Accepted formats',
         secureUpload: 'Your files are encrypted and securely stored',
         poweredBy: 'Powered by Dockly',
-        remaining: 'documents remaining',
-        allUploaded: 'All documents uploaded',
-        takePhoto: 'Take Photo',
-        chooseFile: 'Choose File',
+        allUploaded: 'All documents uploaded!',
+        allUploadedDesc: 'Thank you! All required documents have been uploaded successfully.',
         errorSize: 'File too large. Maximum size is',
-        errorFormat: 'Invalid file format. Accepted formats:',
+        errorFormat: 'Invalid file format. Accepted:',
         errorUpload: 'Upload failed. Please try again.',
         preview: 'Preview',
-        hidePreview: 'Hide Preview',
-        uploadedOn: 'Uploaded on',
-        progress: 'Progress',
-        reupload: 'Upload Again',
-        completed: 'Completed',
-        refreshStatus: 'Refresh',
-        fileDetails: 'File details',
+        download: 'Download',
+        close: 'Close',
+        uploadFile: 'Upload file',
+        reupload: 'Re-upload',
+        rejectedMsg: 'Rejected — please re-upload',
+        clickToUpload: 'Click to upload',
       },
       he: {
-        title: 'פורטל העלאת מסמכים',
-        subtitle: 'העלה את המסמכים הנדרשים בצורה מאובטחת',
-        caseLabel: 'תיק',
+        overallProgress: 'התקדמות כללית',
+        uploaded: 'הועלה',
+        missingLabel: 'חסר',
+        documentCenter: 'מרכז מסמכים',
         notFound: 'עמוד לא נמצא',
         notFoundDesc: 'קישור זה אינו תקף. אנא בדוק את הקישור או פנה לספק השירות.',
-        required: 'חובה',
-        optional: 'אופציונלי',
-        upload: 'העלאה',
+        statusMissing: 'חסר',
+        statusUploaded: 'הועלה',
+        statusApproved: 'אושר',
+        statusRejected: 'נדחה',
+        statusReview: 'בבדיקה',
+        noFile: 'ללא קובץ',
+        notUploaded: 'לא הועלה',
         uploading: 'מעלה...',
-        uploaded: 'הועלה',
-        approved: 'אושר',
-        rejected: 'דורש העלאה מחדש',
-        underReview: 'בבדיקה',
-        pending: 'ממתין',
-        missing: 'חסר',
-        dragDrop: 'גרור ושחרר או לחץ להעלאה',
-        maxSize: 'גודל קובץ מקסימלי',
-        formats: 'פורמטים מקובלים',
         secureUpload: 'הקבצים שלך מוצפנים ומאוחסנים בצורה מאובטחת',
         poweredBy: 'מופעל על ידי Dockly',
-        remaining: 'מסמכים נותרו',
-        allUploaded: 'כל המסמכים הועלו',
-        takePhoto: 'צלם תמונה',
-        chooseFile: 'בחר קובץ',
-        errorSize: 'הקובץ גדול מדי. גודל מקסימלי הוא',
-        errorFormat: 'פורמט קובץ לא תקין. פורמטים מקובלים:',
+        allUploaded: 'כל המסמכים הועלו!',
+        allUploadedDesc: 'תודה! כל המסמכים הנדרשים הועלו בהצלחה.',
+        errorSize: 'הקובץ גדול מדי. גודל מקסימלי',
+        errorFormat: 'פורמט לא תקין. מותר:',
         errorUpload: 'ההעלאה נכשלה. נסה שוב.',
         preview: 'תצוגה מקדימה',
-        hidePreview: 'הסתר תצוגה מקדימה',
-        uploadedOn: 'הועלה בתאריך',
-        progress: 'התקדמות',
-        reupload: 'העלה שוב',
-        completed: 'הושלם',
-        refreshStatus: 'רענן',
-        fileDetails: 'פרטי קובץ',
+        download: 'הורדה',
+        close: 'סגור',
+        uploadFile: 'העלה קובץ',
+        reupload: 'העלה מחדש',
+        rejectedMsg: 'נדחה — יש להעלות מחדש',
+        clickToUpload: 'לחץ להעלאה',
       },
     }
     return translations[isHebrew ? 'he' : 'en'][key] || key
@@ -229,50 +216,44 @@ export function PublicCasePortal() {
   const pendingCount = documents.filter(d => needsUpload(d) && !justUploaded[d.id]).length
   const totalCount = documents.length
   const doneCount = totalCount - pendingCount
+  const progressPercent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
 
-  const getStatusBadge = (doc: PublicDocument) => {
-    if (justUploaded[doc.id] || doc.status === 'uploaded' || doc.status === 'received') {
-      return { label: t('uploaded'), bg: 'bg-blue-100 text-blue-700', icon: CheckCircle2 }
-    }
-    if (doc.status === 'approved') {
-      return { label: t('approved'), bg: 'bg-green-100 text-green-700', icon: CheckCircle2 }
-    }
-    if (doc.status === 'under-review') {
-      return { label: t('underReview'), bg: 'bg-indigo-100 text-indigo-700', icon: Eye }
-    }
-    if (doc.status === 'rejected' || doc.status === 'blurry' || doc.status === 'missing-pages') {
-      return { label: t('rejected'), bg: 'bg-red-100 text-red-700', icon: AlertTriangle }
-    }
-    return { label: doc.isRequired ? t('required') : t('optional'), bg: doc.isRequired ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600', icon: null }
+  const getStatusLabel = (doc: PublicDocument) => {
+    if (justUploaded[doc.id] || doc.status === 'uploaded' || doc.status === 'received') return t('statusUploaded')
+    if (doc.status === 'approved') return t('statusApproved')
+    if (doc.status === 'under-review') return t('statusReview')
+    if (doc.status === 'rejected' || doc.status === 'blurry' || doc.status === 'missing-pages') return t('statusRejected')
+    return t('statusMissing')
   }
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  const getStatusColor = (doc: PublicDocument) => {
+    if (justUploaded[doc.id] || doc.status === 'uploaded' || doc.status === 'received') return 'bg-blue-100 text-blue-700'
+    if (doc.status === 'approved') return 'bg-green-100 text-green-700'
+    if (doc.status === 'under-review') return 'bg-indigo-100 text-indigo-700'
+    if (doc.status === 'rejected' || doc.status === 'blurry' || doc.status === 'missing-pages') return 'bg-red-100 text-red-700'
+    return 'bg-gray-100 text-gray-500'
   }
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr)
     return d.toLocaleDateString(isHebrew ? 'he-IL' : 'en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+      year: 'numeric', month: '2-digit', day: '2-digit',
     })
   }
 
-  const isPreviewableImage = (fileType?: string) =>
-    fileType?.startsWith('image/')
+  const isPreviewableImage = (fileType?: string) => fileType?.startsWith('image/')
+  const isPreviewablePdf = (fileType?: string) => fileType === 'application/pdf'
 
-  const isPreviewablePdf = (fileType?: string) =>
-    fileType === 'application/pdf'
+  // Lightbox navigation
+  const lightboxDocObj = documents.find(d => d.id === lightboxDoc)
 
   // ---- LOADING ----
   if (state === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50" dir={dir}>
+      <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8]" dir={dir}>
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">{isHebrew ? 'טוען...' : 'Loading...'}</p>
+          <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mb-4" />
+          <p className="text-gray-400 text-sm">{isHebrew ? 'טוען...' : 'Loading...'}</p>
         </div>
       </div>
     )
@@ -281,13 +262,13 @@ export function PublicCasePortal() {
   // ---- NOT FOUND ----
   if (state === 'not-found') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 p-4" dir={dir}>
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4" dir={dir}>
+        <div className="max-w-sm w-full bg-white rounded-2xl shadow-xl p-10 text-center">
+          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
             <XCircle className="w-8 h-8 text-red-500" />
           </div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">{t('notFound')}</h1>
-          <p className="text-gray-500 text-sm">{t('notFoundDesc')}</p>
+          <p className="text-gray-500 text-sm leading-relaxed">{t('notFoundDesc')}</p>
         </div>
       </div>
     )
@@ -295,283 +276,341 @@ export function PublicCasePortal() {
 
   // ---- MAIN PORTAL ----
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50" dir={dir}>
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-5">
+    <div className="min-h-screen bg-[#f0f4f8]" dir={dir}>
+      {/* ── Top Header Bar ── */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {caseInfo?.workspaceLogo ? (
-              <img src={caseInfo.workspaceLogo} alt="" className="w-10 h-10 rounded-xl object-cover" />
+              <img src={caseInfo.workspaceLogo} alt="" className="w-9 h-9 rounded-lg object-cover" />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <FileText className="w-4.5 h-4.5 text-white" />
               </div>
             )}
             <div>
-              <h1 className="text-lg font-bold text-gray-900">{caseInfo?.workspaceName}</h1>
-              <p className="text-xs text-gray-500">
-                {t('caseLabel')}: {caseInfo?.caseType}
-              </p>
+              <h1 className="text-base font-bold text-gray-900">{caseInfo?.workspaceName}</h1>
+              <p className="text-xs text-gray-400">{caseInfo?.caseType} • {caseInfo?.clientName}</p>
             </div>
           </div>
-          {caseInfo?.clientName && (
-            <p className="text-sm text-gray-600 mt-3">
-              {isHebrew ? `שלום ${caseInfo.clientName}` : `Hello ${caseInfo.clientName}`} 👋
-            </p>
-          )}
-          <p className="text-sm text-gray-500 mt-1">{t('subtitle')}</p>
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-            <span className="font-medium">
-              {t('progress')}: {doneCount} / {totalCount}
-            </span>
-            <div className="flex items-center gap-2">
-              <span>
-                {pendingCount > 0
-                  ? `${pendingCount} ${t('remaining')}`
-                  : t('allUploaded')}
-              </span>
-              <button
-                onClick={loadData}
-                className="p-1 rounded hover:bg-gray-100 transition-colors"
-                title={t('refreshStatus')}
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-gray-400" />
-              </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadData}
+              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              title={isHebrew ? 'רענן' : 'Refresh'}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <Shield className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t('secureUpload')}</span>
             </div>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className={`h-2.5 rounded-full transition-all duration-500 ${
-                pendingCount === 0 ? 'bg-green-500' : 'bg-blue-500'
-              }`}
-              style={{ width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%` }}
-            />
           </div>
         </div>
       </div>
 
-      {/* All done banner */}
-      {pendingCount === 0 && totalCount > 0 && (
-        <div className="max-w-2xl mx-auto px-4 mt-4">
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
+      <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
+
+        {/* ── Progress Card ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-sm font-semibold text-gray-800">{t('overallProgress')}</span>
+                <span className="text-2xl font-bold text-gray-900 tabular-nums">{progressPercent}%</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2.5">
+                <div
+                  className={`h-2.5 rounded-full transition-all duration-700 ease-out ${
+                    progressPercent === 100 ? 'bg-green-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex gap-6 text-center shrink-0">
+              <div className="px-3">
+                <p className="text-2xl font-bold text-green-600">{doneCount}</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{t('uploaded')}</p>
+              </div>
+              <div className="px-3 border-s border-gray-200">
+                <p className="text-2xl font-bold text-gray-400">{pendingCount}</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">{t('missingLabel')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── All Done Banner ── */}
+        {pendingCount === 0 && totalCount > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="font-semibold text-green-800 text-sm">{t('allUploaded')}</p>
-              <p className="text-green-600 text-xs mt-0.5">
-                {isHebrew
-                  ? 'תודה! כל המסמכים הועלו בהצלחה.'
-                  : 'Thank you! All documents have been uploaded successfully.'}
-              </p>
+              <p className="font-bold text-green-800">{t('allUploaded')}</p>
+              <p className="text-green-600 text-sm mt-0.5">{t('allUploadedDesc')}</p>
             </div>
+          </div>
+        )}
+
+        {/* ── Document Center ── */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 mb-4">{t('documentCenter')}</h2>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {documents.map(doc => {
+              const uploaded = isDocUploaded(doc)
+              const isRejected = !justUploaded[doc.id] && (doc.status === 'rejected' || doc.status === 'blurry' || doc.status === 'missing-pages')
+              const showUploadArea = needsUpload(doc) && !justUploaded[doc.id]
+              const isUploadingDoc = uploading[doc.id]
+              const error = errors[doc.id]
+              const hasPreview = previewUrls[doc.id]
+              const isImage = isPreviewableImage(doc.fileType)
+              const isPdf = isPreviewablePdf(doc.fileType)
+
+              return (
+                <div
+                  key={doc.id}
+                  className={`bg-white rounded-xl border overflow-hidden flex flex-col shadow-sm transition-all hover:shadow-md ${
+                    isRejected
+                      ? 'border-red-200'
+                      : uploaded
+                        ? 'border-green-200'
+                        : 'border-gray-200'
+                  }`}
+                >
+                  {/* Preview / Upload Area (aspect 4:3) */}
+                  <div
+                    className={`relative aspect-[4/3] flex items-center justify-center overflow-hidden ${
+                      showUploadArea
+                        ? 'cursor-pointer hover:bg-blue-50/60 transition-colors bg-gray-50'
+                        : uploaded && hasPreview  
+                          ? 'cursor-pointer bg-gray-50'
+                          : 'bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      if (showUploadArea && !isUploadingDoc) {
+                        fileInputRefs.current[doc.id]?.click()
+                      } else if (uploaded && hasPreview) {
+                        setLightboxDoc(doc.id)
+                      }
+                    }}
+                  >
+                    {/* Status badge */}
+                    <div className="absolute top-2 start-2 z-10">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${getStatusColor(doc)}`}>
+                        {getStatusLabel(doc)}
+                      </span>
+                    </div>
+
+                    {/* Preview content */}
+                    {isUploadingDoc ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                        <span className="text-xs text-blue-600">{t('uploading')}</span>
+                      </div>
+                    ) : uploaded && hasPreview && isImage ? (
+                      <img
+                        src={previewUrls[doc.id]}
+                        alt={doc.documentTypeName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : uploaded && hasPreview && isPdf ? (
+                      <div className="flex flex-col items-center gap-1 text-gray-400">
+                        <FileText className="w-10 h-10 text-red-400" />
+                        <span className="text-[10px] font-medium uppercase">PDF</span>
+                      </div>
+                    ) : uploaded && doc.fileName ? (
+                      <div className="flex flex-col items-center gap-1 text-gray-400">
+                        <CheckCircle2 className="w-10 h-10 text-green-400" />
+                        <span className="text-[10px] text-gray-400">{doc.fileType?.split('/').pop()?.toUpperCase() || ''}</span>
+                      </div>
+                    ) : loadingPreviews && doc.storagePath ? (
+                      <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5">
+                        <UploadCloud className="w-10 h-10 text-gray-300" />
+                        <span className="text-[11px] text-gray-400">{t('noFile')}</span>
+                      </div>
+                    )}
+
+                    {/* Hidden file input */}
+                    {showUploadArea && (
+                      <input
+                        ref={el => { fileInputRefs.current[doc.id] = el }}
+                        type="file"
+                        className="hidden"
+                        accept={doc.allowedFormats.map(f => `.${f}`).join(',')}
+                        capture="environment"
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file) handleFileUpload(doc.id, file, doc)
+                          e.target.value = '' // reset for re-upload
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Document info bottom section */}
+                  <div className="p-3 border-t border-gray-100 flex-1 flex flex-col">
+                    <p className="text-sm font-semibold text-gray-900 truncate" title={doc.documentTypeName}>
+                      {doc.documentTypeName}
+                    </p>
+                    {doc.fileName && uploaded ? (
+                      <>
+                        <p className="text-xs text-gray-400 truncate mt-0.5">{doc.fileName}</p>
+                        {doc.uploadedAt && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(doc.uploadedAt)}</p>
+                        )}
+                      </>
+                    ) : isRejected ? (
+                      <p className="text-xs text-red-500 mt-0.5">{t('rejectedMsg')}</p>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-0.5">{t('notUploaded')}</p>
+                    )}
+
+                    {/* Error message */}
+                    {error && (
+                      <p className="text-[10px] text-red-500 mt-1 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" /> {error}
+                      </p>
+                    )}
+
+                    {/* Action buttons for uploaded docs */}
+                    {uploaded && hasPreview && (
+                      <div className="flex items-center gap-1 mt-auto pt-2">
+                        <button
+                          onClick={() => setLightboxDoc(doc.id)}
+                          className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 px-1.5 py-1 rounded hover:bg-blue-50 transition-colors"
+                        >
+                          <Eye className="w-3 h-3" /> {t('preview')}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Re-upload for rejected */}
+                    {isRejected && (
+                      <button
+                        onClick={() => fileInputRefs.current[doc.id]?.click()}
+                        className="mt-auto pt-2 text-[10px] text-red-600 hover:text-red-700 font-medium"
+                      >
+                        {t('reupload')} ↑
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Footer ── */}
+      <div className="mt-12 pb-6">
+        <p className="text-center text-[11px] text-gray-300">{t('poweredBy')}</p>
+      </div>
+
+      {/* ── Lightbox Modal ── */}
+      {lightboxDoc && lightboxDocObj && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxDoc(null)}
+        >
+          <div
+            className="relative max-w-4xl w-full max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Lightbox header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+              <div>
+                <p className="font-semibold text-gray-900">{lightboxDocObj.documentTypeName}</p>
+                {lightboxDocObj.fileName && (
+                  <p className="text-xs text-gray-400">{lightboxDocObj.fileName}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {previewUrls[lightboxDoc] && (
+                  <a
+                    href={previewUrls[lightboxDoc]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
+                )}
+                <button
+                  onClick={() => setLightboxDoc(null)}
+                  className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Lightbox content */}
+            <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-50 min-h-[300px]">
+              {isPreviewableImage(lightboxDocObj.fileType) && previewUrls[lightboxDoc] ? (
+                <img
+                  src={previewUrls[lightboxDoc]}
+                  alt={lightboxDocObj.documentTypeName}
+                  className="max-w-full max-h-[70vh] object-contain"
+                />
+              ) : isPreviewablePdf(lightboxDocObj.fileType) && previewUrls[lightboxDoc] ? (
+                <iframe
+                  src={previewUrls[lightboxDoc]}
+                  className="w-full h-[70vh]"
+                  title={lightboxDocObj.documentTypeName}
+                />
+              ) : (
+                <div className="text-center p-8">
+                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">{lightboxDocObj.fileName}</p>
+                  {previewUrls[lightboxDoc] && (
+                    <a
+                      href={previewUrls[lightboxDoc]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline mt-2 inline-block"
+                    >
+                      {isHebrew ? 'פתח בחלון חדש' : 'Open in new tab'}
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Lightbox nav arrows */}
+            {documents.filter(d => previewUrls[d.id]).length > 1 && (
+              <>
+                <button
+                  className="absolute start-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-gray-600 hover:bg-white transition-colors"
+                  onClick={() => {
+                    const uploadedDocs = documents.filter(d => previewUrls[d.id])
+                    const curIdx = uploadedDocs.findIndex(d => d.id === lightboxDoc)
+                    const prevIdx = (curIdx - 1 + uploadedDocs.length) % uploadedDocs.length
+                    setLightboxDoc(uploadedDocs[prevIdx].id)
+                  }}
+                >
+                  {isHebrew ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                </button>
+                <button
+                  className="absolute end-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-gray-600 hover:bg-white transition-colors"
+                  onClick={() => {
+                    const uploadedDocs = documents.filter(d => previewUrls[d.id])
+                    const curIdx = uploadedDocs.findIndex(d => d.id === lightboxDoc)
+                    const nextIdx = (curIdx + 1) % uploadedDocs.length
+                    setLightboxDoc(uploadedDocs[nextIdx].id)
+                  }}
+                >
+                  {isHebrew ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
-
-      {/* Document list */}
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        {documents.map(doc => {
-          const uploaded = isDocUploaded(doc)
-          const showUploadArea = needsUpload(doc) && !justUploaded[doc.id]
-          const isUploadingDoc = uploading[doc.id]
-          const error = errors[doc.id]
-          const badge = getStatusBadge(doc)
-          const hasPreview = previewUrls[doc.id]
-          const isExpanded = expandedPreview === doc.id
-
-          return (
-            <div
-              key={doc.id}
-              className={`bg-white rounded-xl border-2 transition-all shadow-sm ${
-                uploaded
-                  ? doc.status === 'approved'
-                    ? 'border-green-200'
-                    : doc.status === 'rejected' || doc.status === 'blurry' || doc.status === 'missing-pages'
-                      ? 'border-red-200'
-                      : 'border-blue-200'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="p-4">
-                {/* Header row */}
-                <div className="flex items-start justify-between mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {uploaded ? (
-                      doc.status === 'approved' ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                      ) : doc.status === 'rejected' || doc.status === 'blurry' || doc.status === 'missing-pages' ? (
-                        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                      ) : (
-                        <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
-                      )
-                    ) : (
-                      <ArrowUpCircle className="w-5 h-5 text-gray-400 shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm text-gray-900 truncate">{doc.documentTypeName}</p>
-                      {doc.category && (
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider">{doc.category}</p>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${badge.bg}`}>
-                    {badge.label}
-                  </span>
-                </div>
-
-                {/* Helper text */}
-                {doc.helperText && (
-                  <p className="text-xs text-gray-500 mt-1 ms-7">{doc.helperText}</p>
-                )}
-
-                {/* Uploaded file info + preview */}
-                {uploaded && doc.fileName && (
-                  <div className="mt-3 ms-7">
-                    <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2.5">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {isPreviewableImage(doc.fileType) ? (
-                          <Image className="w-4 h-4 text-blue-500 shrink-0" />
-                        ) : (
-                          <FileIcon className="w-4 h-4 text-gray-500 shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-gray-700 truncate">{doc.fileName}</p>
-                          <p className="text-[10px] text-gray-400">
-                            {doc.fileSize ? formatFileSize(doc.fileSize) : ''}
-                            {doc.uploadedAt && (
-                              <> • {t('uploadedOn')} {formatDate(doc.uploadedAt)}</>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {hasPreview && (
-                          <button
-                            onClick={() => setExpandedPreview(isExpanded ? null : doc.id)}
-                            className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
-                          >
-                            <Eye className="w-3 h-3" />
-                            {isExpanded ? t('hidePreview') : t('preview')}
-                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Preview area */}
-                    {isExpanded && hasPreview && (
-                      <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                        {isPreviewableImage(doc.fileType) ? (
-                          <img
-                            src={previewUrls[doc.id]}
-                            alt={doc.fileName}
-                            className="w-full max-h-96 object-contain"
-                          />
-                        ) : isPreviewablePdf(doc.fileType) ? (
-                          <iframe
-                            src={previewUrls[doc.id]}
-                            className="w-full h-96"
-                            title={doc.fileName}
-                          />
-                        ) : (
-                          <div className="p-8 text-center">
-                            <FileIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500">{doc.fileName}</p>
-                            <a
-                              href={previewUrls[doc.id]}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:underline mt-1 inline-block"
-                            >
-                              {isHebrew ? 'פתח בחלון חדש' : 'Open in new tab'}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Re-upload button for rejected docs */}
-                    {(doc.status === 'rejected' || doc.status === 'blurry' || doc.status === 'missing-pages') && !justUploaded[doc.id] && (
-                      <div className="mt-2">
-                        <p className="text-xs text-red-600 mb-2">
-                          {isHebrew
-                            ? 'המסמך נדחה. אנא העלה מסמך חדש.'
-                            : 'This document was rejected. Please upload a new one.'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Upload area */}
-                {showUploadArea && (
-                  <div className="mt-3 ms-7">
-                    {isUploadingDoc ? (
-                      <div className="flex items-center justify-center gap-2 p-6 border-2 border-dashed border-blue-300 rounded-xl bg-blue-50">
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                        <span className="text-sm text-blue-600">{t('uploading')}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors">
-                          <Upload className="w-6 h-6 text-gray-400" />
-                          <span className="text-sm text-gray-500">{t('dragDrop')}</span>
-                          <div className="flex gap-2 mt-1">
-                            <span className="flex items-center gap-1 text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500">
-                              <File className="w-3 h-3" /> {t('chooseFile')}
-                            </span>
-                            <span className="flex items-center gap-1 text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500">
-                              <Camera className="w-3 h-3" /> {t('takePhoto')}
-                            </span>
-                          </div>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept={doc.allowedFormats.map(f => `.${f}`).join(',')}
-                            capture="environment"
-                            onChange={e => {
-                              const file = e.target.files?.[0]
-                              if (file) handleFileUpload(doc.id, file, doc)
-                            }}
-                          />
-                        </label>
-                        <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
-                          <span>{t('formats')}: {doc.allowedFormats.join(', ').toUpperCase()}</span>
-                          <span>•</span>
-                          <span>{t('maxSize')}: {doc.maxSizeMB}MB</span>
-                        </div>
-                      </>
-                    )}
-                    {error && (
-                      <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" /> {error}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Footer */}
-      <div className="bg-white border-t border-gray-200 mt-8">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-            <Shield className="w-3.5 h-3.5" />
-            <span>{t('secureUpload')}</span>
-          </div>
-          <p className="text-center text-[10px] text-gray-300 mt-2">{t('poweredBy')}</p>
-        </div>
-      </div>
     </div>
   )
 }

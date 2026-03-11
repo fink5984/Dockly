@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,10 +11,11 @@ import { Tabs, useTabState } from '@/components/ui/Tabs'
 import { cn } from '@/lib/utils'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { updateWorkspace } from '@/services/settingsService'
+import { uploadWorkspaceAsset } from '@/services/storageService'
 import { getDocumentTypes, createDocumentType, updateDocumentType, deleteDocumentType } from '@/services/documentsService'
 import {
   Building, Users, Shield, FileText, Bell, Clock, Link, Palette, Globe, Lock,
-  Plus, Edit2, Trash2, Save, Eye, ChevronRight, Mail, Database, Upload, Key
+  Plus, Edit2, Trash2, Save, Eye, ChevronRight, Mail, Database, Upload, Key, Camera, Loader2, ImageIcon
 } from 'lucide-react'
 
 export function SettingsPage() {
@@ -108,6 +109,8 @@ export function SettingsPage() {
   })
   const [wsSaving, setWsSaving] = useState(false)
   const [wsSuccess, setWsSuccess] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   // Populate form from workspace data
   useEffect(() => {
@@ -141,6 +144,34 @@ export function SettingsPage() {
       console.error('Failed to save workspace:', err)
     } finally {
       setWsSaving(false)
+    }
+  }
+
+  const handleLogoUpload = async (file: File) => {
+    if (!workspace?.id) return
+    setLogoUploading(true)
+    try {
+      const ext = file.name.split('.').pop() || 'png'
+      const fileName = `logo_${Date.now()}.${ext}`
+      const publicUrl = await uploadWorkspaceAsset(workspace.id, fileName, file)
+      await updateWorkspace(workspace.id, { logoUrl: publicUrl })
+      await refreshProfile()
+      setWsSuccess(true)
+      setTimeout(() => setWsSuccess(false), 3000)
+    } catch (err) {
+      console.error('Failed to upload logo:', err)
+    } finally {
+      setLogoUploading(false)
+    }
+  }
+
+  const handleRemoveLogo = async () => {
+    if (!workspace?.id) return
+    try {
+      await updateWorkspace(workspace.id, { logoUrl: null })
+      await refreshProfile()
+    } catch (err) {
+      console.error('Failed to remove logo:', err)
     }
   }
 
@@ -197,6 +228,67 @@ export function SettingsPage() {
         <div className="flex-1 min-w-0 space-y-4">
           {activeTab === 'workspace' && (
             <>
+              {/* Logo Upload Card */}
+              <Card>
+                <CardHeader title={t('settings.workspaceLogo') || 'Workspace Logo'} />
+                <CardContent>
+                  <div className="flex items-center gap-6">
+                    <div className="relative group">
+                      {workspace?.logo ? (
+                        <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+                          <img src={workspace.logo} alt="Logo" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-24 h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                          <ImageIcon className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-[var(--text-secondary)]">
+                        {t('settings.logoDesc') || 'Upload your company logo. It will appear in the public portal that clients see.'}
+                      </p>
+                      <p className="text-xs text-[var(--text-tertiary)]">
+                        {t('settings.logoHint') || 'Recommended: Square image, at least 200×200px. PNG or JPG.'}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          icon={logoUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          onClick={() => logoInputRef.current?.click()}
+                          disabled={logoUploading}
+                        >
+                          {workspace?.logo ? (t('settings.changeLogo') || 'Change Logo') : (t('settings.uploadLogo') || 'Upload Logo')}
+                        </Button>
+                        {workspace?.logo && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            icon={<Trash2 className="w-4 h-4" />}
+                            onClick={handleRemoveLogo}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            {t('common.remove') || 'Remove'}
+                          </Button>
+                        )}
+                      </div>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file) handleLogoUpload(file)
+                          e.target.value = ''
+                        }}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader title={t('settings.workspaceDetails')} />
                 <CardContent>
