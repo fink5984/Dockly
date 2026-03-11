@@ -19,6 +19,13 @@ const WA_TOKEN      = process.env.WHATSAPP_ACCESS_TOKEN;
 const WA_VERIFY     = process.env.WHATSAPP_VERIFY_TOKEN || 'dockly-wa-verify-2026-secure';
 const GRAPH_API     = 'https://graph.facebook.com/v21.0';
 
+// Template names — must match exactly what's approved in Meta Business Suite
+const TPL_DOCUMENT_REQUEST  = process.env.WA_TEMPLATE_DOCUMENT_REQUEST  || 'dockly_document_request_';
+const TPL_DOCUMENT_REMINDER = process.env.WA_TEMPLATE_DOCUMENT_REMINDER || 'dockly_document_request_';
+const TPL_DOCUMENT_REJECTED = process.env.WA_TEMPLATE_DOCUMENT_REJECTED || 'dockly_document_request_';
+const TPL_STAFF_REPLY       = process.env.WA_TEMPLATE_STAFF_REPLY       || 'dockly_document_request_';
+const TPL_LANG              = process.env.WA_TEMPLATE_LANG              || 'en';
+
 const SUPABASE_URL  = process.env.VITE_SUPABASE_URL  || process.env.SUPABASE_URL;
 const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const DATABASE_URL  = process.env.DATABASE_URL ||
@@ -111,12 +118,9 @@ async function sendInteractiveButtons(to, bodyText, buttons, withTyping = true) 
  * Send a template message via WhatsApp Cloud API.
  * Template messages are required for system-initiated messages (outside 24h window).
  *
- * Templates must be pre-created & approved in Meta Business Suite.
- * Expected templates:
- *   - dockly_document_request  (he/en): body {{1}}=clientName, {{2}}=pendingCount, {{3}}=caseTitle  + button "📄 הצג מסמכים"
- *   - dockly_document_reminder (he/en): body {{1}}=clientName, {{2}}=pendingCount, {{3}}=caseTitle  + button "📄 הצג מסמכים"
- *   - dockly_document_rejected (he/en): body {{1}}=clientName, {{2}}=pendingCount, {{3}}=caseTitle  + button "📄 הצג מסמכים"
- *   - dockly_staff_reply       (he/en): body {{1}}=clientName, {{2}}=senderName, {{3}}=content      + button "💬 השב"
+ * Template names are loaded from environment variables:
+ *   WA_TEMPLATE_DOCUMENT_REQUEST, WA_TEMPLATE_DOCUMENT_REMINDER,
+ *   WA_TEMPLATE_DOCUMENT_REJECTED, WA_TEMPLATE_STAFF_REPLY, WA_TEMPLATE_LANG
  *
  * @param {string} to - Recipient phone number
  * @param {string} templateName - Approved template name
@@ -829,21 +833,18 @@ export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneN
       if (rows[0]?.name) clientName = rows[0].name;
     } catch (_) { /* use default */ }
 
-    const isHebrew = language === 'he';
-    const langCode = isHebrew ? 'he' : 'en';
-
-    // Determine template name based on messageType
+    // Determine template name based on messageType (from env config)
     let templateName;
     switch (messageType) {
       case 'reminder':
-        templateName = 'dockly_document_reminder';
+        templateName = TPL_DOCUMENT_REMINDER;
         break;
       case 'document_invalid':
-        templateName = 'dockly_document_rejected';
+        templateName = TPL_DOCUMENT_REJECTED;
         break;
       case 'initial':
       default:
-        templateName = 'dockly_document_request';
+        templateName = TPL_DOCUMENT_REQUEST;
         break;
     }
 
@@ -853,7 +854,7 @@ export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneN
     const result = await sendTemplateMessage(
       phone,
       templateName,
-      langCode,
+      TPL_LANG,
       [clientName, String(pendingCount), caseTitle || ''],
       [`show_docs_${caseId}`]
     );
@@ -896,8 +897,8 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
       // Quick Reply button [0]: payload → "support_{caseId}" (triggers support reply flow)
       const result = await sendTemplateMessage(
         phone,
-        'dockly_staff_reply',
-        'he',
+        TPL_STAFF_REPLY,
+        TPL_LANG,
         [clientName, senderName || 'צוות', content],
         [`support_${caseId}`]
       );
@@ -914,7 +915,7 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
       await logWhatsAppMessage(
         wsId, caseId, clientId,
         'outbound', phone, 'template', content, 'sent',
-        { supportRequestId, templateName: 'dockly_staff_reply' }
+        { supportRequestId, templateName: TPL_STAFF_REPLY }
       );
     };
 

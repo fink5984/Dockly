@@ -137,8 +137,8 @@ serve(async (req: Request) => {
           .single()
         const clientNameForTemplate = clientRow?.name || 'Client'
 
-        const templateName = 'dockly_document_request'
-        const langCode = language === 'he' ? 'he' : 'en'
+        const templateName = Deno.env.get('WA_TEMPLATE_DOCUMENT_REQUEST') || 'dockly_document_request_'
+        const langCode = Deno.env.get('WA_TEMPLATE_LANG') || 'en'
 
         const waResponse = await fetch(
           `https://graph.facebook.com/v21.0/${waPhoneId}/messages`,
@@ -199,10 +199,10 @@ serve(async (req: Request) => {
         direction: 'outbound',
         phone_number: phoneNumber,
         message_type: 'template',
-        content: `Template "dockly_document_request" sent for ${caseData.case_type || 'case'}`,
+        content: `Template "${templateName}" sent for ${caseData.case_type || 'case'}`,
         status: sendStatus,
         wa_message_id: waMessageId,
-        template_name: 'dockly_document_request',
+        template_name: templateName,
         error_message: errorMessage,
         metadata: { upload_token: token, upload_url: uploadUrl, pending_docs: pendingDocs.length },
       })
