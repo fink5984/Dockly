@@ -123,6 +123,7 @@ export async function updateCase(
     deadline: string | null
     notes: string | null
     lastActivityDate: string
+    caseType: string
   }>
 ): Promise<Case> {
   const updateData: Record<string, unknown> = {}
@@ -131,6 +132,7 @@ export async function updateCase(
   if (input.deadline !== undefined) updateData.deadline = input.deadline
   if (input.notes !== undefined) updateData.notes = input.notes
   if (input.lastActivityDate !== undefined) updateData.last_activity_date = input.lastActivityDate
+  if (input.caseType !== undefined) updateData.case_type = input.caseType
 
   const { error } = await supabase
     .from('cases')

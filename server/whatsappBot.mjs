@@ -17,7 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 const WA_PHONE_ID   = process.env.WHATSAPP_PHONE_ID;
 const WA_TOKEN      = process.env.WHATSAPP_ACCESS_TOKEN;
 const WA_VERIFY     = process.env.WHATSAPP_VERIFY_TOKEN || 'dockly-wa-verify-2026-secure';
-const GRAPH_API     = 'https://graph.facebook.com/v18.0';
+const GRAPH_API     = 'https://graph.facebook.com/v21.0';
 
 const SUPABASE_URL  = process.env.VITE_SUPABASE_URL  || process.env.SUPABASE_URL;
 const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -56,11 +56,9 @@ async function sendWhatsApp(to, payload) {
 }
 
 // ── Typing Indicator ────────────────────────────────────────────────────
-// WhatsApp Cloud API doesn't support a typing indicator endpoint.
-// We mark the incoming message as "read" (blue checks) immediately,
-// then add a natural delay before responding — this gives the client
-// the impression of someone reading and typing.
-async function sendTypingIndicator(to, duration = 1500) {
+// Uses WhatsApp Cloud API v21.0+ typing_indicator feature.
+// Shows "typing..." bubble on client’s WhatsApp before the bot replies.
+async function sendTypingIndicator(to, duration = 2000) {
   await new Promise(resolve => setTimeout(resolve, duration));
 }
 
@@ -671,15 +669,18 @@ export async function handleIncoming(req, res) {
       console.log(`[Bot] Message from ${from} — type: ${msg.type}, id: ${messageId}`);
 
       try {
-        // Mark EVERY incoming message as read immediately (blue checks on client's WhatsApp)
-        // This works for both bot mode and support mode — the client sees their message was received
-        markMessageAsRead(messageId).catch(err => 
-          console.error('[Bot] Failed to mark message as read:', err)
-        );
-
         // Check if user is in support mode
         const st = await getConversationState(from);
         const isInSupportMode = st?.support_mode;
+
+        // Mark incoming message as read (blue checks on client’s WhatsApp)
+        // ── In BOT mode: mark immediately (automated flow, instant blue checks)
+        // ── In SUPPORT mode: do NOT mark — staff sees green check only when they open the chat
+        if (!isInSupportMode) {
+          markMessageAsRead(messageId).catch(err => 
+            console.error('[Bot] Failed to mark message as read:', err)
+          );
+        }
 
         switch (msg.type) {
           case 'interactive': {

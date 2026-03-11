@@ -3,17 +3,14 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useApp } from '@/contexts/AppContext'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, Users, ClipboardList, FileArchive,
-  Activity, MessageCircle, Settings, X, ChevronLeft, ChevronRight,
+  LayoutDashboard, Users, ClipboardList,
+  Settings, X, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
 const navItems = [
   { key: 'dashboard', path: '/', icon: LayoutDashboard },
   { key: 'clients', path: '/clients', icon: Users },
   { key: 'requests', path: '/requests', icon: ClipboardList },
-  { key: 'documentTypes', path: '/document-types', icon: FileArchive },
-  { key: 'activity', path: '/activity', icon: Activity },
-  { key: 'whatsapp', path: '/whatsapp', icon: MessageCircle },
   { key: 'settings', path: '/settings', icon: Settings },
 ]
 
@@ -38,7 +35,7 @@ export function Sidebar() {
       <aside
         className={cn(
           'fixed top-0 bottom-0 z-50 flex flex-col transition-all duration-300 ease-in-out',
-          'bg-[var(--bg-sidebar)] text-[var(--text-sidebar)]',
+          'text-[var(--text-sidebar)]',
           isRtl ? 'right-0' : 'left-0',
           sidebarOpen ? 'w-64' : 'w-[72px]',
           'lg:translate-x-0',
@@ -46,11 +43,18 @@ export function Sidebar() {
             ? 'translate-x-0 w-72'
             : isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
+        style={{ background: 'linear-gradient(180deg, #0d1117 0%, #0f172a 100%)' }}
       >
+        {/* Top gradient line */}
+        <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.5), transparent)' }} />
+
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-white font-bold text-sm">
+            <div
+              className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold text-sm"
+              style={{ boxShadow: '0 0 12px rgba(99,102,241,0.5)' }}
+            >
               D
             </div>
             {(sidebarOpen || mobileSidebarOpen) && (
@@ -81,22 +85,23 @@ export function Sidebar() {
                 to={item.path}
                 onClick={() => setMobileSidebarOpen(false)}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative',
                   isActive
-                    ? 'bg-[var(--bg-sidebar-active)] text-[var(--text-sidebar-active)] shadow-sm'
+                    ? 'bg-indigo-500/15 text-white shadow-sm'
                     : 'text-[var(--text-sidebar)] hover:bg-[var(--bg-sidebar-hover)] hover:text-white',
                   !sidebarOpen && !mobileSidebarOpen && 'justify-center px-0'
                 )}
                 title={!sidebarOpen ? t(`nav.${item.key}`) : undefined}
               >
+                {isActive && (
+                  <div className={cn(
+                    'absolute top-1 bottom-1 w-[3px] rounded-full bg-indigo-500',
+                    isRtl ? 'right-0' : 'left-0'
+                  )} />
+                )}
                 <Icon className="w-5 h-5 shrink-0" />
                 {(sidebarOpen || mobileSidebarOpen) && (
                   <span>{t(`nav.${item.key}`)}</span>
-                )}
-                {item.key === 'whatsapp' && (sidebarOpen || mobileSidebarOpen) && (
-                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/60">
-                    {t('common.comingSoon')}
-                  </span>
                 )}
               </NavLink>
             )

@@ -71,6 +71,9 @@
     "title": "לוח בקרה",
     "welcome": "ברוך הבא",
     "overview": "סקירה כללית",
+    "goodMorning": "בוקר טוב",
+    "goodAfternoon": "צהריים טובים",
+    "goodEvening": "ערב טוב",
     "totalClients": "סה\"כ לקוחות",
     "openCases": "תיקים פתוחים",
     "completedCases": "הושלמו",
@@ -81,8 +84,13 @@
     "activeSupportRequests": "תמיכה פעילה",
     "statusDistribution": "פילוח סטטוס תיקים",
     "progressTrend": "מגמת השלמה",
+    "last6Months": "6 חודשים אחרונים",
+    "total": "סה\"כ",
+    "completed": "הושלמו",
     "needingAttention": "לקוחות הדורשים תשומת לב",
+    "allGood": "הכל תקין!",
     "mostMissing": "מסמכים חסרים ביותר",
+    "noMissing": "אין מסמכים חסרים",
     "recentActivity": "פעילות אחרונה",
     "activeSupport": "בקשות תמיכה פעילות",
     "viewAll": "הצג הכל",
@@ -252,7 +260,21 @@
     "waModalDesc": "הלקוח יקבל הודעה אינטראקטיבית בוואטסאפ שבה יוכל לראות את רשימת המסמכים ולהעלות אותם ישירות בצ'אט.",
     "waSentSuccess": "הודעת וואטסאפ נשלחה!",
     "waSentSuccessDesc": "הלקוח יקבל הודעה עם כפתור לצפייה ברשימת המסמכים — ההעלאה מתבצעת ישירות בוואטסאפ.",
-    "waSentFailed": "שליחת הודעת וואטסאפ נכשלה"
+    "waSentFailed": "שליחת הודעת וואטסאפ נכשלה",
+    "reviewBeforeSend": "בדוק לפני שליחה",
+    "reviewBeforeSendDesc": "הבקשה נוצרה. בדוק את הפרטים לפני שליחה ללקוח.",
+    "confirmAndContinue": "אשר והמשך",
+    "editRequest": "עריכת בקשה",
+    "send": "שלח",
+    "sent": "נשלח",
+    "sendVia": "שלח דרך",
+    "noPhone": "אין טלפון",
+    "sendFirst": "שלח קודם",
+    "reminderSent": "תזכורת נשלחה",
+    "deleteSuccess": "הבקשה נמחקה בהצלחה",
+    "deleteConfirmTitle": "מחיקת בקשה",
+    "deleteConfirmDesc": "האם אתה בטוח שברצונך למחוק את הבקשה \"{{name}}\"? פעולה זו לא ניתנת לביטול.",
+    "addDocType": "הוסף סוג מסמך"
   },
   "requests": {
     "title": "בקשות",
@@ -687,5 +709,8 @@
     "admin": "שירותי מנהלה",
     "real_estate": "נדל\"ן",
     "other": "אחר"
+  },
+  "notifications": {
+    "markAllRead": "סמן הכל כנקרא"
   }
 }

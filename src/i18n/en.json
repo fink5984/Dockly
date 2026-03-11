@@ -71,6 +71,9 @@
     "title": "Dashboard",
     "welcome": "Welcome back",
     "overview": "Overview",
+    "goodMorning": "Good morning",
+    "goodAfternoon": "Good afternoon",
+    "goodEvening": "Good evening",
     "totalClients": "Total Clients",
     "openCases": "Open Cases",
     "completedCases": "Completed",
@@ -81,8 +84,13 @@
     "activeSupportRequests": "Active Support",
     "statusDistribution": "Case Status Distribution",
     "progressTrend": "Completion Trend",
+    "last6Months": "Last 6 months",
+    "total": "Total",
+    "completed": "Completed",
     "needingAttention": "Clients Needing Attention",
+    "allGood": "All good!",
     "mostMissing": "Most Missing Documents",
+    "noMissing": "No missing documents",
     "recentActivity": "Recent Activity",
     "activeSupport": "Active Support Requests",
     "viewAll": "View All",
@@ -252,7 +260,21 @@
     "waModalDesc": "The client will receive an interactive WhatsApp message where they can view the document list and upload files directly in the chat.",
     "waSentSuccess": "WhatsApp message sent!",
     "waSentSuccessDesc": "The client will receive a message with a button to view documents — uploads happen directly in WhatsApp.",
-    "waSentFailed": "Failed to send WhatsApp message"
+    "waSentFailed": "Failed to send WhatsApp message",
+    "reviewBeforeSend": "Review before sending",
+    "reviewBeforeSendDesc": "The request was created. Review the details before sending to the client.",
+    "confirmAndContinue": "Confirm & Continue",
+    "editRequest": "Edit Request",
+    "send": "Send",
+    "sent": "Sent",
+    "sendVia": "Send via",
+    "noPhone": "No phone",
+    "sendFirst": "Send first",
+    "reminderSent": "Reminder sent",
+    "deleteSuccess": "Request deleted successfully",
+    "deleteConfirmTitle": "Delete Request",
+    "deleteConfirmDesc": "Are you sure you want to delete the request \"{{name}}\"? This action cannot be undone.",
+    "addDocType": "Add Document Type"
   },
   "requests": {
     "title": "Requests",
@@ -684,5 +706,8 @@
     "admin": "Administrative Services",
     "real_estate": "Real Estate",
     "other": "Other"
+  },
+  "notifications": {
+    "markAllRead": "Mark all as read"
   }
 }

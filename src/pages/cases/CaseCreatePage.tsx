@@ -158,7 +158,7 @@ export function CaseCreatePage() {
       }
 
       addToast({ type: 'success', title: t('requests.createSuccess') || 'Request created successfully' })
-      navigate(`/requests/${result.id}`)
+      navigate(`/requests/${result.id}?mode=review`)
     } catch (err: any) {
       setError(err?.message || 'Failed to create request')
       addToast({ type: 'error', title: t('common.error'), message: err?.message })

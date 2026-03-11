@@ -1,23 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useI18n } from '@/contexts/I18nContext'
 import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import { Textarea } from '@/components/ui/Input'
+import { Input, Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { cn, formatFileSize, getStatusColor, getDocStatusKey, formatDate } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
+import { useApp } from '@/contexts/AppContext'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
-import { getCases } from '@/services/casesService'
+import { getCases, updateCase, deleteCase, addCaseDocument } from '@/services/casesService'
+import { createActivity } from '@/services/activityService'
 import { getSupportRequestsByCaseId, createSupportRequest, sendSupportReplyViaWhatsApp, updateSupportRequest, markClientMessagesAsRead } from '@/services/supportService'
 import { getClientById } from '@/services/clientsService'
 import { sendDocumentRequest } from '@/services/whatsappService'
+import { SendActionButton } from '@/components/cases/SendActionButton'
 import {
   ArrowLeft, ArrowRight, Copy, Send, Bell, Calendar, User, Clock, FileText, CheckCircle2, XCircle, AlertTriangle,
-  UploadCloud, Eye, Download, RotateCcw, MessageCircle, Link2, MoreHorizontal, Loader2
+  UploadCloud, Eye, Download, RotateCcw, MessageCircle, Link2, MoreHorizontal, Loader2, Edit2, Trash2, Save
 } from 'lucide-react'
 import { getDocumentTypes } from '@/services/documentsService'
 import { getSignedUrl, downloadFile } from '@/services/storageService'
@@ -53,21 +56,41 @@ export function CaseDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { t, direction, language } = useI18n()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [chatMessage, setChatMessage] = useState('')
   const [sendingChat, setSendingChat] = useState(false)
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [lightboxDoc, setLightboxDoc] = useState<string | null>(null)
   const [docMenuOpen, setDocMenuOpen] = useState<string | null>(null)
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
-  const [waSending, setWaSending] = useState(false)
-  const [waResult, setWaResult] = useState<{ success: boolean; error?: string } | null>(null)
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({})
   const [urlsLoading, setUrlsLoading] = useState(true)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
+  // Review mode (from CaseCreatePage redirect)
+  const isReviewMode = searchParams.get('mode') === 'review'
+
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editSaving, setEditSaving] = useState(false)
+
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  // Send state
+  const [wasSent, setWasSent] = useState(false)
+
+  // Add doc type modal
+  const [addDocModalOpen, setAddDocModalOpen] = useState(false)
+  const [addingDoc, setAddingDoc] = useState(false)
+
+  // Edit form state (initialized with defaults, synced via useEffect)
+  const [editForm, setEditForm] = useState({ caseType: '', notes: '', deadline: '' })
+
   const { user, workspace } = useAuth()
+  const { addToast } = useApp()
   const wsId = workspace?.id || user?.workspaceId || ''
 
   const { data: allCases } = useRealtimeData(
@@ -216,6 +239,24 @@ export function CaseDetailPage() {
   const caseData = caseForClient
   const BackArrow = direction === 'rtl' ? ArrowRight : ArrowLeft
 
+  // Sync edit form when caseData changes (must be before early return to obey Rules of Hooks)
+  useEffect(() => {
+    if (caseData) {
+      setEditForm({
+        caseType: caseData.caseType,
+        notes: caseData.notes || '',
+        deadline: caseData.deadline || '',
+      })
+    }
+  }, [caseData?.caseType, caseData?.notes, caseData?.deadline])
+
+  // Persist sent state from DB status — if case is no longer 'new', it was sent
+  useEffect(() => {
+    if (caseData && caseData.status !== 'new') {
+      setWasSent(true)
+    }
+  }, [caseData?.status])
+
   if (!caseData) {
     return (
       <EmptyState
@@ -233,13 +274,138 @@ export function CaseDetailPage() {
   const rejected = caseData.requiredDocuments.filter(d => d.status === 'rejected').length
   const missing = caseData.requiredDocuments.filter(d => ['missing', 'pending-upload'].includes(d.status)).length
 
+  // Handler: save edits
+  const handleEditSave = async () => {
+    setEditSaving(true)
+    try {
+      await updateCase(caseData.id, {
+        caseType: editForm.caseType,
+        notes: editForm.notes,
+        deadline: editForm.deadline || null,
+      })
+      addToast({ type: 'success', title: t('common.save') })
+      setEditModalOpen(false)
+    } catch (err: any) {
+      addToast({ type: 'error', title: t('common.error'), message: err?.message })
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  // Handler: delete case
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteCase(caseData.id)
+      await createActivity(wsId, {
+        type: 'case-closed',
+        description: `Deleted request "${caseData.caseType}"`,
+        userId: user?.id || '',
+        userName: user?.name || '',
+        clientId: caseData.clientId,
+        clientName: caseData.clientName,
+      })
+      addToast({ type: 'success', title: t('cases.deleteSuccess') })
+      navigate('/requests')
+    } catch (err: any) {
+      addToast({ type: 'error', title: t('common.error'), message: err?.message })
+    } finally {
+      setDeleting(false)
+      setDeleteModalOpen(false)
+    }
+  }
+
+  // Handler: send initial (for SendActionButton)
+  const handleSendInitial = async (channel: 'whatsapp'): Promise<boolean> => {
+    if (channel === 'whatsapp' && clientData?.phone) {
+      try {
+        const result = await sendDocumentRequest({
+          workspaceId: wsId,
+          caseId: caseData.id,
+          clientId: caseData.clientId,
+          phoneNumber: clientData.phone,
+          language: language as 'en' | 'he',
+        })
+        if (result.success) {
+          // Update case status so sent state persists across refresh
+          await updateCase(caseData.id, { status: 'waiting-for-client' })
+          addToast({ type: 'success', title: t('cases.waSentSuccess') })
+          return true
+        } else {
+          addToast({ type: 'error', title: t('cases.waSentFailed'), message: result.error })
+          return false
+        }
+      } catch (err: any) {
+        addToast({ type: 'error', title: t('cases.waSentFailed'), message: err.message })
+        return false
+      }
+    }
+    return false
+  }
+
+  // Handler: send reminder
+  const handleSendReminder = async () => {
+    if (!clientData?.phone) return
+    try {
+      await sendDocumentRequest({
+        workspaceId: wsId,
+        caseId: caseData.id,
+        clientId: caseData.clientId,
+        phoneNumber: clientData.phone,
+        language: language as 'en' | 'he',
+      })
+      addToast({ type: 'success', title: t('cases.reminderSent') })
+    } catch (err: any) {
+      addToast({ type: 'error', title: t('common.error'), message: err.message })
+    }
+  }
+
   const isRtl = direction === 'rtl'
 
   return (
     <div className="space-y-6">
+      {/* Review Banner */}
+      {isReviewMode && (
+        <div className="flex items-center justify-between p-4 rounded-xl border
+          bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <div>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                {t('cases.reviewBeforeSend')}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-300 mt-0.5">
+                {t('cases.reviewBeforeSendDesc')}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline" size="sm"
+              icon={<Edit2 className="w-3.5 h-3.5" />}
+              onClick={() => setEditModalOpen(true)}
+            >
+              {t('common.edit')}
+            </Button>
+            <Button
+              size="sm"
+              icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+              onClick={async () => {
+                setSearchParams({})
+                // Auto-send via WhatsApp on confirm
+                const sent = await handleSendInitial('whatsapp')
+                if (sent) setWasSent(true)
+              }}
+            >
+              {t('cases.confirmAndContinue')}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start gap-3">
-        <button onClick={() => navigate('/cases')} className="mt-1 p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors">
+        <button onClick={() => navigate('/requests')} className="mt-1 p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors">
           <BackArrow className="w-4 h-4" />
         </button>
         <div className="flex-1 min-w-0">
@@ -255,7 +421,7 @@ export function CaseDetailPage() {
             <span className="flex items-center gap-1"><User className="w-3 h-3" />{caseData.assignedOwnerName}</span>
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 items-center">
           <div className="relative">
             <Button
               variant="outline"
@@ -269,17 +435,28 @@ export function CaseDetailPage() {
               <span className="absolute -top-1 -end-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-gray-800 shadow-md" />
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            icon={<MessageCircle className="w-3.5 h-3.5 text-green-500" />}
-            onClick={() => setShowWhatsAppModal(true)}
-          >
-            {t('cases.sendWhatsApp')}
-          </Button>
-          <Button variant="outline" size="sm" icon={<Send className="w-3.5 h-3.5" />}>{t('cases.sendReminderEmail')}</Button>
+          <SendActionButton
+            caseId={caseData.id}
+            clientName={caseData.clientName}
+            clientPhone={clientData?.phone}
+            workspaceId={wsId}
+            clientId={caseData.clientId}
+            language={language as 'en' | 'he'}
+            onSend={handleSendInitial}
+            onReminder={handleSendReminder}
+            initialSent={wasSent}
+          />
           <Button variant="outline" size="sm" icon={<Copy className="w-3.5 h-3.5" />}>{t('cases.duplicateCase')}</Button>
           <Button variant="outline" size="sm" icon={<Link2 className="w-3.5 h-3.5" />}>{t('cases.copyLink')}</Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Trash2 className="w-3.5 h-3.5" />}
+            onClick={() => setDeleteModalOpen(true)}
+            className="text-[var(--text-tertiary)] hover:text-danger"
+          >
+            {t('common.delete')}
+          </Button>
         </div>
       </div>
 
@@ -356,7 +533,17 @@ export function CaseDetailPage() {
               </span>
             )}
           </h2>
-          <Button variant="outline" size="sm" icon={<Download className="w-3.5 h-3.5" />}>{t('cases.downloadAll')}</Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<FileText className="w-3.5 h-3.5" />}
+              onClick={() => setAddDocModalOpen(true)}
+            >
+              {t('cases.addDocType')}
+            </Button>
+            <Button variant="outline" size="sm" icon={<Download className="w-3.5 h-3.5" />}>{t('cases.downloadAll')}</Button>
+          </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {caseData.requiredDocuments.map(doc => {
@@ -769,81 +956,126 @@ export function CaseDetailPage() {
         )}
       </Modal>
 
-      {/* ── WhatsApp Send Modal ── */}
-      <Modal isOpen={showWhatsAppModal} onClose={() => { setShowWhatsAppModal(false); setWaResult(null) }} title={t('cases.sendWhatsApp')} size="md">
-        <div className="space-y-4">
-          {!waResult ? (
-            <>
-              <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/20 rounded-xl border border-green-200 dark:border-green-800">
-                <MessageCircle className="w-8 h-8 text-green-500 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-green-700 dark:text-green-400">{t('cases.waModalTitle')}</p>
-                  <p className="text-xs text-green-600 dark:text-green-300 mt-0.5">{t('cases.waModalDesc')}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between p-2 bg-[var(--bg-tertiary)] rounded-lg">
-                  <span className="text-xs text-[var(--text-tertiary)]">{t('common.client')}</span>
-                  <span className="text-xs font-medium">{caseData.clientName}</span>
-                </div>
-                <div className="flex justify-between p-2 bg-[var(--bg-tertiary)] rounded-lg">
-                  <span className="text-xs text-[var(--text-tertiary)]">{t('common.phone')}</span>
-                  <span className="text-xs font-medium">{clientData?.phone || '—'}</span>
-                </div>
-                <div className="flex justify-between p-2 bg-[var(--bg-tertiary)] rounded-lg">
-                  <span className="text-xs text-[var(--text-tertiary)]">{t('cases.pendingDocs')}</span>
-                  <span className="text-xs font-medium">{missing}</span>
-                </div>
-              </div>
-              {!clientData?.phone && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-xs text-amber-700 dark:text-amber-400">{t('cases.noPhoneWarning')}</p>
-                </div>
-              )}
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={() => setShowWhatsAppModal(false)}>{t('common.cancel')}</Button>
-                <Button
-                  icon={waSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
-                  disabled={waSending || !clientData?.phone}
-                  onClick={async () => {
-                    if (!clientData?.phone) return
-                    setWaSending(true)
-                    try {
-                      const result = await sendDocumentRequest({ workspaceId: wsId, caseId: caseData.id, clientId: caseData.clientId, phoneNumber: clientData.phone, language: language as 'en' | 'he' })
-                      setWaResult({ success: result.success, error: result.error })
-                    } catch (err: any) {
-                      setWaResult({ success: false, error: err.message || 'Failed to send' })
-                    } finally { setWaSending(false) }
-                  }}
-                >{t('cases.sendViaWhatsApp')}</Button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center space-y-4">
-              {waResult.success ? (
-                <>
-                  <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-8 h-8 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-green-700 dark:text-green-400">{t('cases.waSentSuccess')}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] mt-1">{t('cases.waSentSuccessDesc')}</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mx-auto">
-                    <XCircle className="w-8 h-8 text-red-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-red-700 dark:text-red-400">{t('cases.waSentFailed')}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] mt-1">{waResult.error}</p>
-                  </div>
-                </>
-              )}
-              <Button variant="ghost" onClick={() => { setShowWhatsAppModal(false); setWaResult(null) }}>{t('common.close')}</Button>
+      {/* ── Edit Request Modal ── */}
+      <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)}
+        title={t('cases.editRequest')} size="md">
+        <div className="space-y-4 p-2">
+          <Input
+            label={t('requests.requestTitle')}
+            value={editForm.caseType}
+            onChange={e => setEditForm(p => ({ ...p, caseType: e.target.value }))}
+          />
+          <Textarea
+            label={t('requests.description')}
+            value={editForm.notes}
+            onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))}
+            rows={3}
+          />
+          <Input
+            label={t('requests.deadline')}
+            type="date"
+            value={editForm.deadline}
+            onChange={e => setEditForm(p => ({ ...p, deadline: e.target.value }))}
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setEditModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleEditSave} loading={editSaving}
+              icon={<Save className="w-4 h-4" />}>
+              {t('common.save')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Delete Confirmation Modal ── */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title={t('cases.deleteConfirmTitle')}
+        size="sm"
+      >
+        <div className="p-2 space-y-4">
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                {t('cases.deleteConfirmTitle')}
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-300 mt-1">
+                {t('cases.deleteConfirmDesc').replace('{{name}}', caseData.caseType)}
+              </p>
             </div>
-          )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setDeleteModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              loading={deleting}
+              icon={<Trash2 className="w-4 h-4" />}
+              onClick={handleDelete}
+            >
+              {t('common.delete')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Add Document Type Modal ── */}
+      <Modal
+        isOpen={addDocModalOpen}
+        onClose={() => setAddDocModalOpen(false)}
+        title={t('cases.addDocType')}
+        size="md"
+      >
+        <div className="p-2 space-y-2 max-h-[60vh] overflow-y-auto">
+          {(() => {
+            // Filter out doc types already in this case
+            const existingTypeIds = new Set(caseData.requiredDocuments.map(d => d.documentTypeId))
+            const available = allDocumentTypes.filter(dt => !existingTypeIds.has(dt.id) && dt.status === 'active')
+
+            if (available.length === 0) {
+              return (
+                <div className="text-center py-8 text-[var(--text-tertiary)]">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">{t('documents.noDocumentTypes')}</p>
+                </div>
+              )
+            }
+
+            return available.map(dt => (
+              <button
+                key={dt.id}
+                disabled={addingDoc}
+                onClick={async () => {
+                  setAddingDoc(true)
+                  try {
+                    await addCaseDocument(caseData.id, dt.id, true)
+                    addToast({ type: 'success', title: t('cases.addDocType'), message: dt.name })
+                    setAddDocModalOpen(false)
+                  } catch (err: any) {
+                    addToast({ type: 'error', title: t('common.error'), message: err?.message })
+                  } finally {
+                    setAddingDoc(false)
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors text-start border border-[var(--border-secondary)]"
+              >
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-indigo-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{dt.name}</p>
+                  {dt.description && (
+                    <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{dt.description}</p>
+                  )}
+                </div>
+              </button>
+            ))
+          })()}
         </div>
       </Modal>
     </div>
