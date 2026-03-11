@@ -9,7 +9,7 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { handleVerification, handleIncoming, sendInitialMessage, sendSupportReply, shutdown } from './whatsappBot.mjs';
+import { handleVerification, handleIncoming, sendInitialMessage, sendSupportReply, markSupportMessagesAsRead, shutdown } from './whatsappBot.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -79,22 +79,8 @@ app.post('/api/whatsapp/support/mark-read', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Missing supportRequestId' });
     }
     
-    // Get all unread client messages with WhatsApp message IDs
-    const { rows } = await pool.query(`
-      SELECT whatsapp_message_id
-      FROM support_messages
-      WHERE request_id = $1
-        AND sender_type = 'client'
-        AND is_read = false
-        AND whatsapp_message_id IS NOT NULL
-    `, [supportRequestId]);
-    
-    // Mark each message as read in WhatsApp (green check marks)
-    const { markMessageAsRead } = await import('./whatsappBot.mjs');
-    const promises = rows.map(row => markMessageAsRead(row.whatsapp_message_id));
-    await Promise.all(promises);
-    
-    res.json({ success: true, markedCount: rows.length });
+    const markedCount = await markSupportMessagesAsRead(supportRequestId);
+    res.json({ success: true, markedCount });
   } catch (err) {
     console.error('[API] Mark messages read error:', err);
     res.status(500).json({ success: false, error: err.message });

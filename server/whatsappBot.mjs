@@ -65,31 +65,8 @@ async function sendWhatsApp(to, payload) {
 // ── Typing Indicator ────────────────────────────────────────────────────
 // Uses WhatsApp Cloud API v21.0+ typing_indicator feature.
 // Shows "typing..." bubble on client’s WhatsApp before the bot replies.
-async function sendTypingIndicator(to, duration = 2000) {  try {
-    const url = `${GRAPH_API}/${WA_PHONE_ID}/messages`;
-    // Send typing_on
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${WA_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to,
-        type: 'contacts',
-        status: 'typing_on',
-      }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      console.error('[WA] Typing indicator error:', JSON.stringify(data));
-    }
-  } catch (err) {
-    console.error('[WA] Typing indicator failed:', err.message);
-  }
-  // Wait before sending the actual message  await new Promise(resolve => setTimeout(resolve, duration));
+async function sendTypingIndicator(to, duration = 2000) {
+  await new Promise(resolve => setTimeout(resolve, duration));
 }
 
 // ── Mark Message as Read ────────────────────────────────────────────────
@@ -953,18 +930,12 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
     // 1. Save message to support_messages and get the message ID
     const messageDbId = await addSupportMessage(supportRequestId, 'staff', senderName, content);
 
-    // Helper: send template to a phone and update DB
+    // Helper: send text message to a phone and update DB.
+    // Client initiated the conversation (support mode) so 24h window is open —
+    // we can send a regular text message, no template needed.
     const doSend = async (phone, clientId, clientName, caseId, wsId) => {
-      // Send as template message (required by Meta for system-initiated messages)
-      // Template body params: {{1}}=clientName, {{2}}=senderName, {{3}}=content
-      // Quick Reply button [0]: payload → "support_{caseId}" (triggers support reply flow)
-      const result = await sendTemplateMessage(
-        phone,
-        TPL_STAFF_REPLY,
-        TPL_LANG,
-        [clientName, senderName || 'צוות', content],
-        [`support_${caseId}`]
-      );
+      const textBody = `💬 *הודעה מ${senderName || 'צוות'}:*\n\n${content}`;
+      const result = await sendTextMessage(phone, textBody, false);
 
       // Update DB with WhatsApp message ID
       if (result.messages?.[0]?.id) {
@@ -977,8 +948,8 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
 
       await logWhatsAppMessage(
         wsId, caseId, clientId,
-        'outbound', phone, 'template', content, 'sent',
-        { supportRequestId, templateName: TPL_STAFF_REPLY }
+        'outbound', phone, 'text', content, 'sent',
+        { supportRequestId }
       );
     };
 
@@ -1025,6 +996,26 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
     console.error('[Bot] sendSupportReply error:', err);
     return { success: false, error: err.message };
   }
+}
+
+/**
+ * Mark all unread client messages in a support request as read in WhatsApp.
+ * Called from the mark-read API endpoint.
+ */
+export async function markSupportMessagesAsRead(supportRequestId) {
+  const { rows } = await pool.query(`
+    SELECT whatsapp_message_id
+    FROM support_messages
+    WHERE request_id = $1
+      AND sender_type = 'client'
+      AND is_read = false
+      AND whatsapp_message_id IS NOT NULL
+  `, [supportRequestId]);
+
+  const promises = rows.map(row => markMessageAsRead(row.whatsapp_message_id));
+  await Promise.all(promises);
+
+  return rows.length;
 }
 
 export async function shutdown() {
