@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card } from '@/components/ui/Card'
@@ -22,8 +22,10 @@ export function CasesPage() {
   const navigate = useNavigate()
   const { user, workspace } = useAuth()
   const wsId = workspace?.id || user?.workspaceId || ''
+  const [searchParams] = useSearchParams()
+  const initialFilter = (searchParams.get('filter') || 'all') as CaseFilter
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<CaseFilter>('all')
+  const [filter, setFilter] = useState<CaseFilter>(initialFilter)
 
   const { data: allCases } = useRealtimeData(
     () => getCases(wsId),

@@ -87,6 +87,7 @@ export interface Case {
   notes?: string
   supportRequestId?: string
   lastActivityDate?: string
+  publicToken?: string
   createdAt: string
   updatedAt: string
 }

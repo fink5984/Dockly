@@ -23,6 +23,7 @@ import { SettingsPage } from '@/pages/settings/SettingsPage'
 
 // Public pages (no auth required)
 import { ClientUploadPortal } from '@/pages/upload/ClientUploadPortal'
+import { PublicCasePortal } from '@/pages/upload/PublicCasePortal'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isOnboarding, isLoading } = useAuth()
@@ -62,6 +63,7 @@ export function App() {
 
         {/* Public client upload portal (no auth) */}
         <Route path="/upload/:token" element={<ClientUploadPortal />} />
+        <Route path="/p/:token" element={<PublicCasePortal />} />
 
         {/* Protected app routes */}
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

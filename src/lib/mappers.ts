@@ -156,6 +156,7 @@ export function mapCase(
     notes: row.notes ?? undefined,
     supportRequestId: row.support_request_id ?? undefined,
     lastActivityDate: row.last_activity_date ?? undefined,
+    publicToken: (row as any).public_token ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

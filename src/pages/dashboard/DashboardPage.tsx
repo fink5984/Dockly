@@ -1,14 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/ui/Button'
 import { getCaseStatusKey } from '@/lib/utils'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { getCases } from '@/services/casesService'
 import { getDashboardStats } from '@/services/settingsService'
 import {
   Users, ClipboardList, CheckCircle, AlertTriangle, Clock, FileX, FileCheck,
-  ArrowUpRight, TrendingUp, Eye,
+  ArrowUpRight, TrendingUp,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
 
@@ -68,10 +67,10 @@ export function DashboardPage() {
 
   // Primary hero KPIs
   const heroKpis = [
-    { key: 'totalClients', value: stats.totalClients, icon: Users, accent: '#6366f1' },
-    { key: 'openCases', value: stats.openCases, icon: ClipboardList, accent: '#3b82f6' },
-    { key: 'completedCases', value: stats.completedCases, icon: CheckCircle, accent: '#16a34a' },
-    { key: 'delayedCases', value: stats.delayedCases, icon: AlertTriangle, accent: '#ef4444' },
+    { key: 'totalClients', value: stats.totalClients, icon: Users, accent: '#6366f1', link: '/clients' },
+    { key: 'openCases', value: stats.openCases, icon: ClipboardList, accent: '#3b82f6', link: '/requests' },
+    { key: 'completedCases', value: stats.completedCases, icon: CheckCircle, accent: '#16a34a', link: '/requests?filter=completed' },
+    { key: 'delayedCases', value: stats.delayedCases, icon: AlertTriangle, accent: '#ef4444', link: '/requests?filter=delayed' },
   ]
 
   // Secondary mini stats
@@ -100,25 +99,6 @@ export function DashboardPage() {
           </h1>
           <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{hebrewDate}</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={<Eye className="w-3.5 h-3.5" />}
-            onClick={() => navigate('/clients')}
-          >
-            {t('dashboard.viewAll')}
-          </Button>
-          <button
-            onClick={() => navigate('/requests/create')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white
-                       bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400
-                       shadow-sm transition-all"
-          >
-            <ClipboardList className="w-3.5 h-3.5" />
-            {t('requests.newRequest')}
-          </button>
-        </div>
       </div>
 
       {/* ── Hero Stats ── */}
@@ -128,8 +108,9 @@ export function DashboardPage() {
           return (
             <div
               key={kpi.key}
+              onClick={() => navigate(kpi.link)}
               className="relative overflow-hidden rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)]
-                         p-4 group hover:shadow-md transition-shadow"
+                         p-4 group hover:shadow-md transition-shadow cursor-pointer"
             >
               {/* Subtle accent background blob */}
               <div

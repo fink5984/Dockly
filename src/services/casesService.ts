@@ -75,6 +75,9 @@ export async function createCase(
   }
 ): Promise<Case> {
   // 1. Insert the case
+  // Generate a permanent public token for sharing
+  const publicToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
+
   const { data: caseRow, error: caseErr } = await supabase
     .from('cases')
     .insert({
@@ -85,6 +88,7 @@ export async function createCase(
       assigned_owner: input.assignedOwner ?? '',
       deadline: input.deadline ?? null,
       notes: input.notes ?? null,
+      public_token: publicToken,
     })
     .select('*, clients!inner ( name )')
     .single()

@@ -490,7 +490,22 @@ export function CaseDetailPage() {
             initialSent={wasSent}
           />
           <Button variant="outline" size="sm" icon={<Copy className="w-3.5 h-3.5" />}>{t('cases.duplicateCase')}</Button>
-          <Button variant="outline" size="sm" icon={<Link2 className="w-3.5 h-3.5" />}>{t('cases.copyLink')}</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<Link2 className="w-3.5 h-3.5" />}
+            onClick={() => {
+              if (caseData.publicToken) {
+                const url = `${window.location.origin}/p/${caseData.publicToken}`
+                navigator.clipboard.writeText(url)
+                addToast({ type: 'success', title: t('cases.linkCopied') })
+              } else {
+                addToast({ type: 'error', title: t('common.error'), message: 'No public token' })
+              }
+            }}
+          >
+            {t('cases.copyLink')}
+          </Button>
           <Button
             variant="ghost"
             size="sm"

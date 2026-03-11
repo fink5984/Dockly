@@ -8,7 +8,7 @@ import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { getSupportRequests } from '@/services/supportService'
 import { cn, getInitials } from '@/lib/utils'
 import {
-  Search, UserPlus, FolderPlus, Sun, Moon, Menu,
+  Search, Sun, Moon, Menu,
   Globe, LogOut, User, ChevronDown, Settings, Activity, MessageCircle,
 } from 'lucide-react'
 
@@ -101,30 +101,6 @@ export function Topbar() {
 
       {/* Right section */}
       <div className="flex items-center gap-1.5">
-        {/* Quick actions - desktop */}
-        <div className="hidden md:flex items-center gap-1.5">
-          <button
-            onClick={() => navigate('/clients?action=add')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span>{t('clients.addClient')}</span>
-          </button>
-          <button
-            onClick={() => navigate('/requests/create')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white transition-colors hover:brightness-110"
-            style={{
-              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-              boxShadow: '0 1px 8px rgba(99,102,241,0.3)',
-            }}
-          >
-            <FolderPlus className="w-3.5 h-3.5" />
-            <span>{t('cases.createCase')}</span>
-          </button>
-        </div>
-
-        <div className="w-px h-6 bg-[var(--border-primary)] mx-1 hidden md:block" />
-
         {/* Support conversations awaiting team response */}
         <div ref={supportRef} className="relative">
           <button

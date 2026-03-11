@@ -232,6 +232,7 @@ export interface Database {
           notes: string | null
           support_request_id: string | null
           last_activity_date: string | null
+          public_token: string | null
           created_at: string
           updated_at: string
         }
@@ -246,6 +247,7 @@ export interface Database {
           notes?: string | null
           support_request_id?: string | null
           last_activity_date?: string | null
+          public_token?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -260,6 +262,7 @@ export interface Database {
           notes?: string | null
           support_request_id?: string | null
           last_activity_date?: string | null
+          public_token?: string | null
           created_at?: string
           updated_at?: string
         }
