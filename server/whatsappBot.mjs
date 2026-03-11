@@ -629,15 +629,28 @@ async function handleTextInput(phone, text, messageId = null) {
     }
 
     const clientName = await getClientName(state.client_id);
+
+    // Check if this is the first client message in this support session
+    const { rows: prevMsgs } = await pool.query(`
+      SELECT id FROM support_messages
+      WHERE request_id = $1 AND sender_type = 'client'
+      LIMIT 1
+    `, [state.support_request_id]);
+    const isFirstMessage = prevMsgs.length === 0;
+
     await addSupportMessage(state.support_request_id, 'client', clientName, text.trim(), messageId);
     await logWhatsAppMessage(
       state.workspace_id, state.case_id, state.client_id,
       'inbound', phone, 'support_chat', text.trim(), 'delivered',
       { supportRequestId: state.support_request_id }
     );
-    await sendTextMessage(phone,
-      '✉️ ההודעה שלך נשלחה לצוות. נחזור אליך בהקדם.\n💡 כתוב *חזור* לחזור לתפריט המסמכים.'
-    );
+
+    // Only send confirmation on the first message; subsequent messages are silently relayed
+    if (isFirstMessage) {
+      await sendTextMessage(phone,
+        '✉️ ההודעה שלך נשלחה לצוות. נחזור אליך בהקדם.\n💡 כתוב *חזור* לחזור לתפריט המסמכים.'
+      );
+    }
     return;
   }
 
@@ -940,8 +953,7 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
     // Client initiated the conversation (support mode) so 24h window is open —
     // we can send a regular text message, no template needed.
     const doSend = async (phone, clientId, clientName, caseId, wsId) => {
-      const textBody = `💬 *הודעה מ${senderName || 'צוות'}:*\n\n${content}`;
-      const result = await sendTextMessage(phone, textBody, false);
+      const result = await sendTextMessage(phone, content, false);
 
       // Update DB with WhatsApp message ID
       if (result.messages?.[0]?.id) {
