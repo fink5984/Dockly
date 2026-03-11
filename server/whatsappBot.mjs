@@ -17,7 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 const WA_PHONE_ID   = process.env.WHATSAPP_PHONE_ID;
 const WA_TOKEN      = process.env.WHATSAPP_ACCESS_TOKEN;
 const WA_VERIFY     = process.env.WHATSAPP_VERIFY_TOKEN || 'dockly-wa-verify-2026-secure';
-const GRAPH_API     = 'https://graph.facebook.com/v21.0';
+const GRAPH_API     = 'https://graph.facebook.com/v25.0';
 
 // Template names — must match exactly what's approved in Meta Business Suite
 const TPL_DOCUMENT_REQUEST  = process.env.WA_TEMPLATE_DOCUMENT_REQUEST  || '_dockly_document_request';
@@ -69,21 +69,27 @@ async function sendTypingIndicator(to, duration = 2000) {
   await new Promise(resolve => setTimeout(resolve, duration));
 }
 
-// ── Mark Message as Read ────────────────────────────────────────────────
-export async function markMessageAsRead(messageId) {
+// ── Mark Message as Read (+ optional typing indicator) ──────────────────
+// When withTyping=true, shows "typing..." bubble on client's WhatsApp
+// so they know a response is being prepared (dismissed on reply or 25s).
+export async function markMessageAsRead(messageId, withTyping = false) {
   const url = `${GRAPH_API}/${WA_PHONE_ID}/messages`;
-  console.log(`[WA] Marking message as read: ${messageId}`);
+  const payload = {
+    messaging_product: 'whatsapp',
+    status: 'read',
+    message_id: messageId,
+  };
+  if (withTyping) {
+    payload.typing_indicator = { type: 'text' };
+  }
+  console.log(`[WA] Marking message as read: ${messageId}${withTyping ? ' (+ typing)' : ''}`);
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${WA_TOKEN}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      status: 'read',
-      message_id: messageId,
-    }),
+    body: JSON.stringify(payload),
   });
   const data = await res.json();
   if (!res.ok) {
@@ -765,7 +771,7 @@ export async function handleIncoming(req, res) {
         // ── In BOT mode: mark immediately (automated flow, instant blue checks)
         // ── In SUPPORT mode: do NOT mark — staff sees green check only when they open the chat
         if (!isInSupportMode) {
-          markMessageAsRead(messageId).catch(err => 
+          markMessageAsRead(messageId, true).catch(err => 
             console.error('[Bot] Failed to mark message as read:', err)
           );
         }
@@ -1003,12 +1009,14 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
  * Called from the mark-read API endpoint.
  */
 export async function markSupportMessagesAsRead(supportRequestId) {
+  // Query without is_read filter — the frontend may have already updated is_read=true
+  // before calling this endpoint, so we need to find all client messages regardless.
+  // Sending read receipts to WhatsApp is idempotent (safe to send twice).
   const { rows } = await pool.query(`
     SELECT whatsapp_message_id
     FROM support_messages
     WHERE request_id = $1
       AND sender_type = 'client'
-      AND is_read = false
       AND whatsapp_message_id IS NOT NULL
   `, [supportRequestId]);
 
