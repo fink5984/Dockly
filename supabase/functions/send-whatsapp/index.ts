@@ -117,7 +117,7 @@ serve(async (req: Request) => {
         ? `שלום ${clientName} 👋\n\nאנחנו צריכים ממך את המסמכים הבאים:\n\n${docList}\n\n📎 לחץ על הקישור כדי להעלות את המסמכים:\n${uploadUrl}\n\n⏰ הקישור בתוקף ל-7 ימים.\nתודה! 🙏`
         : `Hi ${clientName} 👋\n\nWe need the following documents from you:\n\n${docList}\n\n📎 Click the link to upload your documents:\n${uploadUrl}\n\n⏰ This link is valid for 7 days.\nThank you! 🙏`
 
-      // 8. Send via WhatsApp Cloud API
+      // 8. Send via WhatsApp Cloud API (as template message — required for system-initiated)
       const waAccessToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
       const waPhoneId = Deno.env.get('WHATSAPP_PHONE_ID')
 
@@ -129,8 +129,19 @@ serve(async (req: Request) => {
         // Format phone number (ensure it starts with country code, no + sign)
         const formattedPhone = phoneNumber.replace(/[^0-9]/g, '')
 
+        // Fetch client name for template personalization
+        const { data: clientRow } = await supabase
+          .from('clients')
+          .select('name')
+          .eq('id', clientId)
+          .single()
+        const clientNameForTemplate = clientRow?.name || 'Client'
+
+        const templateName = 'dockly_document_request'
+        const langCode = language === 'he' ? 'he' : 'en'
+
         const waResponse = await fetch(
-          `https://graph.facebook.com/v18.0/${waPhoneId}/messages`,
+          `https://graph.facebook.com/v21.0/${waPhoneId}/messages`,
           {
             method: 'POST',
             headers: {
@@ -140,8 +151,27 @@ serve(async (req: Request) => {
             body: JSON.stringify({
               messaging_product: 'whatsapp',
               to: formattedPhone,
-              type: 'text',
-              text: { body: messageBody },
+              type: 'template',
+              template: {
+                name: templateName,
+                language: { code: langCode },
+                components: [
+                  {
+                    type: 'body',
+                    parameters: [
+                      { type: 'text', text: clientNameForTemplate },
+                      { type: 'text', text: String(pendingDocs.length) },
+                      { type: 'text', text: caseData.case_type || '' },
+                    ],
+                  },
+                  {
+                    type: 'button',
+                    sub_type: 'quick_reply',
+                    index: '0',
+                    parameters: [{ type: 'payload', payload: `show_docs_${caseId}` }],
+                  },
+                ],
+              },
             }),
           }
         )
@@ -168,11 +198,11 @@ serve(async (req: Request) => {
         client_id: clientId,
         direction: 'outbound',
         phone_number: phoneNumber,
-        message_type: 'text',
-        content: messageBody,
+        message_type: 'template',
+        content: `Template "dockly_document_request" sent for ${caseData.case_type || 'case'}`,
         status: sendStatus,
         wa_message_id: waMessageId,
-        template_name: 'document_request',
+        template_name: 'dockly_document_request',
         error_message: errorMessage,
         metadata: { upload_token: token, upload_url: uploadUrl, pending_docs: pendingDocs.length },
       })

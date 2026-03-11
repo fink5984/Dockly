@@ -32,7 +32,7 @@ app.post('/api/whatsapp/webhook', handleIncoming);
 // ── WhatsApp Send Initial Message (from frontend) ──────────────────────
 app.post('/api/whatsapp/send', async (req, res) => {
   try {
-    const { workspaceId, caseId, clientId, phoneNumber, language, caseTitle, pendingCount } = req.body;
+    const { workspaceId, caseId, clientId, phoneNumber, language, caseTitle, pendingCount, messageType } = req.body;
     
     if (!phoneNumber || !caseId || !workspaceId || !clientId) {
       return res.status(400).json({ success: false, error: 'Missing required fields' });
@@ -46,6 +46,7 @@ app.post('/api/whatsapp/send', async (req, res) => {
       language: language || 'he',
       caseTitle: caseTitle || '',
       pendingCount: pendingCount || 0,
+      messageType: messageType || 'initial',
     });
 
     res.json(result);

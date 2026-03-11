@@ -134,7 +134,7 @@ export function ClientProfilePage() {
                       <div className="flex items-center gap-2 mb-1">
                         <p className="text-sm font-medium">{c.id}</p>
                         <Badge variant="status" status={c.status}>
-                          {t(`cases.${c.status === 'waiting-for-client' ? 'waitingForClient' : c.status === 'partial-submission' ? 'partialSubmission' : c.status === 'awaiting-review' ? 'awaitingReview' : c.status}`)}
+                          {t(`cases.${c.status === 'waiting-for-client' ? 'waitingForClient' : c.status === 'partial-submission' ? 'partialSubmission' : c.status}`)}
                         </Badge>
                         {c.supportRequestId && <Badge variant="status" status="warning">{t('support.activeSupportBadge')}</Badge>}
                       </div>

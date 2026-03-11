@@ -16,7 +16,6 @@ const STATUS_COLORS: Record<string, string> = {
   new: '#3b82f6',
   'waiting-for-client': '#f59e0b',
   'partial-submission': '#8b5cf6',
-  'awaiting-review': '#06b6d4',
   completed: '#16a34a',
   closed: '#16a34a',
   delayed: '#dc2626',
@@ -257,12 +256,12 @@ export function DashboardPage() {
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-4">
+              <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-4">
                 {pieData.map(d => (
-                  <div key={d.name} className="flex items-center gap-2 text-xs">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                    <span className="text-[var(--text-secondary)] truncate">{t(getCaseStatusKey(d.name))}</span>
-                    <span className="font-semibold ms-auto">{d.value}</span>
+                  <div key={d.name} className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                    <span className="text-[var(--text-secondary)]">{t(getCaseStatusKey(d.name))}</span>
+                    <span className="font-bold">{d.value}</span>
                   </div>
                 ))}
               </div>

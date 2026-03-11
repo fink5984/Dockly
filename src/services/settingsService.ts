@@ -411,7 +411,7 @@ export async function getDashboardStats(workspaceId: string): Promise<DashboardS
     { count: activeSupportRequests },
   ] = await Promise.all([
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'active'),
-    supabase.from('cases').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).in('status', ['new', 'waiting-for-client', 'partial-submission', 'awaiting-review']),
+    supabase.from('cases').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).in('status', ['new', 'waiting-for-client', 'partial-submission']),
     supabase.from('cases').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).in('status', ['completed', 'closed']),
     supabase.from('cases').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'delayed'),
     supabase.from('support_requests').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).in('status', ['open', 'waiting-for-staff', 'waiting-for-client']),

@@ -19,7 +19,7 @@ import {
   CheckCircle, Clock, Users, Filter,
 } from 'lucide-react'
 
-type ClientFilter = 'all' | 'no-submission' | 'partial' | 'completed' | 'delayed' | 'awaiting-review' | 'active-support'
+type ClientFilter = 'all' | 'no-submission' | 'partial' | 'completed' | 'delayed' | 'active-support'
 
 export function ClientsPage() {
   const { t } = useI18n()
@@ -58,7 +58,6 @@ export function ClientsPage() {
     if (latestCase) {
       if (latestCase.status === 'completed') submissionStatus = 'completed'
       else if (latestCase.status === 'delayed') submissionStatus = 'delayed'
-      else if (latestCase.status === 'awaiting-review') submissionStatus = 'awaiting-review'
       else if (totalReceived > 0 && totalReceived < totalRequired) submissionStatus = 'partial'
       else if (totalReceived === 0) submissionStatus = 'no-submission'
     }
@@ -81,7 +80,6 @@ export function ClientsPage() {
     { key: 'partial', labelKey: 'clients.partial', count: clientsWithData.filter(c => c.submissionStatus === 'partial').length },
     { key: 'completed', labelKey: 'clients.completed', count: clientsWithData.filter(c => c.submissionStatus === 'completed').length },
     { key: 'delayed', labelKey: 'clients.delayed', count: clientsWithData.filter(c => c.submissionStatus === 'delayed').length },
-    { key: 'awaiting-review', labelKey: 'clients.awaitingReview', count: clientsWithData.filter(c => c.submissionStatus === 'awaiting-review').length },
     { key: 'active-support', labelKey: 'clients.activeSupport', count: clientsWithData.filter(c => c.hasSupport).length },
   ]
 

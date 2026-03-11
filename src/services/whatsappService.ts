@@ -14,6 +14,7 @@ export interface SendDocumentRequestParams {
   clientId: string
   phoneNumber: string
   language: 'en' | 'he'
+  messageType?: 'initial' | 'reminder' | 'document_invalid'
 }
 
 export interface SendDocumentRequestResult {
@@ -58,6 +59,7 @@ export async function sendDocumentRequest(
         language: params.language || 'he',
         caseTitle: caseRow?.case_type || '',
         pendingCount: count ?? 0,
+        messageType: params.messageType || 'initial',
       }),
     })
 
@@ -240,6 +242,32 @@ export async function uploadFromPortal(
     .eq('id', documentId)
 
   if (updateErr) throw updateErr
+
+  // Recalculate case status
+  const { data: allDocs } = await supabase
+    .from('case_documents')
+    .select('status')
+    .eq('case_id', caseId)
+
+  if (allDocs) {
+    const total = allDocs.length
+    const uploaded = allDocs.filter(d => d.status === 'uploaded').length
+    const missing = allDocs.filter(d => ['missing', 'pending-upload'].includes(d.status)).length
+
+    let newStatus: string
+    if (uploaded >= total) {
+      newStatus = 'completed'
+    } else if (uploaded > 0 && missing > 0) {
+      newStatus = 'partial-submission'
+    } else {
+      newStatus = 'waiting-for-client'
+    }
+
+    await supabase
+      .from('cases')
+      .update({ status: newStatus })
+      .eq('id', caseId)
+  }
 }
 
 // ---- Mark token as used ----

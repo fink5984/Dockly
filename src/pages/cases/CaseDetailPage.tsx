@@ -12,7 +12,7 @@ import { cn, formatFileSize, getStatusColor, getDocStatusKey, formatDate } from 
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
-import { getCases, updateCase, deleteCase, addCaseDocument } from '@/services/casesService'
+import { getCases, updateCase, deleteCase, addCaseDocument, updateCaseDocument } from '@/services/casesService'
 import { createActivity } from '@/services/activityService'
 import { getSupportRequestsByCaseId, createSupportRequest, sendSupportReplyViaWhatsApp, updateSupportRequest, markClientMessagesAsRead } from '@/services/supportService'
 import { getClientById } from '@/services/clientsService'
@@ -268,10 +268,7 @@ export function CaseDetailPage() {
   }
 
   const totalDocs = caseData.requiredDocuments.length
-  const approvedDocs = caseData.requiredDocuments.filter(d => d.status === 'approved').length
-  const submittedDocs = caseData.requiredDocuments.filter(d => !['missing', 'pending-upload'].includes(d.status)).length
-  const pendingReview = caseData.requiredDocuments.filter(d => ['uploaded', 'under-review'].includes(d.status)).length
-  const rejected = caseData.requiredDocuments.filter(d => d.status === 'rejected').length
+  const uploadedDocs = caseData.requiredDocuments.filter(d => !['missing', 'pending-upload'].includes(d.status)).length
   const missing = caseData.requiredDocuments.filter(d => ['missing', 'pending-upload'].includes(d.status)).length
 
   // Handler: save edits
@@ -325,6 +322,7 @@ export function CaseDetailPage() {
           clientId: caseData.clientId,
           phoneNumber: clientData.phone,
           language: language as 'en' | 'he',
+          messageType: 'initial',
         })
         if (result.success) {
           // Update case status so sent state persists across refresh
@@ -353,10 +351,55 @@ export function CaseDetailPage() {
         clientId: caseData.clientId,
         phoneNumber: clientData.phone,
         language: language as 'en' | 'he',
+        messageType: 'reminder',
       })
       addToast({ type: 'success', title: t('cases.reminderSent') })
     } catch (err: any) {
       addToast({ type: 'error', title: t('common.error'), message: err.message })
+    }
+  }
+
+  // Handler: mark document as invalid → reset to missing + notify client via WhatsApp
+  const handleMarkInvalid = async (doc: CaseDocument) => {
+    try {
+      // Reset document to 'missing' and clear file info
+      await updateCaseDocument(doc.id, {
+        status: 'missing',
+        fileName: '',
+        fileType: '',
+        fileSize: 0,
+        storagePath: '',
+        storageStatus: 'error',
+        rejectionReason: null,
+      })
+      // Recalculate case status based on remaining documents
+      const otherDocs = caseData.requiredDocuments.filter(d => d.id !== doc.id)
+      const stillUploaded = otherDocs.filter(d => !['missing', 'pending-upload'].includes(d.status)).length
+      const totalCount = caseData.requiredDocuments.length
+      let newStatus: string
+      if (stillUploaded === 0) {
+        newStatus = 'waiting-for-client'
+      } else if (stillUploaded < totalCount - 1) {
+        // -1 because the current doc is now missing
+        newStatus = 'partial-submission'
+      } else {
+        newStatus = 'partial-submission'
+      }
+      await updateCase(caseData.id, { status: newStatus })
+      // Notify client via WhatsApp
+      if (clientData?.phone) {
+        await sendDocumentRequest({
+          workspaceId: wsId,
+          caseId: caseData.id,
+          clientId: caseData.clientId,
+          phoneNumber: clientData.phone,
+          language: language as 'en' | 'he',
+          messageType: 'document_invalid',
+        })
+      }
+      addToast({ type: 'success', title: t('documents.markedInvalid') })
+    } catch (err: any) {
+      addToast({ type: 'error', title: t('common.error'), message: err?.message })
     }
   }
 
@@ -412,7 +455,7 @@ export function CaseDetailPage() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
             <h1 className="text-xl font-bold truncate">{caseData.clientName}</h1>
             <Badge variant="status" status={caseData.status}>
-              {t(`cases.${caseData.status === 'waiting-for-client' ? 'waitingForClient' : caseData.status === 'partial-submission' ? 'partialSubmission' : caseData.status === 'awaiting-review' ? 'awaitingReview' : caseData.status}`)}
+              {t(`cases.${caseData.status === 'waiting-for-client' ? 'waitingForClient' : caseData.status === 'partial-submission' ? 'partialSubmission' : caseData.status}`)}
             </Badge>
           </div>
           <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)] mt-1">
@@ -469,24 +512,16 @@ export function CaseDetailPage() {
               <div className="flex-1">
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span className="font-medium">{t('cases.overallProgress')}</span>
-                  <span className="tabular-nums font-bold text-lg">{totalDocs > 0 ? Math.round((approvedDocs / totalDocs) * 100) : 0}%</span>
+                  <span className="tabular-nums font-bold text-lg">{totalDocs > 0 ? Math.round((uploadedDocs / totalDocs) * 100) : 0}%</span>
                 </div>
-                <ProgressBar value={approvedDocs} max={totalDocs} size="lg" />
+                <ProgressBar value={uploadedDocs} max={totalDocs} size="lg" />
               </div>
               <div className="flex gap-4 text-center shrink-0">
                 <div className="px-3">
-                  <p className="text-lg font-bold text-green-600">{approvedDocs}</p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.approved')}</p>
+                  <p className="text-lg font-bold text-green-600">{uploadedDocs}</p>
+                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('documents.uploaded')}</p>
                 </div>
-                <div className="px-3 border-x border-[var(--border-primary)]">
-                  <p className="text-lg font-bold text-blue-500">{pendingReview}</p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.pending')}</p>
-                </div>
-                <div className="px-3 border-e border-[var(--border-primary)]">
-                  <p className="text-lg font-bold text-red-500">{rejected}</p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.rejected')}</p>
-                </div>
-                <div className="px-3">
+                <div className="px-3 border-s border-[var(--border-primary)]">
                   <p className="text-lg font-bold text-gray-400">{missing}</p>
                   <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('cases.missing')}</p>
                 </div>
@@ -527,9 +562,9 @@ export function CaseDetailPage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold flex items-center gap-2">
             {t('documents.title')}
-            {pendingReview > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-bold dark:bg-blue-900 dark:text-blue-300">
-                {pendingReview}
+            {uploadedDocs > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-green-100 text-green-700 text-[11px] font-bold dark:bg-green-900 dark:text-green-300">
+                {uploadedDocs}
               </span>
             )}
           </h2>
@@ -686,19 +721,12 @@ export function CaseDetailPage() {
                               <FileText className="w-3.5 h-3.5" />
                               {t('documents.details') || t('cases.caseInfo')}
                             </button>
-                            {['uploaded', 'under-review'].includes(doc.status) && (
-                              <>
-                                <button onClick={(e) => { e.stopPropagation(); setDocMenuOpen(null) }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] text-green-600 transition-colors">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />{t('documents.approve')}
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); setDocMenuOpen(null) }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] text-red-600 transition-colors">
-                                  <XCircle className="w-3.5 h-3.5" />{t('documents.reject')}
-                                </button>
-                              </>
-                            )}
-                            {doc.status === 'rejected' && (
-                              <button onClick={(e) => { e.stopPropagation(); setDocMenuOpen(null) }} className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] transition-colors">
-                                <RotateCcw className="w-3.5 h-3.5" />{t('documents.requestReupload')}
+                            {!['missing', 'pending-upload'].includes(doc.status) && (
+                              <button
+                                onClick={async (e) => { e.stopPropagation(); setDocMenuOpen(null); await handleMarkInvalid(doc) }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--bg-tertiary)] text-red-600 transition-colors"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />{t('documents.markInvalid')}
                               </button>
                             )}
                           </div>

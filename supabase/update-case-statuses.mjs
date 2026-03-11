@@ -20,18 +20,15 @@ async function run() {
       );
 
       const total = docs.length;
-      const pending = docs.filter(d => ['missing', 'pending-upload', 'rejected'].includes(d.status)).length;
-      const uploaded = docs.filter(d => ['uploaded', 'under-review'].includes(d.status)).length;
-      const approved = docs.filter(d => d.status === 'approved').length;
+      const uploaded = docs.filter(d => d.status === 'uploaded').length;
+      const missing = docs.filter(d => ['missing', 'pending-upload'].includes(d.status)).length;
 
       let newStatus;
       if (total === 0) {
         newStatus = 'new';
-      } else if (approved === total) {
+      } else if (uploaded === total) {
         newStatus = 'completed';
-      } else if (uploaded > 0 && pending === 0) {
-        newStatus = 'awaiting-review';
-      } else if (uploaded > 0 || approved > 0) {
+      } else if (uploaded > 0 && missing > 0) {
         newStatus = 'partial-submission';
       } else {
         newStatus = 'waiting-for-client';

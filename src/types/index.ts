@@ -95,7 +95,6 @@ export type CaseStatus =
   | 'new'
   | 'waiting-for-client'
   | 'partial-submission'
-  | 'awaiting-review'
   | 'completed'
   | 'closed'
   | 'delayed'

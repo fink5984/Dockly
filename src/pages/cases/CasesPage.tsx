@@ -50,7 +50,6 @@ export function CasesPage() {
     { key: 'new', labelKey: 'cases.new', count: allCases.filter(c => c.status === 'new').length },
     { key: 'waiting-for-client', labelKey: 'cases.waitingForClient', count: allCases.filter(c => c.status === 'waiting-for-client').length },
     { key: 'partial-submission', labelKey: 'cases.partialSubmission', count: allCases.filter(c => c.status === 'partial-submission').length },
-    { key: 'awaiting-review', labelKey: 'cases.awaitingReview', count: allCases.filter(c => c.status === 'awaiting-review').length },
     { key: 'completed', labelKey: 'cases.completed', count: allCases.filter(c => c.status === 'completed').length },
     { key: 'delayed', labelKey: 'cases.delayed', count: allCases.filter(c => c.status === 'delayed').length },
   ]
@@ -100,9 +99,7 @@ export function CasesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(c => {
             const total = c.requiredDocuments.length
-            // Count documents that are not missing/pending - i.e., have been uploaded
             const uploaded = c.requiredDocuments.filter(d => !['missing', 'pending-upload'].includes(d.status)).length
-            const approved = c.requiredDocuments.filter(d => d.status === 'approved').length
 
             // Check for unread support messages - only show indicator if status is waiting-for-staff
             const caseSupportRequest = allSupportRequests.find(sr => sr.caseId === c.id)
@@ -124,7 +121,7 @@ export function CasesPage() {
                       <p className="text-sm font-semibold mt-0.5">{c.clientName}</p>
                     </div>
                     <Badge variant="status" status={c.status}>
-                      {t(`cases.${c.status === 'waiting-for-client' ? 'waitingForClient' : c.status === 'partial-submission' ? 'partialSubmission' : c.status === 'awaiting-review' ? 'awaitingReview' : c.status}`)}
+                      {t(`cases.${c.status === 'waiting-for-client' ? 'waitingForClient' : c.status === 'partial-submission' ? 'partialSubmission' : c.status}`)}
                     </Badge>
                   </div>
 

@@ -107,6 +107,53 @@ async function sendInteractiveButtons(to, bodyText, buttons, withTyping = true) 
   return result;
 }
 
+/**
+ * Send a template message via WhatsApp Cloud API.
+ * Template messages are required for system-initiated messages (outside 24h window).
+ *
+ * Templates must be pre-created & approved in Meta Business Suite.
+ * Expected templates:
+ *   - dockly_document_request  (he/en): body {{1}}=clientName, {{2}}=pendingCount, {{3}}=caseTitle  + button "📄 הצג מסמכים"
+ *   - dockly_document_reminder (he/en): body {{1}}=clientName, {{2}}=pendingCount, {{3}}=caseTitle  + button "📄 הצג מסמכים"
+ *   - dockly_document_rejected (he/en): body {{1}}=clientName, {{2}}=pendingCount, {{3}}=caseTitle  + button "📄 הצג מסמכים"
+ *   - dockly_staff_reply       (he/en): body {{1}}=clientName, {{2}}=senderName, {{3}}=content      + button "💬 השב"
+ *
+ * @param {string} to - Recipient phone number
+ * @param {string} templateName - Approved template name
+ * @param {string} languageCode - e.g. 'he' or 'en'
+ * @param {string[]} bodyParams - Values for body {{1}}, {{2}}, ... placeholders
+ * @param {string[]} buttonPayloads - Payload strings for Quick Reply buttons (one per button, matched by index)
+ */
+async function sendTemplateMessage(to, templateName, languageCode, bodyParams = [], buttonPayloads = []) {
+  const components = [];
+  if (bodyParams.length > 0) {
+    components.push({
+      type: 'body',
+      parameters: bodyParams.map(p => ({ type: 'text', text: String(p) })),
+    });
+  }
+
+  // Add Quick Reply button payloads (index-matched to buttons defined in the template)
+  for (let i = 0; i < buttonPayloads.length; i++) {
+    components.push({
+      type: 'button',
+      sub_type: 'quick_reply',
+      index: String(i),
+      parameters: [{ type: 'payload', payload: buttonPayloads[i] }],
+    });
+  }
+
+  const result = await sendWhatsApp(to, {
+    type: 'template',
+    template: {
+      name: templateName,
+      language: { code: languageCode },
+      components,
+    },
+  });
+  return result;
+}
+
 async function sendInteractiveList(to, bodyText, buttonLabel, sections, withTyping = true) {
   if (withTyping) {
     await sendTypingIndicator(to, 1500);
@@ -180,7 +227,7 @@ async function getPendingDocuments(caseId) {
     FROM case_documents cd
     LEFT JOIN document_types dt ON dt.id = cd.document_type_id
     WHERE cd.case_id = $1
-      AND cd.status IN ('pending', 'missing', 'rejected')
+      AND cd.status IN ('pending', 'missing')
     ORDER BY cd.sort_order ASC
   `, [caseId]);
   return rows;
@@ -221,16 +268,13 @@ async function updateCaseStatus(caseId) {
   `, [caseId]);
 
   const total = rows.length;
-  const pending = rows.filter(d => ['missing', 'pending-upload', 'rejected'].includes(d.status)).length;
-  const uploaded = rows.filter(d => ['uploaded', 'under-review'].includes(d.status)).length;
-  const approved = rows.filter(d => d.status === 'approved').length;
+  const pending = rows.filter(d => ['missing', 'pending-upload'].includes(d.status)).length;
+  const uploaded = rows.filter(d => d.status === 'uploaded').length;
 
   let newStatus;
-  if (approved === total && total > 0) {
+  if (uploaded === total && total > 0) {
     newStatus = 'completed';
-  } else if (uploaded > 0 && pending === 0) {
-    newStatus = 'awaiting-review';
-  } else if (uploaded > 0 || approved > 0) {
+  } else if (uploaded > 0 && pending > 0) {
     newStatus = 'partial-submission';
   } else {
     newStatus = 'waiting-for-client';
@@ -588,8 +632,8 @@ async function handleTextInput(phone, text, messageId = null) {
       return;
     }
     const allDocs = await getAllDocuments(state.case_id);
-    const pending = allDocs.filter(d => ['pending', 'missing', 'rejected'].includes(d.status));
-    const uploaded = allDocs.filter(d => ['uploaded', 'approved'].includes(d.status));
+    const pending = allDocs.filter(d => ['pending', 'missing'].includes(d.status));
+    const uploaded = allDocs.filter(d => d.status === 'uploaded');
 
     let statusText = `📊 *סטטוס מסמכים:*\n\n`;
     if (uploaded.length > 0) {
@@ -729,6 +773,25 @@ export async function handleIncoming(req, res) {
             break;
           }
 
+          // Template Quick Reply button clicks arrive as type 'button'
+          case 'button': {
+            const payload = msg.button?.payload || '';
+            console.log(`[Bot] Template button click — payload: ${payload}`);
+            if (payload.startsWith('show_docs_')) {
+              const caseId = payload.replace('show_docs_', '');
+              await handleShowDocuments(from, caseId);
+            } else if (payload.startsWith('support_')) {
+              const st = await getConversationState(from);
+              if (st) {
+                await enterSupportMode(from, st);
+                await sendTextMessage(from,
+                  '💬 *מצב תמיכה*\n\nכתוב את ההודעה שלך והצוות יקבל התראה ויענה לך ישירות כאן.\n\n💡 כתוב *חזור* כדי לחזור לתפריט המסמכים.'
+                );
+              }
+            }
+            break;
+          }
+
           default:
             console.log(`[Bot] Unhandled message type: ${msg.type}`);
             break;
@@ -748,7 +811,7 @@ export async function handleIncoming(req, res) {
  * Send the initial WhatsApp message to a client with a button to view documents.
  * Called from the frontend via /api/whatsapp/send endpoint.
  */
-export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneNumber, language, caseTitle, pendingCount }) {
+export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneNumber, language, caseTitle, pendingCount, messageType }) {
   try {
     // Format phone number: remove non-digits, convert Israeli local to international
     let phone = phoneNumber.replace(/[^0-9]/g, '');
@@ -759,24 +822,41 @@ export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneN
       phone = phone.slice(2);
     }
 
-    // Build message text
+    // Fetch client name for template personalization
+    let clientName = 'לקוח';
+    try {
+      const { rows } = await pool.query('SELECT name FROM clients WHERE id = $1', [clientId]);
+      if (rows[0]?.name) clientName = rows[0].name;
+    } catch (_) { /* use default */ }
+
     const isHebrew = language === 'he';
-    const bodyText = isHebrew
-      ? `שלום! 👋\n\nיש מסמכים שצריך להעלות עבור התיק: *${caseTitle}*\n📄 מספר מסמכים להעלאה: *${pendingCount}*\n\nלחץ על הכפתור למטה כדי לראות את רשימת המסמכים ולהעלות אותם ישירות כאן בוואטסאפ.`
-      : `Hello! 👋\n\nThere are documents to upload for case: *${caseTitle}*\n📄 Documents to upload: *${pendingCount}*\n\nClick the button below to see the document list and upload them directly here in WhatsApp.`;
+    const langCode = isHebrew ? 'he' : 'en';
 
-    const buttonTitle = isHebrew ? 'הצג מסמכים' : 'Show Documents';
+    // Determine template name based on messageType
+    let templateName;
+    switch (messageType) {
+      case 'reminder':
+        templateName = 'dockly_document_reminder';
+        break;
+      case 'document_invalid':
+        templateName = 'dockly_document_rejected';
+        break;
+      case 'initial':
+      default:
+        templateName = 'dockly_document_request';
+        break;
+    }
 
-    // Send interactive button message
-    const result = await sendInteractiveButtons(phone, bodyText, [
-      {
-        type: 'reply',
-        reply: {
-          id: `show_docs_${caseId}`,
-          title: buttonTitle,
-        },
-      },
-    ]);
+    // Send template message (required by Meta for system-initiated messages)
+    // Template body params: {{1}}=clientName, {{2}}=pendingCount, {{3}}=caseTitle
+    // Quick Reply button [0]: payload → "show_docs_{caseId}" (triggers document list flow)
+    const result = await sendTemplateMessage(
+      phone,
+      templateName,
+      langCode,
+      [clientName, String(pendingCount), caseTitle || ''],
+      [`show_docs_${caseId}`]
+    );
 
     // Set conversation state
     await setConversationState(phone, caseId, clientId, workspaceId, null, null);
@@ -784,9 +864,9 @@ export async function sendInitialMessage({ workspaceId, caseId, clientId, phoneN
     // Log outbound message
     await logWhatsAppMessage(
       workspaceId, caseId, clientId,
-      'outbound', phone, 'interactive_button',
-      `Initial message sent for ${caseTitle}`, 'sent',
-      { pendingCount, language }
+      'outbound', phone, 'template',
+      `Template "${templateName}" sent for ${caseTitle} (${messageType || 'initial'})`, 'sent',
+      { pendingCount, language, templateName, messageType: messageType || 'initial' }
     );
 
     return {
@@ -809,6 +889,35 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
     // 1. Save message to support_messages and get the message ID
     const messageDbId = await addSupportMessage(supportRequestId, 'staff', senderName, content);
 
+    // Helper: send template to a phone and update DB
+    const doSend = async (phone, clientId, clientName, caseId, wsId) => {
+      // Send as template message (required by Meta for system-initiated messages)
+      // Template body params: {{1}}=clientName, {{2}}=senderName, {{3}}=content
+      // Quick Reply button [0]: payload → "support_{caseId}" (triggers support reply flow)
+      const result = await sendTemplateMessage(
+        phone,
+        'dockly_staff_reply',
+        'he',
+        [clientName, senderName || 'צוות', content],
+        [`support_${caseId}`]
+      );
+
+      // Update DB with WhatsApp message ID
+      if (result.messages?.[0]?.id) {
+        await pool.query(`
+          UPDATE support_messages 
+          SET whatsapp_message_id = $1 
+          WHERE id = $2
+        `, [result.messages[0].id, messageDbId]);
+      }
+
+      await logWhatsAppMessage(
+        wsId, caseId, clientId,
+        'outbound', phone, 'template', content, 'sent',
+        { supportRequestId, templateName: 'dockly_staff_reply' }
+      );
+    };
+
     // 2. Find the client's phone from conversation state
     const { rows } = await pool.query(`
       SELECT wcs.phone_number, wcs.case_id, wcs.client_id, wcs.workspace_id
@@ -820,7 +929,7 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
     if (rows.length === 0) {
       // Client might not be in support mode anymore — find phone from support_request → client
       const { rows: sr } = await pool.query(`
-        SELECT sr.case_id, sr.client_id, c.phone, cas.workspace_id
+        SELECT sr.case_id, sr.client_id, c.phone, c.name AS client_name, cas.workspace_id
         FROM support_requests sr
         JOIN clients c ON c.id = sr.client_id
         JOIN cases cas ON cas.id = sr.case_id
@@ -835,47 +944,17 @@ export async function sendSupportReply({ supportRequestId, senderName, content }
       if (phone.startsWith('05') && phone.length === 10) phone = '972' + phone.slice(1);
       if (!phone) return { success: false, error: 'Client has no phone number' };
 
-      // Send with typing
-      const result = await sendTextMessage(phone, `💬 *הודעה מהצוות:*\n\n${content}`);
-      
-      // Update DB with WhatsApp message ID
-      if (result.messages?.[0]?.id) {
-        await pool.query(`
-          UPDATE support_messages 
-          SET whatsapp_message_id = $1 
-          WHERE id = $2
-        `, [result.messages[0].id, messageDbId]);
-      }
-
-      await logWhatsAppMessage(
-        sr[0].workspace_id, sr[0].case_id, sr[0].client_id,
-        'outbound', phone, 'support_chat', content, 'sent',
-        { supportRequestId }
-      );
-
+      await doSend(phone, sr[0].client_id, sr[0].client_name || 'לקוח', sr[0].case_id, sr[0].workspace_id);
       return { success: true };
     }
 
     const { phone_number, case_id, client_id, workspace_id } = rows[0];
 
-    // 3. Send WhatsApp message to client with typing
-    const result = await sendTextMessage(phone_number, `💬 *הודעה מהצוות:*\n\n${content}`);
-    
-    // Update DB with WhatsApp message ID
-    if (result.messages?.[0]?.id) {
-      await pool.query(`
-        UPDATE support_messages 
-        SET whatsapp_message_id = $1 
-        WHERE id = $2
-      `, [result.messages[0].id, messageDbId]);
-    }
+    // Get client name for template
+    const clientName = await getClientName(client_id);
 
-    // 4. Log
-    await logWhatsAppMessage(
-      workspace_id, case_id, client_id,
-      'outbound', phone_number, 'support_chat', content, 'sent',
-      { supportRequestId }
-    );
+    // 3. Send template message to client
+    await doSend(phone_number, client_id, clientName, case_id, workspace_id);
 
     return { success: true };
   } catch (err) {
