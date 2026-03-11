@@ -137,7 +137,7 @@ serve(async (req: Request) => {
           .single()
         const clientNameForTemplate = clientRow?.name || 'Client'
 
-        const templateName = Deno.env.get('WA_TEMPLATE_DOCUMENT_REQUEST') || 'dockly_document_request_'
+        const templateName = Deno.env.get('WA_TEMPLATE_DOCUMENT_REQUEST') || '_dockly_document_request'
         const langCode = Deno.env.get('WA_TEMPLATE_LANG') || 'en'
 
         const waResponse = await fetch(

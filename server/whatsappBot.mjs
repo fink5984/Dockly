@@ -20,10 +20,10 @@ const WA_VERIFY     = process.env.WHATSAPP_VERIFY_TOKEN || 'dockly-wa-verify-202
 const GRAPH_API     = 'https://graph.facebook.com/v21.0';
 
 // Template names — must match exactly what's approved in Meta Business Suite
-const TPL_DOCUMENT_REQUEST  = process.env.WA_TEMPLATE_DOCUMENT_REQUEST  || 'dockly_document_request_';
-const TPL_DOCUMENT_REMINDER = process.env.WA_TEMPLATE_DOCUMENT_REMINDER || 'dockly_document_request_';
-const TPL_DOCUMENT_REJECTED = process.env.WA_TEMPLATE_DOCUMENT_REJECTED || 'dockly_document_request_';
-const TPL_STAFF_REPLY       = process.env.WA_TEMPLATE_STAFF_REPLY       || 'dockly_document_request_';
+const TPL_DOCUMENT_REQUEST  = process.env.WA_TEMPLATE_DOCUMENT_REQUEST  || '_dockly_document_request';
+const TPL_DOCUMENT_REMINDER = process.env.WA_TEMPLATE_DOCUMENT_REMINDER || '_dockly_document_request';
+const TPL_DOCUMENT_REJECTED = process.env.WA_TEMPLATE_DOCUMENT_REJECTED || '_dockly_document_request';
+const TPL_STAFF_REPLY       = process.env.WA_TEMPLATE_STAFF_REPLY       || '_dockly_document_request';
 const TPL_LANG              = process.env.WA_TEMPLATE_LANG              || 'en';
 
 const SUPABASE_URL  = process.env.VITE_SUPABASE_URL  || process.env.SUPABASE_URL;
@@ -65,13 +65,37 @@ async function sendWhatsApp(to, payload) {
 // ── Typing Indicator ────────────────────────────────────────────────────
 // Uses WhatsApp Cloud API v21.0+ typing_indicator feature.
 // Shows "typing..." bubble on client’s WhatsApp before the bot replies.
-async function sendTypingIndicator(to, duration = 2000) {
-  await new Promise(resolve => setTimeout(resolve, duration));
+async function sendTypingIndicator(to, duration = 2000) {  try {
+    const url = `${GRAPH_API}/${WA_PHONE_ID}/messages`;
+    // Send typing_on
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WA_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to,
+        type: 'contacts',
+        status: 'typing_on',
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      console.error('[WA] Typing indicator error:', JSON.stringify(data));
+    }
+  } catch (err) {
+    console.error('[WA] Typing indicator failed:', err.message);
+  }
+  // Wait before sending the actual message  await new Promise(resolve => setTimeout(resolve, duration));
 }
 
 // ── Mark Message as Read ────────────────────────────────────────────────
 export async function markMessageAsRead(messageId) {
   const url = `${GRAPH_API}/${WA_PHONE_ID}/messages`;
+  console.log(`[WA] Marking message as read: ${messageId}`);
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -87,6 +111,8 @@ export async function markMessageAsRead(messageId) {
   const data = await res.json();
   if (!res.ok) {
     console.error('[WA] Mark read error:', JSON.stringify(data));
+  } else {
+    console.log('[WA] Mark read success:', messageId);
   }
   return data;
 }
@@ -338,13 +364,18 @@ async function addSupportMessage(requestId, senderType, senderName, content, wha
 }
 
 async function enterSupportMode(phone, state) {
-  const requestId = await findOrCreateSupportRequest(state.case_id, state.client_id);
-  await pool.query(`
-    UPDATE whatsapp_conversation_state
-    SET support_mode = true, support_request_id = $1, awaiting_document_id = NULL, awaiting_document_name = NULL, updated_at = NOW()
-    WHERE phone_number = $2
-  `, [requestId, phone]);
-  return requestId;
+  try {
+    const requestId = await findOrCreateSupportRequest(state.case_id, state.client_id);
+    await pool.query(`
+      UPDATE whatsapp_conversation_state
+      SET support_mode = true, support_request_id = $1, awaiting_document_id = NULL, awaiting_document_name = NULL, updated_at = NOW()
+      WHERE phone_number = $2
+    `, [requestId, phone]);
+    return requestId;
+  } catch (err) {
+    console.error('[Bot] enterSupportMode error:', err);
+    throw err;
+  }
 }
 
 async function exitSupportMode(phone) {
@@ -585,8 +616,35 @@ async function handleTextInput(phone, text, messageId = null) {
     return;
   }
 
-  // ── If in support mode, relay message to support chat ──
+  // ── If in support mode, verify the request still exists then relay message ──
   if (state?.support_mode && state?.support_request_id) {
+    // Verify the support request still exists (may have been deleted)
+    const { rows: srCheck } = await pool.query(
+      'SELECT id FROM support_requests WHERE id = $1', [state.support_request_id]
+    );
+    if (srCheck.length === 0) {
+      // Support request was deleted — exit support mode and re-enter cleanly
+      console.log(`[Bot] Orphaned support_request_id ${state.support_request_id} — resetting support mode`);
+      await exitSupportMode(phone);
+      // If user typed a support keyword, enter fresh support mode
+      if (['תמיכה', 'support', 'עזרה', 'help'].includes(normalized)) {
+        try {
+          const requestId = await enterSupportMode(phone, state);
+          await sendTextMessage(phone,
+            '💬 *מצב תמיכה*\n\nכתוב את ההודעה שלך והצוות יקבל התראה ויענה לך ישירות כאן.\n\n💡 כתוב *חזור* כדי לחזור לתפריט המסמכים.'
+          );
+        } catch (err) {
+          console.error('[Bot] Failed to re-enter support mode:', err);
+          await sendTextMessage(phone, '❌ שגיאה בכניסה למצב תמיכה. נסה שוב.');
+        }
+        return;
+      }
+      // Otherwise show menu
+      await sendTextMessage(phone, '⚠️ השיחה הקודמת הסתיימה. חוזרים לתפריט.');
+      await sendDocumentList(phone, state.case_id, state);
+      return;
+    }
+
     const clientName = await getClientName(state.client_id);
     await addSupportMessage(state.support_request_id, 'client', clientName, text.trim(), messageId);
     await logWhatsAppMessage(
@@ -606,15 +664,20 @@ async function handleTextInput(phone, text, messageId = null) {
       await sendTextMessage(phone, 'אין כרגע תיק פעיל. בקש מהמשרד לשלוח לך הודעה חדשה.');
       return;
     }
-    const requestId = await enterSupportMode(phone, state);
-    await sendTextMessage(phone,
-      '💬 *מצב תמיכה*\n\nכתוב את ההודעה שלך והצוות יקבל התראה ויענה לך ישירות כאן.\n\n💡 כתוב *חזור* כדי לחזור לתפריט המסמכים.'
-    );
-    await logWhatsAppMessage(
-      state.workspace_id, state.case_id, state.client_id,
-      'inbound', phone, 'text', 'Entered support mode', 'delivered',
-      { supportRequestId: requestId }
-    );
+    try {
+      const requestId = await enterSupportMode(phone, state);
+      await sendTextMessage(phone,
+        '💬 *מצב תמיכה*\n\nכתוב את ההודעה שלך והצוות יקבל התראה ויענה לך ישירות כאן.\n\n💡 כתוב *חזור* כדי לחזור לתפריט המסמכים.'
+      );
+      await logWhatsAppMessage(
+        state.workspace_id, state.case_id, state.client_id,
+        'inbound', phone, 'text', 'Entered support mode', 'delivered',
+        { supportRequestId: requestId }
+      );
+    } catch (err) {
+      console.error('[Bot] Failed to enter support mode:', err);
+      await sendTextMessage(phone, '❌ שגיאה בכניסה למצב תמיכה. נסה שוב מאוחר יותר.');
+    }
     return;
   }
 
