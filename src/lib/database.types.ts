@@ -745,6 +745,159 @@ export interface Database {
         }
         Relationships: []
       }
+      signature_requests: {
+        Row: {
+          id: string
+          workspace_id: string
+          client_id: string
+          title: string
+          description: string | null
+          status: string
+          public_token: string
+          document_file_name: string
+          document_storage_path: string
+          document_file_type: string
+          document_file_size: number
+          canvas_width: number | null
+          signed_at: string | null
+          signed_ip: string | null
+          signed_document_path: string | null
+          expires_at: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          client_id: string
+          title: string
+          description?: string | null
+          status: string
+          public_token: string
+          document_file_name: string
+          document_storage_path: string
+          document_file_type: string
+          document_file_size: number
+          canvas_width?: number | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          signed_document_path?: string | null
+          expires_at?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          client_id?: string
+          title?: string
+          description?: string | null
+          status?: string
+          public_token?: string
+          document_file_name?: string
+          document_storage_path?: string
+          document_file_type?: string
+          document_file_size?: number
+          canvas_width?: number | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          signed_document_path?: string | null
+          expires_at?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      signature_fields: {
+        Row: {
+          id: string
+          request_id: string
+          type: string
+          label: string
+          page: number
+          x: number
+          y: number
+          width: number
+          height: number
+          required: boolean
+          value: string | null
+          sort_order: number
+          doc_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          type: string
+          label: string
+          page: number
+          x: number
+          y: number
+          width: number
+          height: number
+          required?: boolean
+          value?: string | null
+          sort_order?: number
+          doc_index?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          type?: string
+          label?: string
+          page?: number
+          x?: number
+          y?: number
+          width?: number
+          height?: number
+          required?: boolean
+          value?: string | null
+          sort_order?: number
+          doc_index?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      signature_documents: {
+        Row: {
+          id: string
+          request_id: string
+          file_name: string
+          storage_path: string
+          file_type: string
+          file_size: number
+          sort_order: number
+          signed_storage_path: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          file_name: string
+          storage_path: string
+          file_type: string
+          file_size: number
+          sort_order?: number
+          signed_storage_path?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          file_name?: string
+          storage_path?: string
+          file_type?: string
+          file_size?: number
+          sort_order?: number
+          signed_storage_path?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
