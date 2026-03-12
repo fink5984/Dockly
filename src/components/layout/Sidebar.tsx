@@ -4,13 +4,14 @@ import { useApp } from '@/contexts/AppContext'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Users, ClipboardList,
-  Settings, X, ChevronLeft, ChevronRight,
+  Settings, X, ChevronLeft, ChevronRight, PenLine,
 } from 'lucide-react'
 
 const navItems = [
   { key: 'dashboard', path: '/', icon: LayoutDashboard },
   { key: 'clients', path: '/clients', icon: Users },
   { key: 'requests', path: '/requests', icon: ClipboardList },
+  { key: 'signatures', path: '/signatures', icon: PenLine },
   { key: 'settings', path: '/settings', icon: Settings },
 ]
 

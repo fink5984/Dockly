@@ -24,6 +24,12 @@ import { SettingsPage } from '@/pages/settings/SettingsPage'
 // Public pages (no auth required)
 import { ClientUploadPortal } from '@/pages/upload/ClientUploadPortal'
 import { PublicCasePortal } from '@/pages/upload/PublicCasePortal'
+import { PublicSignaturePage } from '@/pages/signatures/PublicSignaturePage'
+
+// Signature pages
+import { SignaturesPage } from '@/pages/signatures/SignaturesPage'
+import { SignatureCreatePage } from '@/pages/signatures/SignatureCreatePage'
+import { SignatureDetailPage } from '@/pages/signatures/SignatureDetailPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isOnboarding, isLoading } = useAuth()
@@ -64,6 +70,7 @@ export function App() {
         {/* Public client upload portal (no auth) */}
         <Route path="/upload/:token" element={<ClientUploadPortal />} />
         <Route path="/p/:token" element={<PublicCasePortal />} />
+        <Route path="/sign/:token" element={<PublicSignaturePage />} />
 
         {/* Protected app routes */}
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -81,6 +88,9 @@ export function App() {
           <Route path="document-types" element={<DocumentTypesPage />} />
           <Route path="activity" element={<ActivityPage />} />
           <Route path="whatsapp" element={<WhatsAppPage />} />
+          <Route path="signatures" element={<SignaturesPage />} />
+          <Route path="signatures/create" element={<SignatureCreatePage />} />
+          <Route path="signatures/:id" element={<SignatureDetailPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

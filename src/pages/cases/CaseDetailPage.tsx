@@ -9,6 +9,7 @@ import { Input, Textarea } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { cn, formatFileSize, getStatusColor, getDocStatusKey, formatDate } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
@@ -93,7 +94,7 @@ export function CaseDetailPage() {
   const { addToast } = useApp()
   const wsId = workspace?.id || user?.workspaceId || ''
 
-  const { data: allCases } = useRealtimeData(
+  const { data: allCases, refetch: refetchCases } = useRealtimeData(
     () => getCases(wsId),
     [],
     [wsId],
@@ -372,20 +373,25 @@ export function CaseDetailPage() {
         storageStatus: 'error',
         rejectionReason: null,
       })
-      // Recalculate case status based on remaining documents
-      const otherDocs = caseData.requiredDocuments.filter(d => d.id !== doc.id)
-      const stillUploaded = otherDocs.filter(d => !['missing', 'pending-upload'].includes(d.status)).length
-      const totalCount = caseData.requiredDocuments.length
-      let newStatus: string
-      if (stillUploaded === 0) {
-        newStatus = 'waiting-for-client'
-      } else if (stillUploaded < totalCount - 1) {
-        // -1 because the current doc is now missing
-        newStatus = 'partial-submission'
-      } else {
-        newStatus = 'partial-submission'
+      // Recalculate case status from fresh DB state (avoid stale local data)
+      const { data: freshDocs } = await supabase
+        .from('case_documents')
+        .select('status')
+        .eq('case_id', caseData.id)
+
+      let newStatus = 'waiting-for-client'
+      if (freshDocs) {
+        const total = freshDocs.length
+        const uploaded = freshDocs.filter(d => !['missing', 'pending-upload'].includes(d.status)).length
+        if (uploaded >= total) {
+          newStatus = 'completed'
+        } else if (uploaded > 0) {
+          newStatus = 'partial-submission'
+        }
       }
       await updateCase(caseData.id, { status: newStatus })
+      // Force UI refresh (bypass realtime debounce)
+      setTimeout(() => refetchCases(), 1200)
       // Notify client via WhatsApp
       if (clientData?.phone) {
         await sendDocumentRequest({
@@ -755,8 +761,6 @@ export function CaseDetailPage() {
           })}
         </div>
       </div>
-
-
 
       {/* ── Image Lightbox ── */}
       {lightboxDoc && (() => {

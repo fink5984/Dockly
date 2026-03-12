@@ -318,3 +318,62 @@ export interface ClientUploadToken {
   isUsed: boolean
   createdAt: string
 }
+
+// ---- Digital Signatures ----
+
+export interface SignatureRequest {
+  id: string
+  workspaceId: string
+  clientId: string
+  clientName: string
+  title: string
+  description?: string
+  status: SignatureRequestStatus
+  publicToken: string
+  documentFileName: string
+  documentStoragePath: string
+  documentFileType: string
+  documentFileSize: number
+  canvasWidth?: number
+  fields: SignatureField[]
+  signedAt?: string
+  signedIp?: string
+  signedDocumentPath?: string
+  expiresAt?: string
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type SignatureRequestStatus =
+  | 'draft'
+  | 'pending'
+  | 'viewed'
+  | 'signed'
+  | 'declined'
+  | 'expired'
+  | 'cancelled'
+
+export interface SignatureField {
+  id: string
+  requestId: string
+  type: SignatureFieldType
+  label: string
+  page: number
+  x: number
+  y: number
+  width: number
+  height: number
+  required: boolean
+  value?: string
+  sortOrder: number
+  docIndex?: number
+}
+
+export type SignatureFieldType =
+  | 'signature'
+  | 'date'
+  | 'name'
+  | 'text'
+  | 'initials'
+  | 'checkbox'
