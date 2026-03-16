@@ -3,6 +3,7 @@
  */
 import { supabase } from '@/lib/supabase'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { uploadBuffer as s3UploadBuffer, downloadFile as s3DownloadFile, getSignedUrl as s3GetSignedUrl } from './storageService'
 import type { SignatureRequest, SignatureField } from '@/types'
 
 // ---- Mappers ----
@@ -279,16 +280,14 @@ export async function submitPublicSignature(
   try {
     const signedPdfBytes = await generateSignedPdf(request, valuesMap, undefined, mainDocFields)
 
-    // Upload signed PDF
+    // Upload signed PDF to S3
     const signedPath = request.documentStoragePath.replace(/\.pdf$/i, '_signed.pdf')
-    const { error: uploadErr } = await supabase.storage
-      .from('documents')
-      .upload(signedPath, signedPdfBytes, {
-        contentType: 'application/pdf',
-        upsert: true,
-      })
+    let uploadSuccess = true
+    try {
+      await s3UploadBuffer(signedPath, signedPdfBytes, 'application/pdf')
+    } catch { uploadSuccess = false }
 
-    if (!uploadErr) {
+    if (uploadSuccess) {
       // Save signed document path
       await updateSignatureRequest(request.id, {
         status: 'signed',
@@ -297,7 +296,7 @@ export async function submitPublicSignature(
         signedDocumentPath: signedPath,
       })
     } else {
-      console.error('Failed to upload signed PDF, saving without it:', uploadErr)
+      console.error('Failed to upload signed PDF, saving without it')
       await updateSignatureRequest(request.id, {
         status: 'signed',
         signedAt: new Date().toISOString(),
@@ -325,13 +324,9 @@ export async function submitPublicSignature(
       try {
         const signedBytes = await generateSignedPdf(request, valuesMap, doc.storagePath, docFields)
         const signedDocPath = doc.storagePath.replace(/\.pdf$/i, '_signed.pdf')
-        const { error: upErr } = await supabase.storage
-          .from('documents')
-          .upload(signedDocPath, signedBytes, {
-            contentType: 'application/pdf',
-            upsert: true,
-          })
-        if (!upErr) {
+        let docUploadOk = true
+        try { await s3UploadBuffer(signedDocPath, signedBytes, 'application/pdf') } catch { docUploadOk = false }
+        if (docUploadOk) {
           // Update the extra doc record with signed path
           await supabase
             .from('signature_documents')
@@ -368,12 +363,9 @@ async function generateSignedPdf(
   const docPath = storagePath ?? request.documentStoragePath
   const fields = fieldsSubset ?? request.fields
 
-  // Download the original PDF via Supabase Storage SDK (avoids CORS)
-  const { data: blob, error: dlErr } = await supabase.storage
-    .from('documents')
-    .download(docPath)
-
-  if (dlErr || !blob) throw new Error('Could not download original PDF: ' + (dlErr?.message ?? 'no data'))
+  // Download the original PDF via S3 API
+  const blob = await s3DownloadFile(docPath)
+  if (!blob) throw new Error('Could not download original PDF')
 
   const pdfBytes = await blob.arrayBuffer()
   const pdfDoc = await PDFDocument.load(pdfBytes)
@@ -466,16 +458,9 @@ export async function ensureSignedPdfExists(
 
   const signedPdfBytes = await generateSignedPdf(request, valuesMap, undefined, mainDocFields)
 
-  // Upload
+  // Upload to S3
   const signedPath = request.documentStoragePath.replace(/\.pdf$/i, '_signed.pdf')
-  const { error: uploadErr } = await supabase.storage
-    .from('documents')
-    .upload(signedPath, signedPdfBytes, {
-      contentType: 'application/pdf',
-      upsert: true,
-    })
-
-  if (uploadErr) throw uploadErr
+  await s3UploadBuffer(signedPath, signedPdfBytes, 'application/pdf')
 
   // Save path to request
   await updateSignatureRequest(request.id, { signedDocumentPath: signedPath })
@@ -509,12 +494,7 @@ export async function generateAndDownloadSignedPdf(request: SignatureRequest): P
  * get document signed URL for public access
  */
 export async function getSignatureDocumentUrl(storagePath: string): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from('documents')
-    .createSignedUrl(storagePath, 3600) // 1h
-
-  if (error) throw error
-  return data.signedUrl
+  return s3GetSignedUrl(storagePath, 3600)
 }
 
 // ---- Signature Documents (multi-doc support) ----

@@ -6,14 +6,16 @@
  * 3. Provides a health check endpoint
  */
 
+import 'dotenv/config';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { handleVerification, handleIncoming, sendInitialMessage, sendSupportReply, markSupportMessagesAsRead, shutdown } from './whatsappBot.mjs';
+import s3Routes from './s3Routes.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
-const PORT       = process.env.PORT || 3000;
+const PORT       = process.env.PORT || 3001;
 
 const app = express();
 
@@ -24,6 +26,9 @@ app.use(express.json({ limit: '10mb' }));
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// ── S3 Storage API ──────────────────────────────────────────────────────
+app.use('/api/storage', s3Routes);
 
 // ── WhatsApp Webhook ────────────────────────────────────────────────────
 app.get('/api/whatsapp/webhook', handleVerification);

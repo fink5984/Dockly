@@ -165,12 +165,18 @@ export function PublicCasePortal() {
     setUploading(prev => ({ ...prev, [docId]: true }))
 
     try {
-      await uploadFromPublicPortal(
+      const uploadedPath = await uploadFromPublicPortal(
         caseInfo.workspaceId,
         caseInfo.caseId,
         docId,
         file,
-        caseInfo.clientId
+        caseInfo.clientId,
+        {
+          workspaceName: caseInfo.workspaceName,
+          clientName: caseInfo.clientName,
+          caseType: caseInfo.caseType,
+          documentTypeName: doc.documentTypeName,
+        }
       )
 
       setJustUploaded(prev => ({ ...prev, [docId]: true }))
@@ -186,16 +192,15 @@ export function PublicCasePortal() {
                 fileType: file.type,
                 fileSize: file.size,
                 uploadedAt: new Date().toISOString(),
-                storagePath: `${caseInfo.workspaceId}/${caseInfo.caseId}/${docId}/${file.name}`,
+                storagePath: uploadedPath,
               }
             : d
         )
       )
 
       // Generate preview URL for the newly uploaded file
-      const storagePath = `${caseInfo.workspaceId}/${caseInfo.caseId}/${docId}/${file.name}`
       try {
-        const url = await getPublicSignedUrl(storagePath)
+        const url = await getPublicSignedUrl(uploadedPath)
         setPreviewUrls(prev => ({ ...prev, [docId]: url }))
       } catch {
         // ignore

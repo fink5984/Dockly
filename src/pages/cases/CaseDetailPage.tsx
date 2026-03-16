@@ -24,7 +24,7 @@ import {
   UploadCloud, Eye, Download, RotateCcw, MessageCircle, Link2, MoreHorizontal, Loader2, Edit2, Trash2, Save
 } from 'lucide-react'
 import { getDocumentTypes } from '@/services/documentsService'
-import { getSignedUrl, downloadFile } from '@/services/storageService'
+import { getSignedUrl, downloadFile, deleteFile } from '@/services/storageService'
 import type { CaseDocument, DocumentStatus } from '@/types'
 
 const statusIcons: Record<DocumentStatus, typeof CheckCircle2> = {
@@ -363,6 +363,14 @@ export function CaseDetailPage() {
   // Handler: mark document as invalid → reset to missing + notify client via WhatsApp
   const handleMarkInvalid = async (doc: CaseDocument) => {
     try {
+      // Delete the file from S3 if it exists
+      if (doc.storagePath) {
+        try {
+          await deleteFile(doc.storagePath)
+        } catch (err) {
+          console.error('Failed to delete file from S3:', err)
+        }
+      }
       // Reset document to 'missing' and clear file info
       await updateCaseDocument(doc.id, {
         status: 'missing',

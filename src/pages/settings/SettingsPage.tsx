@@ -153,7 +153,7 @@ export function SettingsPage() {
     try {
       const ext = file.name.split('.').pop() || 'png'
       const fileName = `logo_${Date.now()}.${ext}`
-      const publicUrl = await uploadWorkspaceAsset(workspace.id, fileName, file)
+      const publicUrl = await uploadWorkspaceAsset(workspace.name || workspace.id, fileName, file)
       await updateWorkspace(workspace.id, { logoUrl: publicUrl })
       await refreshProfile()
       setWsSuccess(true)

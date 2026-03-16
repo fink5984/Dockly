@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { uploadFileWithKey } from '@/services/storageService'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { getClients } from '@/services/clientsService'
 import { createSignatureRequest, addSignatureDocument } from '@/services/signaturesService'
@@ -218,14 +218,11 @@ export function SignatureCreatePage() {
 
     try {
       const mainDoc = documents[0]
-      // 1. Upload main PDF to storage
+      // 1. Upload main PDF to S3
       const safeName = mainDoc.file.name.replace(/[^\w.\-]/g, '_')
-      const storagePath = `signatures/${wsId}/${Date.now()}_${safeName}`
-      const { error: uploadErr } = await supabase.storage
-        .from('documents')
-        .upload(storagePath, mainDoc.file)
-
-      if (uploadErr) throw uploadErr
+      const wsName = workspace?.name || wsId
+      const storagePath = `signatures/${wsName}/${Date.now()}_${safeName}`
+      await uploadFileWithKey(storagePath, mainDoc.file)
 
       // Capture the actual canvas width for accurate PDF coordinate mapping
       const canvasWidth = renderedDims.width || containerRef.current?.getBoundingClientRect().width || 700
@@ -260,8 +257,9 @@ export function SignatureCreatePage() {
       for (let i = 1; i < documents.length; i++) {
         const doc = documents[i]
         const dn = doc.file.name.replace(/[^\w.\-]/g, '_')
-        const dp = `signatures/${wsId}/${created.id}/${Date.now()}_${dn}`
-        await supabase.storage.from('documents').upload(dp, doc.file)
+        const wsName = workspace?.name || wsId
+        const dp = `signatures/${wsName}/${created.id}/${Date.now()}_${dn}`
+        await uploadFileWithKey(dp, doc.file)
         await addSignatureDocument(created.id, {
           fileName: doc.file.name,
           storagePath: dp,

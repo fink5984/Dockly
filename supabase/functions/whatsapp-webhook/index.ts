@@ -95,7 +95,7 @@ serve(async (req: Request) => {
               // Find the latest active case for this client
               const { data: activeCases } = await supabase
                 .from('cases')
-                .select('id')
+                .select('id, case_type, workspaces!cases_workspace_id_fkey(name)')
                 .eq('client_id', client.id)
                 .not('status', 'in', '("completed","closed")')
                 .order('created_at', { ascending: false })
@@ -140,17 +140,40 @@ serve(async (req: Request) => {
                       const targetDoc = pendingDocs?.[0]
 
                       if (targetDoc) {
-                        // Step 4: Upload to Supabase Storage
-                        const storagePath = `${client.workspace_id}/${activeCase.id}/${targetDoc.id}/${fileName}`
+                        // Step 4: Upload to S3 via server API with readable path
+                        // Resolve document type name
+                        const { data: dtRow } = await supabase
+                          .from('document_types')
+                          .select('name')
+                          .eq('id', targetDoc.document_type_id)
+                          .single()
+                        const docTypeName = dtRow?.name || 'document'
+                        const workspaceName = (activeCase as any)?.workspaces?.name || client.workspace_id
+                        const caseType = (activeCase as any)?.case_type || 'general'
 
-                        const { error: uploadErr } = await supabase.storage
-                          .from('documents')
-                          .upload(storagePath, fileBlob, {
-                            contentType: mimeType,
-                            upsert: true,
-                          })
+                        const pathInfo = {
+                          type: 'document',
+                          workspaceName,
+                          clientName: client.name || from,
+                          caseType,
+                          documentTypeName: docTypeName,
+                          fileName,
+                        }
 
-                        if (!uploadErr) {
+                        // Convert blob to base64 for server upload
+                        const arrayBuf = await fileBlob.arrayBuffer()
+                        const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)))
+
+                        const serverUrl = Deno.env.get('APP_SERVER_URL') || 'https://dockly-production.up.railway.app'
+                        const uploadRes = await fetch(`${serverUrl}/api/storage/upload-buffer`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ pathInfo, base64Data, contentType: mimeType }),
+                        })
+                        const uploadResult = await uploadRes.json()
+
+                        if (uploadResult.success) {
+                          const storagePath = uploadResult.key
                           // Step 5: Update case_document record
                           await supabase
                             .from('case_documents')

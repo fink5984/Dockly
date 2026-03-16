@@ -4,6 +4,7 @@
  * The full conversation (document list, file upload) happens within WhatsApp.
  */
 import { supabase } from '@/lib/supabase'
+import { uploadFile as s3UploadFile } from './storageService'
 import type { WhatsAppMessage } from '@/types'
 
 // ---- Send document request via WhatsApp ----
@@ -211,20 +212,39 @@ export async function uploadFromPortal(
   caseId: string,
   documentId: string,
   file: File,
-  clientId: string
+  clientId: string,
+  pathContext?: { workspaceName: string; clientName: string; caseType: string; documentTypeName: string }
 ): Promise<void> {
-  const storagePath = `${workspaceId}/${caseId}/${documentId}/${file.name}`
+  // Resolve readable names if not provided
+  let ctx = pathContext
+  if (!ctx) {
+    const { data: caseRow } = await supabase
+      .from('cases')
+      .select('case_type, clients!inner(name), workspaces!cases_workspace_id_fkey(name)')
+      .eq('id', caseId)
+      .single()
+    const { data: docRow } = await supabase
+      .from('case_documents')
+      .select('document_types!inner(name)')
+      .eq('id', documentId)
+      .single()
+    ctx = {
+      workspaceName: (caseRow as any)?.workspaces?.name || workspaceId,
+      clientName: (caseRow as any)?.clients?.name || clientId,
+      caseType: caseRow?.case_type || 'general',
+      documentTypeName: (docRow as any)?.document_types?.name || 'document',
+    }
+  }
 
-  // Upload file
-  const { error: uploadErr } = await supabase.storage
-    .from('documents')
-    .upload(storagePath, file, {
-      cacheControl: '3600',
-      upsert: true,
-      contentType: file.type,
-    })
-
-  if (uploadErr) throw uploadErr
+  const result = await s3UploadFile(file, {
+    type: 'document',
+    workspaceName: ctx.workspaceName,
+    clientName: ctx.clientName,
+    caseType: ctx.caseType,
+    documentTypeName: ctx.documentTypeName,
+    fileName: file.name,
+  })
+  const storagePath = result.storagePath
 
   // Update case_document record
   const { error: updateErr } = await supabase

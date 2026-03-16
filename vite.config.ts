@@ -13,9 +13,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://dockly-production-8797.up.railway.app',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
     },
   },

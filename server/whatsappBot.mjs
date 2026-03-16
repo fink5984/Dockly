@@ -508,27 +508,51 @@ async function handleMediaUpload(phone, mediaId, mimeType, fileName) {
   }
 
   const ext = extFromMime(media.mimeType);
-  // Use UUID-based filename for storage (Supabase doesn't allow Hebrew chars)
-  const safeFileName = `${state.awaiting_document_id}_${Date.now()}.${ext}`;
-  const storagePath = `${state.workspace_id}/${state.case_id}/${state.awaiting_document_id}/${safeFileName}`;
   // Keep original name for display
   const displayName = fileName || state.awaiting_document_name || 'document';
 
+  // Resolve human-readable names for S3 path
+  let workspaceName = state.workspace_id;
+  let clientName = state.client_id;
+  let caseType = 'general';
+  let docTypeName = state.awaiting_document_name || 'document';
   try {
-    // Upload to Supabase Storage
-    const { error: uploadErr } = await supabase.storage
-      .from('documents')
-      .upload(storagePath, media.buffer, {
-        contentType: media.mimeType,
-        cacheControl: '3600',
-        upsert: true,
-      });
-
-    if (uploadErr) {
-      console.error('[Storage] Upload error:', uploadErr);
-      await sendTextMessage(phone, '❌ שגיאה בהעלאת הקובץ. נסה שוב.');
-      return;
+    const { rows: caseInfo } = await pool.query(`
+      SELECT c.case_type, cl.name AS client_name, w.name AS workspace_name
+      FROM cases c
+      JOIN clients cl ON cl.id = c.client_id
+      JOIN workspaces w ON w.id = c.workspace_id
+      WHERE c.id = $1
+    `, [state.case_id]);
+    if (caseInfo.length > 0) {
+      workspaceName = caseInfo[0].workspace_name || workspaceName;
+      clientName = caseInfo[0].client_name || clientName;
+      caseType = caseInfo[0].case_type || caseType;
     }
+    const { rows: dtInfo } = await pool.query(`
+      SELECT dt.name FROM case_documents cd
+      JOIN document_types dt ON dt.id = cd.document_type_id
+      WHERE cd.id = $1
+    `, [state.awaiting_document_id]);
+    if (dtInfo.length > 0) docTypeName = dtInfo[0].name || docTypeName;
+  } catch (e) {
+    console.error('[WhatsApp] Failed to resolve names for path:', e.message);
+  }
+
+  const { buildReadablePath } = await import('./s3Service.mjs');
+  const safeFileName = `${displayName.replace(/[^\w.\-]/g, '_')}_${Date.now()}.${ext}`;
+  const storagePath = buildReadablePath({
+    workspaceName,
+    clientName,
+    caseType,
+    documentTypeName: docTypeName,
+    fileName: safeFileName,
+  });
+
+  try {
+    // Upload to AWS S3
+    const { uploadBuffer } = await import('./s3Service.mjs');
+    await uploadBuffer(storagePath, media.buffer, media.mimeType);
 
     // Update case_documents
     await markDocumentUploaded(
