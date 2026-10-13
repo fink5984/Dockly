@@ -148,9 +148,29 @@ export async function updateCase(
 }
 
 /**
- * Delete a case (cascade will remove docs).
+ * Delete a case: remove S3 files for all uploaded documents, then delete from DB.
  */
 export async function deleteCase(id: string): Promise<void> {
+  // 1. Fetch the case with its documents to get storage paths
+  const caseData = await getCaseById(id)
+  if (caseData) {
+    // Collect all storage paths from uploaded documents
+    const storagePaths = caseData.requiredDocuments
+      .map(d => d.storagePath)
+      .filter((p): p is string => !!p)
+
+    // Delete individual files from S3
+    if (storagePaths.length > 0) {
+      try {
+        const { deleteFiles } = await import('@/services/storageService')
+        await deleteFiles(storagePaths)
+      } catch (err) {
+        console.warn('Failed to delete some S3 files:', err)
+      }
+    }
+  }
+
+  // 2. Delete from DB (cascade will remove case_documents)
   const { error } = await supabase
     .from('cases')
     .delete()

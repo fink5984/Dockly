@@ -1,7 +1,7 @@
 /**
  * Generic hook for fetching data from Supabase services.
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 interface UseSupabaseDataResult<T> {
   data: T
@@ -19,6 +19,7 @@ export function useSupabaseData<T>(
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [trigger, setTrigger] = useState(0)
+  const hasFetchedRef = useRef(false)
 
   const refetch = useCallback(() => {
     setTrigger((prev) => prev + 1)
@@ -26,7 +27,9 @@ export function useSupabaseData<T>(
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    if (!hasFetchedRef.current) {
+      setLoading(true)
+    }
     setError(null)
 
     fetcher()
@@ -34,6 +37,7 @@ export function useSupabaseData<T>(
         if (!cancelled) {
           setData(result)
           setLoading(false)
+          hasFetchedRef.current = true
         }
       })
       .catch((err) => {

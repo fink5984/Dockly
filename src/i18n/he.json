@@ -15,7 +15,9 @@
     "activity": "פעילות",
     "whatsapp": "וואטסאפ",
     "settings": "הגדרות",
-    "workspace": "סביבת עבודה"
+    "workspace": "סביבת עבודה",
+    "menu": "תפריט",
+    "logout": "התנתקות"
   },
   "auth": {
     "signIn": "התחברות",
@@ -132,10 +134,14 @@
     "noClients": "אין לקוחות עדיין",
     "noClientsDesc": "הוסף את הלקוח הראשון שלך כדי להתחיל",
     "notes": "הערות",
+    "notesPlaceholder": "הוסף הערות על הלקוח...",
+    "idNumber": "מספר זהות / ח.פ.",
+    "active": "פעיל",
+    "inactive": "לא פעיל",
+    "archived": "בארכיון",
     "createdAt": "נוצר",
     "profile": "פרופיל לקוח",
     "contactInfo": "פרטי קשר",
-    "activityTimeline": "ציר זמן פעילות",
     "casesList": "תיקים",
     "createCase": "צור תיק",
     "submissionLink": "קישור הגשה",
@@ -298,10 +304,16 @@
     "createRequest": "צור בקשה",
     "addAndSelect": "הוסף ובחר",
     "createSuccess": "הבקשה נוצרה בהצלחה",
+    "totalRequests": "סה\"כ בקשות",
+    "pendingRequests": "ממתינות",
+    "completedRequests": "הושלמו",
     "noRequests": "אין בקשות עדיין",
     "noRequestsDesc": "צור את הבקשה הראשונה שלך כדי להתחיל לאסוף מסמכים",
     "requestsList": "בקשות",
-    "searchRequests": "חפש בקשות..."
+    "searchRequests": "חפש בקשות...",
+    "deleteRequest": "מחיקת בקשה",
+    "deleteConfirm": "האם אתה בטוח שברצונך למחוק את הבקשה הזו? כל המסמכים והקבצים הקשורים יימחקו לצמיתות.",
+    "deleteSuccess": "הבקשה נמחקה בהצלחה"
   },
   "documents": {
     "title": "מרכז מסמכים",

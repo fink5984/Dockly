@@ -16,7 +16,7 @@ import { getCases } from '@/services/casesService'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   UserPlus, MoreHorizontal, Eye, ClipboardList, Send, FileText,
-  CheckCircle, Clock, Users, Filter,
+  CheckCircle, Clock, Users, Filter, Loader2,
 } from 'lucide-react'
 
 type ClientFilter = 'all' | 'no-submission' | 'partial' | 'completed' | 'delayed' | 'active-support'
@@ -33,7 +33,7 @@ export function ClientsPage() {
   const [createError, setCreateError] = useState('')
 
   const wsId = workspace?.id || user?.workspaceId || ''
-  const { data: clients, refetch: refetchClients } = useRealtimeData(
+  const { data: clients, loading, refetch: refetchClients } = useRealtimeData(
     () => getClients(wsId),
     [],
     [wsId],
@@ -44,6 +44,12 @@ export function ClientsPage() {
     [],
     [wsId],
     { tables: ['cases', 'case_documents'] }
+  )
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-32">
+      <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+    </div>
   )
 
   // Compute client data with case info

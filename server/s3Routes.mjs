@@ -153,6 +153,31 @@ router.post('/delete', async (req, res) => {
   }
 });
 
+// ── Delete all objects under a prefix (folder) ──────────────────────────
+router.post('/delete-folder', async (req, res) => {
+  try {
+    const { prefix } = req.body;
+    if (!prefix) return res.status(400).json({ success: false, error: 'Missing prefix' });
+
+    // List all objects under the prefix
+    const objects = await listObjects(prefix);
+    if (objects.length === 0) {
+      return res.json({ success: true, deleted: 0 });
+    }
+
+    // Delete all found objects
+    const keysToDelete = objects.map(obj => obj.key).filter(Boolean);
+    if (keysToDelete.length > 0) {
+      await deleteObjects(keysToDelete);
+    }
+
+    res.json({ success: true, deleted: keysToDelete.length });
+  } catch (err) {
+    console.error('[S3] Delete folder error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── List files ──────────────────────────────────────────────────────────
 router.post('/list', async (req, res) => {
   try {

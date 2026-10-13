@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
-import { uploadFileWithKey } from '@/services/storageService'
+import { uploadFile } from '@/services/storageService'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { getClients } from '@/services/clientsService'
 import { createSignatureRequest, addSignatureDocument } from '@/services/signaturesService'
@@ -213,16 +213,20 @@ export function SignatureCreatePage() {
 
   // Submit handler
   const handleSubmit = async () => {
-    if (!clientId || !title || documents.length === 0) return
+    if (!clientId || !title || documents.length === 0 || !selectedClient) return
     setSubmitting(true)
 
     try {
       const mainDoc = documents[0]
       // 1. Upload main PDF to S3
-      const safeName = mainDoc.file.name.replace(/[^\w.\-]/g, '_')
       const wsName = workspace?.name || wsId
-      const storagePath = `signatures/${wsName}/${Date.now()}_${safeName}`
-      await uploadFileWithKey(storagePath, mainDoc.file)
+      const { storagePath } = await uploadFile(mainDoc.file, {
+        type: 'signature',
+        workspaceName: wsName,
+        clientName: selectedClient.name,
+        title,
+        fileName: mainDoc.file.name,
+      })
 
       // Capture the actual canvas width for accurate PDF coordinate mapping
       const canvasWidth = renderedDims.width || containerRef.current?.getBoundingClientRect().width || 700
@@ -256,10 +260,13 @@ export function SignatureCreatePage() {
       // 3. Upload additional documents
       for (let i = 1; i < documents.length; i++) {
         const doc = documents[i]
-        const dn = doc.file.name.replace(/[^\w.\-]/g, '_')
-        const wsName = workspace?.name || wsId
-        const dp = `signatures/${wsName}/${created.id}/${Date.now()}_${dn}`
-        await uploadFileWithKey(dp, doc.file)
+        const { storagePath: dp } = await uploadFile(doc.file, {
+          type: 'signature',
+          workspaceName: wsName,
+          clientName: selectedClient.name,
+          title,
+          fileName: doc.file.name,
+        })
         await addSignatureDocument(created.id, {
           fileName: doc.file.name,
           storagePath: dp,

@@ -15,20 +15,17 @@ function sanitizeSegment(name: string): string {
 
 /**
  * Build a human-readable storage path for documents.
- * Pattern: {workspaceName}/{clientName}/{caseType}/{documentTypeName}/{fileName}
+ * Pattern: {workspaceName}/{clientName}/documents/{fileName}
  */
 export function buildReadablePath(
   workspaceName: string,
   clientName: string,
-  caseType: string,
-  documentTypeName: string,
   fileName: string
 ): string {
   return [
     sanitizeSegment(workspaceName),
     sanitizeSegment(clientName),
-    sanitizeSegment(caseType),
-    sanitizeSegment(documentTypeName),
+    'documents',
     sanitizeSegment(fileName),
   ].join('/')
 }
@@ -41,14 +38,22 @@ export function buildReadablePath(
  */
 export async function uploadFile(
   file: File,
-  pathInfo: {
-    type: 'document'
-    workspaceName: string
-    clientName: string
-    caseType: string
-    documentTypeName: string
-    fileName: string
-  }
+  pathInfo:
+    | {
+        type: 'document'
+        workspaceName: string
+        clientName: string
+        caseType?: string
+        documentTypeName?: string
+        fileName: string
+      }
+    | {
+        type: 'signature'
+        workspaceName: string
+        clientName: string
+        title?: string
+        fileName: string
+      }
 ): Promise<{ storagePath: string; fileSize: number }> {
   const formData = new FormData()
   formData.append('file', file)
@@ -154,6 +159,34 @@ export async function deleteFile(storagePath: string): Promise<void> {
   })
   const data = await resp.json()
   if (!data.success) throw new Error(data.error || 'Failed to delete file')
+}
+
+/**
+ * Delete multiple files from storage.
+ */
+export async function deleteFiles(storagePaths: string[]): Promise<void> {
+  if (storagePaths.length === 0) return
+  const resp = await fetch(`${API_BASE}/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keys: storagePaths }),
+  })
+  const data = await resp.json()
+  if (!data.success) throw new Error(data.error || 'Failed to delete files')
+}
+
+/**
+ * Delete all files under a folder prefix in S3.
+ */
+export async function deleteFolder(prefix: string): Promise<number> {
+  const resp = await fetch(`${API_BASE}/delete-folder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prefix }),
+  })
+  const data = await resp.json()
+  if (!data.success) throw new Error(data.error || 'Failed to delete folder')
+  return data.deleted ?? 0
 }
 
 /**

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/Input'
+import { ProgressBar } from '@/components/ui/ProgressBar'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { cn, formatDate } from '@/lib/utils'
@@ -14,8 +15,10 @@ import { getSignatureRequests, cancelSignatureRequest, deleteSignatureRequest } 
 import { useApp } from '@/contexts/AppContext'
 import {
   PenLine, Plus, FileText, Copy, Eye, Trash2,
-  XCircle, CheckCircle2, Clock, AlertTriangle, Loader2, Send,
+  XCircle, CheckCircle2, Clock, AlertTriangle, Loader2, Send, Calendar,
 } from 'lucide-react'
+import { CardMenu } from '@/components/ui/CardMenu'
+import type { CardMenuItem } from '@/components/ui/CardMenu'
 import type { SignatureRequestStatus } from '@/types'
 
 type SigFilter = 'all' | SignatureRequestStatus
@@ -42,11 +45,17 @@ export function SignaturesPage() {
   const [acting, setActing] = useState(false)
   const { addToast } = useApp()
 
-  const { data: requests, refetch } = useRealtimeData(
+  const { data: requests, loading, refetch } = useRealtimeData(
     () => getSignatureRequests(wsId),
     [],
     [wsId],
     { tables: ['signature_requests', 'signature_fields'] }
+  )
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-32">
+      <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+    </div>
   )
 
   const filtered = requests.filter(r => {
@@ -163,7 +172,7 @@ export function SignaturesPage() {
           action={<Button onClick={() => navigate('/signatures/create')} icon={<Plus className="w-4 h-4" />}>{t('signatures.newRequest')}</Button>}
         />
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(req => {
             const sc = statusConfig[req.status]
             const StatusIcon = sc.icon
@@ -171,64 +180,51 @@ export function SignaturesPage() {
             const totalFields = req.fields.length
 
             return (
-              <Card
-                key={req.id}
-                className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => navigate(`/signatures/${req.id}`)}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  {/* Icon */}
-                  <div className="hidden sm:flex shrink-0 w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 items-center justify-center">
-                    <PenLine className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-sm truncate">{req.title}</h3>
-                      <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full', sc.color)}>
+              <Card key={req.id} hover onClick={() => navigate(`/signatures/${req.id}`)}>
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{req.title}</p>
+                      <p className="text-xs text-[var(--text-secondary)] mt-0.5">{req.clientName}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full shrink-0', sc.color)}>
                         <StatusIcon className="w-3 h-3 me-1 inline" />
                         {t(`signatures.${req.status}`)}
                       </Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-[var(--text-tertiary)]">
-                      <span>{req.clientName}</span>
-                      <span>{req.documentFileName}</span>
-                      <span>{formatDate(req.createdAt)}</span>
-                      {totalFields > 0 && (
-                        <span>{filledFields}/{totalFields} {t('signatures.fieldsFilled')}</span>
-                      )}
+                      <CardMenu items={(() => {
+                        const menuItems: CardMenuItem[] = []
+                        if (req.status === 'pending') {
+                          menuItems.push({ label: t('signatures.copyLink'), icon: <Copy className="w-3.5 h-3.5" />, onClick: () => handleCopyLink(req.publicToken) })
+                        }
+                        if (req.status === 'pending' || req.status === 'viewed') {
+                          menuItems.push({ label: t('signatures.cancel'), icon: <XCircle className="w-3.5 h-3.5" />, onClick: () => setCancelId(req.id), variant: 'warning' })
+                        }
+                        if (req.status === 'signed' || req.status === 'cancelled' || req.status === 'expired') {
+                          menuItems.push({ label: t('signatures.delete'), icon: <Trash2 className="w-3.5 h-3.5" />, onClick: () => setDeleteId(req.id), variant: 'danger' })
+                        }
+                        return menuItems
+                      })()} />
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                    {req.status === 'pending' && (
-                      <button
-                        onClick={() => handleCopyLink(req.publicToken)}
-                        className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-                        title={t('signatures.copyLink')}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    )}
-                    {(req.status === 'pending' || req.status === 'viewed') && (
-                      <button
-                        onClick={() => setCancelId(req.id)}
-                        className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-amber-500"
-                        title={t('signatures.cancel')}
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                    )}
-                    {(req.status === 'signed' || req.status === 'cancelled' || req.status === 'expired') && (
-                      <button
-                        onClick={() => setDeleteId(req.id)}
-                        className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-red-500"
-                        title={t('signatures.delete')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center text-xs text-[var(--text-tertiary)]">
+                      <FileText className="w-3 h-3 me-1" />
+                      <span className="truncate">{req.documentFileName}</span>
+                    </div>
+                    <div className="flex items-center text-xs text-[var(--text-tertiary)]">
+                      <Calendar className="w-3 h-3 me-1" />
+                      <span>{formatDate(req.createdAt)}</span>
+                    </div>
+                    {totalFields > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-[var(--text-tertiary)]">{t('signatures.fieldsFilled')}</span>
+                          <span className="font-medium tabular-nums">{filledFields}/{totalFields}</span>
+                        </div>
+                        <ProgressBar value={filledFields} max={totalFields} />
+                      </div>
                     )}
                   </div>
                 </div>

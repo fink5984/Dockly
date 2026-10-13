@@ -7,7 +7,7 @@ import { getCases } from '@/services/casesService'
 import { getDashboardStats } from '@/services/settingsService'
 import {
   Users, ClipboardList, CheckCircle, AlertTriangle, Clock, FileX, FileCheck,
-  ArrowUpRight, TrendingUp,
+  ArrowUpRight, TrendingUp, Loader2,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
 
@@ -32,8 +32,14 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const wsId = workspace?.id || user?.workspaceId || ''
 
-  const { data: stats } = useSupabaseData(() => getDashboardStats(wsId), defaultStats, [wsId])
+  const { data: stats, loading } = useSupabaseData(() => getDashboardStats(wsId), defaultStats, [wsId])
   const { data: cases } = useSupabaseData(() => getCases(wsId), [], [wsId])
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-32">
+      <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+    </div>
+  )
 
   // Compute pie chart data from real cases
   const statusCounts: Record<string, number> = {}

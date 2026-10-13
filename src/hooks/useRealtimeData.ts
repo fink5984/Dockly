@@ -9,8 +9,6 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 interface UseRealtimeDataOptions {
   /** Tables to subscribe to for realtime updates */
   tables?: string[]
-  /** Polling interval in ms (default: 5000 for reliable updates) */
-  pollInterval?: number
 }
 
 interface UseRealtimeDataResult<T> {
@@ -26,13 +24,14 @@ export function useRealtimeData<T>(
   deps: unknown[] = [],
   options: UseRealtimeDataOptions = {}
 ): UseRealtimeDataResult<T> {
-  const { tables = [], pollInterval = 5000 } = options
+  const { tables = [] } = options
   const [data, setData] = useState<T>(defaultValue)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [trigger, setTrigger] = useState(0)
   const channelRef = useRef<RealtimeChannel | null>(null)
   const lastFetchRef = useRef<number>(0)
+  const hasFetchedRef = useRef(false)
 
   const refetch = useCallback(() => {
     // Debounce: don't refetch more than once per second
@@ -45,7 +44,10 @@ export function useRealtimeData<T>(
   // Fetch data
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    // Only show loading spinner on initial fetch
+    if (!hasFetchedRef.current) {
+      setLoading(true)
+    }
     setError(null)
 
     fetcher()
@@ -53,6 +55,7 @@ export function useRealtimeData<T>(
         if (!cancelled) {
           setData(result)
           setLoading(false)
+          hasFetchedRef.current = true
         }
       })
       .catch((err) => {
@@ -69,13 +72,12 @@ export function useRealtimeData<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger, ...deps])
 
-  // Realtime subscription
+  // Realtime subscription — refetch when DB changes
   useEffect(() => {
     if (tables.length === 0) return
 
     const channelName = `realtime-${tables.join('-')}-${Date.now()}`
     
-    // Build channel with subscriptions to all specified tables
     let channel = supabase.channel(channelName)
     
     tables.forEach((table) => {
@@ -103,14 +105,6 @@ export function useRealtimeData<T>(
       }
     }
   }, [tables.join(','), refetch])
-
-  // Polling fallback - always runs to ensure updates
-  useEffect(() => {
-    if (pollInterval <= 0) return
-
-    const interval = setInterval(refetch, pollInterval)
-    return () => clearInterval(interval)
-  }, [pollInterval, refetch])
 
   return { data, loading, error, refetch }
 }

@@ -39,15 +39,14 @@ function sanitizeSegment(name) {
 }
 
 /**
- * Build a human-readable storage path.
- * Pattern: {workspaceName}/{clientName}/{caseType}/{documentTypeName}/{fileName}
+ * Build a human-readable storage path for documents.
+ * Pattern: {workspaceName}/{clientName}/documents/{fileName}
  */
 export function buildReadablePath({ workspaceName, clientName, caseType, documentTypeName, fileName }) {
   const segments = [
     sanitizeSegment(workspaceName),
     sanitizeSegment(clientName),
-    sanitizeSegment(caseType),
-    sanitizeSegment(documentTypeName),
+    'documents',
     sanitizeSegment(fileName),
   ];
   return segments.join('/');
@@ -55,14 +54,13 @@ export function buildReadablePath({ workspaceName, clientName, caseType, documen
 
 /**
  * Build path for signatures.
- * Pattern: signatures/{workspaceName}/{clientName}/{title}/{fileName}
+ * Pattern: {workspaceName}/{clientName}/signatures/{fileName}
  */
 export function buildSignaturePath({ workspaceName, clientName, title, fileName }) {
   const segments = [
-    'signatures',
     sanitizeSegment(workspaceName),
     sanitizeSegment(clientName),
-    sanitizeSegment(title),
+    'signatures',
     sanitizeSegment(fileName),
   ];
   return segments.join('/');
