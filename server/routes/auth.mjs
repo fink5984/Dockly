@@ -15,6 +15,20 @@ import { logger } from '../lib/logger.mjs'
 const router = Router()
 
 const LOCK_AFTER = 8
+
+// The legacy plaintext column is dropped by a manual step after all passwords
+// are hashed (server/db/manual/drop_plaintext_password.sql). Read it through
+// to_jsonb() and only clear it while it still exists, so both states work.
+let legacyColumn = null
+async function hasLegacyPasswordColumn() {
+  if (legacyColumn === null) {
+    legacyColumn = Boolean(await queryOne(`SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'password'`))
+  }
+  return legacyColumn
+}
+async function clearLegacyPassword(id) {
+  if (await hasLegacyPasswordColumn()) await query(`UPDATE profiles SET password = '' WHERE id = $1`, [id])
+}
 const LOCK_MINUTES = 15
 
 function issueSession(res, profile) {
@@ -68,8 +82,8 @@ router.post('/signup', rateLimit({ name: 'signup', limit: 5, windowMs: 60 * 60 *
       [body.name, body.phone, body.email, body.language || 'he'],
     )
     return tx.queryOne(
-      `INSERT INTO profiles (workspace_id, email, name, role, phone, password, password_hash)
-       VALUES ($1, $2, $3, 'owner', $4, '', $5) RETURNING id, workspace_id, session_version`,
+      `INSERT INTO profiles (workspace_id, email, name, role, phone, password_hash)
+       VALUES ($1, $2, $3, 'owner', $4, $5) RETURNING id, workspace_id, session_version`,
       [ws.id, body.email, body.name, body.phone, passwordHash],
     )
   })
@@ -84,7 +98,7 @@ router.post('/signin', rateLimit({ name: 'signin-ip', limit: 20, windowMs: 10 * 
   if (!perAccount.allowed) throw new HttpError(429, 'rate_limited', 'Too many attempts. Try again in a few minutes.', { retryAfter: perAccount.retryAfterSec })
 
   const profile = await queryOne(
-    `SELECT id, workspace_id, password, password_hash, session_version, failed_login_count, locked_until, is_active
+    `SELECT id, workspace_id, to_jsonb(profiles)->>'password' AS password, password_hash, session_version, failed_login_count, locked_until, is_active
        FROM profiles WHERE lower(email) = $1 ORDER BY created_at LIMIT 1`,
     [body.email],
   )
@@ -107,7 +121,8 @@ router.post('/signin', rateLimit({ name: 'signin-ip', limit: 20, windowMs: 10 * 
   }
   if (needsRehash) {
     // Legacy plaintext row: replace with a hash and erase the plaintext now.
-    await query(`UPDATE profiles SET password_hash = $2, password = '' WHERE id = $1`, [profile.id, await hashPassword(body.password)])
+    await query(`UPDATE profiles SET password_hash = $2 WHERE id = $1`, [profile.id, await hashPassword(body.password)])
+    await clearLegacyPassword(profile.id)
   }
   await query('UPDATE profiles SET failed_login_count = 0, locked_until = NULL, last_login_at = now() WHERE id = $1', [profile.id])
   issueSession(res, profile)
@@ -146,14 +161,15 @@ router.post('/change-password', requireAuth, rateLimit({ name: 'change-password'
   const body = parse(z.object({ currentPassword: z.string().min(1).max(200), newPassword: z.string().max(200) }), req.body)
   const policy = passwordPolicyError(body.newPassword)
   if (policy) throw badRequest('weak_password', policy)
-  const profile = await queryOne('SELECT id, workspace_id, password, password_hash FROM profiles WHERE id = $1', [req.user.id])
+  const profile = await queryOne(`SELECT id, workspace_id, to_jsonb(profiles)->>'password' AS password, password_hash FROM profiles WHERE id = $1`, [req.user.id])
   const { ok } = await verifyPassword(body.currentPassword, profile)
   if (!ok) throw badRequest('invalid_current_password', 'Current password is incorrect')
   const updated = await queryOne(
-    `UPDATE profiles SET password_hash = $2, password = '', session_version = session_version + 1 WHERE id = $1
+    `UPDATE profiles SET password_hash = $2, session_version = session_version + 1 WHERE id = $1
      RETURNING id, workspace_id, session_version`,
     [req.user.id, await hashPassword(body.newPassword)],
   )
+  await clearLegacyPassword(req.user.id)
   invalidateUserCache(req.user.id)
   issueSession(res, updated) // keep this device signed in; others are revoked
   res.json({ ok: true })
@@ -187,8 +203,8 @@ router.post('/invite/:token/accept', rateLimit({ name: 'invite-accept', limit: 1
     const taken = await tx.queryOne('SELECT 1 FROM profiles WHERE lower(email) = lower($1)', [inv.email])
     if (taken) throw conflict('email_taken', 'An account with this email already exists')
     const p = await tx.queryOne(
-      `INSERT INTO profiles (workspace_id, email, name, role, password, password_hash)
-       VALUES ($1, lower($2), $3, $4, '', $5) RETURNING id, workspace_id, session_version`,
+      `INSERT INTO profiles (workspace_id, email, name, role, password_hash)
+       VALUES ($1, lower($2), $3, $4, $5) RETURNING id, workspace_id, session_version`,
       [inv.workspace_id, inv.email, body.name, normalizeRole(inv.role), passwordHash],
     )
     await tx.query('UPDATE workspace_invites SET accepted_at = now() WHERE id = $1', [inv.id])

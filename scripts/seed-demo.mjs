@@ -30,7 +30,7 @@ export async function seedDemo() {
      VALUES ('משרד כהן ושות׳', 'accounting', 'נועה כהן', '03-555-0100', 'office@example.test', 'he', 'Asia/Jerusalem', '#4B4ACF') RETURNING id`,
   )
   await query(
-    `INSERT INTO profiles (workspace_id, email, name, role, password, password_hash) VALUES ($1, 'demo@dockly.local', 'נועה כהן', 'owner', '', $2)`,
+    `INSERT INTO profiles (workspace_id, email, name, role, password_hash) VALUES ($1, 'demo@dockly.local', 'נועה כהן', 'owner', $2)`,
     [ws.id, await hashPassword('dockly-demo-123')],
   )
   const types = {}
