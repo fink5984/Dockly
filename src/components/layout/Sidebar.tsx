@@ -1,189 +1,155 @@
+import { useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import {
+  LayoutDashboard, ClipboardList, Users, PenLine, FolderOpen, Activity, LayoutTemplate,
+  Zap, Plug, Settings, PanelLeftClose, PanelLeftOpen, X,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
-import { cn, getInitials } from '@/lib/utils'
-import {
-  LayoutDashboard, Users, ClipboardList,
-  Settings, X, ChevronLeft, ChevronRight, PenLine, LogOut,
-} from 'lucide-react'
+import { Tooltip } from '@/components/ui/Tooltip'
+import { Logo } from './Logo'
 
-const mainNav = [
-  { key: 'dashboard', path: '/', icon: LayoutDashboard },
-  { key: 'clients', path: '/clients', icon: Users },
-  { key: 'requests', path: '/requests', icon: ClipboardList },
-  { key: 'signatures', path: '/signatures', icon: PenLine },
+interface NavItem { key: string; to: string; icon: typeof LayoutDashboard; end?: boolean }
+
+const groups: { key: string; items: NavItem[] }[] = [
+  {
+    key: 'work',
+    items: [
+      { key: 'overview', to: '/', icon: LayoutDashboard, end: true },
+      { key: 'requests', to: '/requests', icon: ClipboardList },
+      { key: 'clients', to: '/clients', icon: Users },
+      { key: 'signatures', to: '/signatures', icon: PenLine },
+      { key: 'documents', to: '/documents', icon: FolderOpen },
+    ],
+  },
+  {
+    key: 'workspace',
+    items: [
+      { key: 'activity', to: '/activity', icon: Activity },
+      { key: 'templates', to: '/templates', icon: LayoutTemplate },
+      { key: 'automation', to: '/settings/automation', icon: Zap },
+      { key: 'integrations', to: '/settings/integrations', icon: Plug },
+      { key: 'settings', to: '/settings', icon: Settings, end: true },
+    ],
+  },
 ]
 
-const bottomNav = [
-  { key: 'settings', path: '/settings', icon: Settings },
-]
+function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const { t } = useI18n()
+  const { pathname } = useLocation()
+  const isActive = (item: NavItem) => {
+    if (item.end) return item.to === '/' ? pathname === '/' : pathname === item.to || (item.to === '/settings' && /^\/settings\/(profile|workspace|branding|team|security)/.test(pathname))
+    return pathname === item.to || pathname.startsWith(item.to + '/')
+  }
+  return (
+    <nav aria-label={t('nav.main')} className="flex-1 overflow-y-auto scroll-thin px-3 py-3">
+      {groups.map((g) => (
+        <div key={g.key} className="mb-5 last:mb-0">
+          {!collapsed && <p className="mb-1 px-2.5 text-2xs font-semibold uppercase tracking-wider text-fg-4">{t(`nav.group.${g.key}`)}</p>}
+          {collapsed && <div className="mx-auto mb-2 h-px w-6 bg-line first:hidden" />}
+          <ul className="space-y-0.5">
+            {g.items.map((item) => {
+              const active = isActive(item)
+              const Icon = item.icon
+              const link = (
+                <NavLink
+                  to={item.to}
+                  onClick={onNavigate}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'group relative flex h-9 items-center gap-3 rounded-md text-sm font-medium transition-colors',
+                    'focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]',
+                    collapsed ? 'justify-center px-0' : 'px-2.5',
+                    active ? 'bg-brand-soft text-brand-700' : 'text-fg-2 hover:bg-surface-3 hover:text-fg',
+                  )}
+                >
+                  {active && <span className="absolute inset-y-2 start-0 w-[3px] rounded-full bg-brand-600" aria-hidden />}
+                  <Icon className={cn('size-[18px] shrink-0', active ? 'text-brand-600' : 'text-fg-3 group-hover:text-fg-2')} />
+                  {!collapsed && <span className="truncate">{t(`nav.${item.key}`)}</span>}
+                </NavLink>
+              )
+              return <li key={item.key}>{collapsed ? <Tooltip content={t(`nav.${item.key}`)} side="end">{link}</Tooltip> : link}</li>
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  )
+}
+
+function WorkspaceHeader({ collapsed }: { collapsed: boolean }) {
+  const { workspace } = useAuth()
+  return (
+    <div className={cn('flex h-14 shrink-0 items-center gap-2.5 border-b border-line', collapsed ? 'justify-center px-2' : 'px-4')}>
+      {workspace?.logo ? (
+        <img src={workspace.logo} alt="" className="size-7 rounded-md object-contain bg-surface border border-line" />
+      ) : <Logo className="size-7" />}
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-fg">{workspace?.name || 'Dockly'}</p>
+          <p className="truncate text-2xs text-fg-4">Dockly</p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function Sidebar() {
-  const { t, direction } = useI18n()
-  const { user, signOut } = useAuth()
-  const { sidebarOpen, setSidebarOpen, mobileSidebarOpen, setMobileSidebarOpen } = useApp()
-  const location = useLocation()
+  const { t } = useI18n()
+  const { sidebarCollapsed, setSidebarCollapsed, mobileNavOpen, setMobileNavOpen } = useApp()
+  const { pathname } = useLocation()
 
-  const isRtl = direction === 'rtl'
-  const expanded = sidebarOpen || mobileSidebarOpen
+  useEffect(() => { setMobileNavOpen(false) }, [pathname, setMobileNavOpen])
+  useEffect(() => {
+    if (!mobileNavOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileNavOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [mobileNavOpen, setMobileNavOpen])
 
   return (
     <>
-      {/* Mobile overlay */}
-      {mobileSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Desktop */}
       <aside
         className={cn(
-          'fixed top-0 bottom-0 z-50 flex flex-col transition-all duration-300 ease-in-out',
-          'border-[var(--border-primary)]',
-          isRtl ? 'right-0 border-l' : 'left-0 border-r',
-          sidebarOpen ? 'w-64' : 'w-[72px]',
-          'lg:translate-x-0',
-          mobileSidebarOpen
-            ? 'translate-x-0 w-72'
-            : isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0'
+          'fixed inset-y-0 start-0 z-40 hidden flex-col border-e border-line bg-surface transition-[width] duration-200 lg:flex',
+          sidebarCollapsed ? 'w-[68px]' : 'w-60',
         )}
-        style={{
-          background: 'var(--bg-primary)',
-        }}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-between h-[52px] px-4 border-b border-[var(--border-primary)]">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-sm shadow-md">
-              D
-            </div>
-            {expanded && (
-              <span className="text-lg font-bold text-[var(--text-primary)] tracking-tight">
-                Dockly
-              </span>
-            )}
-          </div>
-          <button
-            onClick={() => setMobileSidebarOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-          >
-            <X className="w-4 h-4 text-[var(--text-secondary)]" />
-          </button>
-        </div>
-
-        {/* Section label */}
-        {expanded && (
-          <div className="px-5 pt-5 pb-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
-              {t('nav.menu') || 'Menu'}
-            </p>
-          </div>
-        )}
-
-        {/* Main Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5">
-          {mainNav.map((item) => {
-            const Icon = item.icon
-            const isActive = item.path === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(item.path)
-
-            return (
-              <NavLink
-                key={item.key}
-                to={item.path}
-                onClick={() => setMobileSidebarOpen(false)}
-                className={cn(
-                  'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 relative',
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]',
-                  !expanded && 'justify-center px-0'
-                )}
-                title={!expanded ? t(`nav.${item.key}`) : undefined}
-              >
-                <Icon className={cn(
-                  'w-[18px] h-[18px] shrink-0 transition-colors',
-                  isActive ? 'text-primary-600 dark:text-primary-400' : 'text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]'
-                )} />
-                {expanded && (
-                  <span>{t(`nav.${item.key}`)}</span>
-                )}
-              </NavLink>
-            )
-          })}
-        </nav>
-
-        {/* Bottom section */}
-        <div className="px-3 pb-2 space-y-0.5">
-          {/* Settings */}
-          {bottomNav.map((item) => {
-            const Icon = item.icon
-            const isActive = location.pathname.startsWith(item.path)
-
-            return (
-              <NavLink
-                key={item.key}
-                to={item.path}
-                onClick={() => setMobileSidebarOpen(false)}
-                className={cn(
-                  'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 relative',
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]',
-                  !expanded && 'justify-center px-0'
-                )}
-                title={!expanded ? t(`nav.${item.key}`) : undefined}
-              >
-                <Icon className={cn(
-                  'w-[18px] h-[18px] shrink-0 transition-colors',
-                  isActive ? 'text-primary-600 dark:text-primary-400' : 'text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]'
-                )} />
-                {expanded && <span>{t(`nav.${item.key}`)}</span>}
-              </NavLink>
-            )
-          })}
-
-          {/* User profile card */}
-          {expanded && user && (
-            <div className="mt-2 p-3 rounded-xl bg-[var(--bg-tertiary)]/50 border border-[var(--border-secondary)]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                  {getInitials(user.name || user.email || '')}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[var(--text-primary)] truncate">{user.name || user.email}</p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] truncate">{user.role === 'admin' ? t('settings.admin') : t('settings.user')}</p>
-                </div>
-                <button
-                  onClick={() => signOut()}
-                  className="p-1.5 rounded-lg hover:bg-[var(--bg-primary)] transition-colors text-[var(--text-tertiary)] hover:text-danger"
-                  title={t('nav.logout')}
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Collapse toggle (desktop only) */}
-        <div className="hidden lg:flex items-center justify-center py-2.5 border-t border-[var(--border-primary)]">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-tertiary)]"
-          >
-            {isRtl ? (
-              sidebarOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />
-            ) : (
-              sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
+        <WorkspaceHeader collapsed={sidebarCollapsed} />
+        <NavList collapsed={sidebarCollapsed} />
+        <div className={cn('border-t border-line p-2', sidebarCollapsed && 'flex justify-center')}>
+          <Tooltip content={sidebarCollapsed ? t('nav.expand') : t('nav.collapse')} side="end">
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              aria-label={sidebarCollapsed ? t('nav.expand') : t('nav.collapse')}
+              className="flex h-8 items-center gap-2 rounded-md px-2 text-sm text-fg-3 hover:bg-surface-3 hover:text-fg-2"
+            >
+              {sidebarCollapsed ? <PanelLeftOpen className="size-4 rtl-flip" /> : <PanelLeftClose className="size-4 rtl-flip" />}
+              {!sidebarCollapsed && <span>{t('nav.collapse')}</span>}
+            </button>
+          </Tooltip>
         </div>
       </aside>
+
+      {/* Mobile */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-[90] lg:hidden">
+          <div className="absolute inset-0 bg-overlay animate-fade-in" onClick={() => setMobileNavOpen(false)} aria-hidden />
+          <aside role="dialog" aria-modal="true" aria-label={t('nav.main')} className="absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col bg-surface shadow-xl animate-fade-in">
+            <div className="flex items-center justify-between pe-2">
+              <div className="min-w-0 flex-1"><WorkspaceHeader collapsed={false} /></div>
+              <button type="button" onClick={() => setMobileNavOpen(false)} className="rounded-md p-2 text-fg-3 hover:bg-surface-3" aria-label={t('common.close')}>
+                <X className="size-5" />
+              </button>
+            </div>
+            <NavList collapsed={false} onNavigate={() => setMobileNavOpen(false)} />
+          </aside>
+        </div>
+      )}
     </>
   )
 }

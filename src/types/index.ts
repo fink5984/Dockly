@@ -1,19 +1,19 @@
+/* Types mirror the JSON returned by the Dockly API (server/routes/*). */
+
 export type Language = 'en' | 'he'
 export type Direction = 'ltr' | 'rtl'
 export type Theme = 'light' | 'dark' | 'system'
+export type Role = 'owner' | 'admin' | 'member' | 'viewer'
 
 export interface User {
   id: string
   email: string
   name: string
-  role: UserRole
-  avatar?: string
+  role: Role
   phone?: string
+  avatar?: string
   workspaceId: string
-  workspace?: Workspace
 }
-
-export type UserRole = 'owner' | 'admin' | 'manager' | 'staff' | 'viewer'
 
 export interface Workspace {
   id: string
@@ -23,31 +23,38 @@ export interface Workspace {
   phone: string
   email: string
   logo?: string
+  brandColor?: string
+  portalMessage: string
   defaultLanguage: Language
   timezone: string
   createdAt: string
+}
+
+export interface ClientStats {
+  requests: number
+  openRequests: number
+  signatures: number
+  lastActivityAt?: string
 }
 
 export interface Client {
   id: string
   workspaceId: string
   name: string
-  fullName: string
   email: string
   phone: string
+  phoneValid: boolean
   company?: string
   notes?: string
-  status: ClientStatus
+  status: 'active' | 'inactive' | 'archived'
   assignedOwner: string
   createdAt: string
   updatedAt: string
+  stats?: ClientStats
 }
-
-export type ClientStatus = 'active' | 'inactive' | 'archived'
 
 export interface DocumentType {
   id: string
-  workspaceId: string
   name: string
   category: string
   description: string
@@ -57,85 +64,158 @@ export interface DocumentType {
   allowedFormats: string[]
   maxSizeMB: number
   status: 'active' | 'archived'
-  applicableCaseTypes: string[]
   sortOrder: number
+  usageCount?: number
   createdAt: string
   updatedAt: string
 }
 
-export interface DocumentPreset {
+export interface TemplateItem {
+  documentTypeId: string
+  required: boolean
+  note: string
+}
+
+export interface RequestTemplate {
   id: string
-  workspaceId: string
   name: string
-  caseType: string
-  documentTypeIds: string[]
   description: string
-  createdAt: string
-}
-
-export interface Case {
-  id: string
-  workspaceId: string
-  clientId: string
-  clientName: string
-  caseType: string
-  status: CaseStatus
-  assignedOwner: string
-  assignedOwnerName: string
-  requiredDocuments: CaseDocument[]
-  deadline?: string
-  notes?: string
-  supportRequestId?: string
-  lastActivityDate?: string
-  publicToken?: string
+  defaultTitle: string
+  instructions: string
+  dueInDays?: number
+  items: TemplateItem[]
   createdAt: string
   updatedAt: string
 }
 
-export type CaseStatus =
-  | 'new'
-  | 'waiting-for-client'
-  | 'partial-submission'
-  | 'completed'
-  | 'closed'
-  | 'delayed'
+export type RequestStatus = 'new' | 'waiting-for-client' | 'partial-submission' | 'completed' | 'closed'
+export type DocStatus = 'missing' | 'uploaded' | 'approved' | 'rejected'
 
-export interface CaseDocument {
+export interface Progress {
+  total: number
+  required: number
+  missing: number
+  awaitingReview: number
+  approved: number
+  rejected: number
+  received: number
+  outstandingRequired: number
+  percent: number
+}
+
+export interface RequestDocument {
   id: string
   caseId: string
   documentTypeId: string
-  documentTypeName: string
+  name: string
   category: string
+  description: string
+  helperText: string
   isRequired: boolean
-  status: DocumentStatus
-  caseNotes?: string
+  status: DocStatus
+  clientNote: string
   notes?: string
   fileName?: string
   fileType?: string
   fileSize?: number
-  storagePath?: string
-  storageStatus?: 'uploaded' | 'processing' | 'ready' | 'error'
+  hasFile: boolean
   uploadedBy?: string
   uploadedAt?: string
   reviewedBy?: string
-  reviewedByName?: string
   reviewedAt?: string
   rejectionReason?: string
   versionCount: number
   sortOrder: number
+  allowedFormats: string[]
+  maxSizeMB: number
 }
 
-export type DocumentStatus =
-  | 'missing'
-  | 'pending-upload'
-  | 'uploaded'
-  | 'received'
-  | 'under-review'
-  | 'approved'
-  | 'rejected'
-  | 'expired'
-  | 'blurry'
-  | 'missing-pages'
+export interface DocRequest {
+  id: string
+  clientId: string
+  clientName: string
+  clientPhone?: string
+  clientEmail?: string
+  title: string
+  status: RequestStatus
+  assignedOwner: string
+  deadline?: string
+  notes?: string
+  instructions: string
+  language?: Language
+  portalEnabled: boolean
+  publicToken?: string
+  sentAt?: string
+  completedAt?: string
+  closedAt?: string
+  remindersEnabled: boolean
+  lastReminderAt?: string
+  reminderCount: number
+  lastActivityDate?: string
+  createdAt: string
+  updatedAt: string
+  overdue: boolean
+  progress: Progress
+  requiredDocuments: RequestDocument[]
+}
+
+export interface RequestList {
+  items: DocRequest[]
+  total: number
+  page: number
+  pageSize: number
+  counts: Partial<Record<RequestStatus, number>>
+}
+
+export interface FileVersion {
+  id: string
+  fileName: string
+  mimeType: string
+  size: number
+  sha256: string
+  via: 'portal' | 'staff' | 'whatsapp' | 'legacy'
+  reviewStatus: 'pending' | 'approved' | 'rejected' | 'superseded'
+  reviewReason?: string
+  reviewedAt?: string
+  reviewer?: string
+  createdAt: string
+  isCurrent: boolean
+}
+
+export interface Delivery {
+  id: string
+  channel: 'whatsapp' | 'email'
+  kind: string
+  recipient: string
+  status: 'queued' | 'accepted' | 'sent' | 'delivered' | 'read' | 'failed' | 'skipped'
+  error?: string
+  triggeredBy: 'user' | 'automation'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ActivityEvent {
+  id: string
+  type: string
+  description: string
+  userName: string
+  actorType: 'user' | 'client' | 'system'
+  clientId?: string
+  clientName?: string
+  caseId?: string
+  documentId?: string
+  timestamp: string
+  metadata?: Record<string, unknown>
+}
+
+export interface SupportMessage {
+  id: string
+  senderType: 'client' | 'staff' | 'system'
+  senderName: string
+  content: string
+  timestamp: string
+  isRead: boolean
+}
 
 export interface SupportRequest {
   id: string
@@ -143,220 +223,17 @@ export interface SupportRequest {
   clientId: string
   clientName: string
   subject: string
-  status: SupportStatus
-  assignedStaff?: string
-  assignedStaffName?: string
+  status: 'open' | 'waiting-for-staff' | 'waiting-for-client' | 'resolved' | 'closed'
   openedAt: string
   closedAt?: string
-  issueDescription: string
   messages: SupportMessage[]
 }
 
-export type SupportStatus =
-  | 'open'
-  | 'waiting-for-staff'
-  | 'waiting-for-client'
-  | 'resolved'
-  | 'closed'
-
-export interface SupportMessage {
-  id: string
-  requestId: string
-  sender: 'client' | 'staff' | 'system'
-  senderType: 'client' | 'staff' | 'system'
-  senderName: string
-  content: string
-  body: string
-  timestamp: string
-  sentAt: string
-  attachments?: MessageAttachment[]
-  isRead: boolean
-}
-
-export interface MessageAttachment {
-  id: string
-  fileName: string
-  fileType: string
-  fileSize: number
-  url: string
-}
-
-export interface ActivityEvent {
-  id: string
-  workspaceId: string
-  type: ActivityType
-  description: string
-  userId: string
-  userName: string
-  performedByName: string
-  clientId?: string
-  clientName?: string
-  caseId?: string
-  documentId?: string
-  timestamp: string
-  metadata?: Record<string, string>
-}
-
-export type ActivityType =
-  | 'client-created'
-  | 'case-opened'
-  | 'case-closed'
-  | 'document-uploaded'
-  | 'document-approved'
-  | 'document-rejected'
-  | 'reminder-sent'
-  | 'note-added'
-  | 'support-opened'
-  | 'support-closed'
-  | 'document-type-created'
-  | 'document-type-edited'
-  | 'assignment-updated'
-  | 'staff-added'
-  | 'case_created'
-  | 'document_uploaded'
-  | 'document_approved'
-  | 'document_rejected'
-  | 'reminder_sent'
-  | 'case_completed'
-  | 'client_created'
-  | 'support_request'
-  | 'status_changed'
-  | 'note_added'
-  | 'document_downloaded'
-  | 'case_archived'
-
-export interface WhatsAppConfig {
-  connected: boolean
-  isConnected: boolean
-  phoneNumber?: string
-  lastSync?: string
-  apiKey?: string
-  connectedAt?: string
-  messagesSent: number
-  messagesReceived: number
-}
-
-export interface MessageTemplate {
-  id: string
-  key: string
-  name: string
-  contentEn: string
-  contentHe: string
-  variables: string[]
-  trigger: string
-  bodyTemplate: string
-  isActive: boolean
-  language: string
-}
-
-export interface AutomationRule {
-  id: string
-  name: string
-  trigger: string
-  action: string
-  enabled: boolean
-  isActive: boolean
-  delay?: string
-  delayMinutes: number
-}
-
-export interface Notification {
-  id: string
-  type: 'info' | 'warning' | 'success' | 'error'
-  title: string
-  message: string
-  timestamp: string
-  read: boolean
-  actionUrl?: string
-}
-
-export interface DashboardStats {
-  totalClients: number
-  openCases: number
-  completedCases: number
-  noSubmissionClients: number
-  partialSubmissionClients: number
-  fullyCompletedClients: number
-  delayedCases: number
-  activeSupportRequests: number
-}
-
-export interface CaseTypeConfig {
-  id: string
-  name: string
-  nameHe: string
-  icon: string
-  color: string
-  defaultDocumentTypeIds: string[]
-  isActive: boolean
-}
-
-export interface WhatsAppMessage {
-  id: string
-  workspaceId: string
-  caseId?: string | null
-  clientId?: string | null
-  direction: 'outbound' | 'inbound'
-  phoneNumber: string
-  messageType: string
-  content: string
-  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed'
-  waMessageId?: string | null
-  templateName?: string | null
-  errorMessage?: string | null
-  metadata?: Record<string, unknown>
-  createdAt: string
-}
-
-export interface ClientUploadToken {
-  id: string
-  workspaceId: string
-  caseId: string
-  clientId: string
-  token: string
-  expiresAt: string
-  isUsed: boolean
-  createdAt: string
-}
-
-// ---- Digital Signatures ----
-
-export interface SignatureRequest {
-  id: string
-  workspaceId: string
-  clientId: string
-  clientName: string
-  title: string
-  description?: string
-  status: SignatureRequestStatus
-  publicToken: string
-  documentFileName: string
-  documentStoragePath: string
-  documentFileType: string
-  documentFileSize: number
-  canvasWidth?: number
-  fields: SignatureField[]
-  signedAt?: string
-  signedIp?: string
-  signedDocumentPath?: string
-  expiresAt?: string
-  createdBy: string
-  createdAt: string
-  updatedAt: string
-}
-
-export type SignatureRequestStatus =
-  | 'draft'
-  | 'pending'
-  | 'viewed'
-  | 'signed'
-  | 'declined'
-  | 'expired'
-  | 'cancelled'
+export type SignatureStatus = 'draft' | 'pending' | 'viewed' | 'signed' | 'declined' | 'expired' | 'cancelled'
+export type SignatureFieldType = 'signature' | 'date' | 'name' | 'text' | 'initials' | 'checkbox'
 
 export interface SignatureField {
   id: string
-  requestId: string
   type: SignatureFieldType
   label: string
   page: number
@@ -367,13 +244,140 @@ export interface SignatureField {
   required: boolean
   value?: string
   sortOrder: number
-  docIndex?: number
+  docIndex: number
 }
 
-export type SignatureFieldType =
-  | 'signature'
-  | 'date'
-  | 'name'
-  | 'text'
-  | 'initials'
-  | 'checkbox'
+export interface SignatureRequest {
+  id: string
+  clientId: string
+  clientName: string
+  caseId?: string
+  title: string
+  description?: string
+  status: SignatureStatus
+  publicToken: string
+  documentFileName: string
+  documentFileType: string
+  documentFileSize: number
+  canvasWidth?: number
+  fields: SignatureField[]
+  fieldCount?: number
+  documents: { id: string; fileName: string; fileType: string; fileSize: number; hasSigned: boolean }[]
+  signedAt?: string
+  signerName?: string
+  hasSignedDocument: boolean
+  viewedAt?: string
+  declinedAt?: string
+  declineReason?: string
+  expiresAt?: string
+  originalSha256?: string
+  signedSha256?: string
+  lastReminderAt?: string
+  reminderCount: number
+  language?: Language
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SignatureEvent {
+  id: number
+  event: string
+  actor: 'signer' | 'user' | 'system'
+  actorName?: string
+  ip?: string
+  userAgent?: string
+  details: Record<string, unknown>
+  hash: string
+  createdAt: string
+}
+
+export interface Notification {
+  id: string
+  type: 'info' | 'warning' | 'success' | 'error'
+  title: string
+  message: string
+  read: boolean
+  actionUrl?: string
+  timestamp: string
+}
+
+export interface TeamMember {
+  id: string
+  name: string
+  email: string
+  role: Role
+  phone?: string
+  isActive: boolean
+  lastLoginAt?: string
+  createdAt: string
+  isYou: boolean
+}
+
+export interface Invite {
+  id: string
+  email: string
+  name: string
+  role: Role
+  expiresAt: string
+  createdAt: string
+}
+
+export interface AutomationSettings {
+  requestReminders: { enabled: boolean; firstAfterDays: number; repeatEveryDays: number; maxReminders: number; channel: 'whatsapp' | 'email' }
+  deadlineReminder: { enabled: boolean; daysBefore: number }
+  signatureReminders: { enabled: boolean; firstAfterDays: number; repeatEveryDays: number; maxReminders: number; channel: 'whatsapp' | 'email' }
+  quietHours: { enabled: boolean; start: string; end: string }
+  weekendDays: number[]
+}
+
+export interface ChannelStatus {
+  whatsapp: { mode: 'cloud' | 'log'; configured: boolean; webhookVerified: boolean }
+  email: { configured: boolean; provider: string }
+}
+
+export type ActionKind = 'support' | 'review' | 'overdue' | 'stalled' | 'signature' | 'unsent'
+
+export interface Dashboard {
+  kpis: {
+    activeRequests: number
+    awaitingClient: number
+    drafts: number
+    requestsNeedingReview: number
+    documentsNeedingReview: number
+    completedRequests: number
+    completedThisMonth: number
+    overdue: number
+    pendingSignatures: number
+    completedSignatures: number
+    signedThisMonth: number
+    activeClients: number
+    supportWaiting: number
+    avgDaysToComplete: number | null
+  }
+  actions: { kind: ActionKind; id: string; title: string; clientName: string; count?: number; at?: string; href: string }[]
+  pipeline: Partial<Record<RequestStatus, number>>
+  trend: { week: string; created: number; completed: number; uploads: number; signed: number }[]
+  onboarding: { hasClient: boolean; hasRequest: boolean; hasSent: boolean; hasSignature: boolean; hasBranding: boolean; hasTemplate: boolean }
+}
+
+export interface LibraryItem {
+  source: 'requests' | 'signatures'
+  id: string
+  parentId: string
+  parentTitle: string
+  label: string
+  fileName: string
+  mimeType: string
+  size: number
+  status: string
+  at: string
+  clientId: string
+  clientName: string
+  versions: number
+}
+
+export interface SearchResults {
+  clients: { id: string; name: string; email: string; phone: string }[]
+  requests: { id: string; title: string; status: RequestStatus; clientName: string }[]
+  signatures: { id: string; title: string; status: SignatureStatus; clientName: string }[]
+}

@@ -78,6 +78,13 @@ async function fullRequest(req, id) {
   return serializeSignature(r, fields, extras)
 }
 
+/** Short-lived URL for a draft upload (editor preview). Only this workspace's uploads. */
+router.get('/uploads/url', async (req, res) => {
+  const key = typeof req.query.key === 'string' ? req.query.key : ''
+  if (!isWorkspaceKey(key, req.user.workspaceId) || !key.includes('/signatures/uploads/')) throw notFound()
+  res.json({ url: await storage.url(key, { contentType: 'application/pdf', expiresIn: 600 }) })
+})
+
 router.get('/', async (req, res) => {
   const params = [req.user.workspaceId]
   let where = 's.workspace_id = $1 AND s.deleted_at IS NULL'

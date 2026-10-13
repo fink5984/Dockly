@@ -1,603 +1,453 @@
-import { useState, useEffect, useRef } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
-import { useTheme } from '@/contexts/ThemeContext'
-import { useAuth } from '@/contexts/AuthContext'
-import { Card, CardHeader, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
-import { Input, Select, Textarea } from '@/components/ui/Input'
-import { Modal } from '@/components/ui/Modal'
-import { Tabs, useTabState } from '@/components/ui/Tabs'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { NavLink, useNavigate, useParams } from 'react-router-dom'
+import { User, Building2, Palette, Users, Zap, Plug, Shield, Upload, Trash2, CheckCircle2, AlertTriangle, MessageCircle, Mail, Copy, UserPlus, XCircle, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useSupabaseData } from '@/hooks/useSupabaseData'
-import { updateWorkspace } from '@/services/settingsService'
-import { uploadWorkspaceAsset } from '@/services/storageService'
-import { getDocumentTypes, createDocumentType, updateDocumentType, deleteDocumentType } from '@/services/documentsService'
-import {
-  Building, Users, Shield, FileText, Bell, Clock, Link, Palette, Globe, Lock,
-  Plus, Edit2, Trash2, Save, Eye, ChevronRight, Mail, Database, Upload, Key, Camera, Loader2, ImageIcon
-} from 'lucide-react'
+import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { useApp } from '@/contexts/AppContext'
+import { useApi, invalidate } from '@/hooks/useApi'
+import { authApi, workspaceApi } from '@/services'
+import { ApiError } from '@/lib/api'
+import { Card, CardHeader, CardBody } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input, Textarea, Select, Switch } from '@/components/ui/Field'
+import { PageHeader, Avatar, CopyButton } from '@/components/ui/Misc'
+import { Dialog, ConfirmDialog } from '@/components/ui/Dialog'
+import { Badge } from '@/components/ui/Badge'
+import { ErrorState, Skeleton } from '@/components/ui/States'
+import { brandStyle } from '@/pages/portal/PublicShell'
+import type { AutomationSettings, Role, Language } from '@/types'
 
-export function SettingsPage() {
-  const { t, language, setLanguage } = useI18n()
-  const { theme, setTheme } = useTheme()
-  const { user, workspace, refreshProfile } = useAuth()
+const SECTIONS = [
+  { id: 'profile', icon: User },
+  { id: 'workspace', icon: Building2, admin: true },
+  { id: 'branding', icon: Palette, admin: true },
+  { id: 'team', icon: Users },
+  { id: 'automation', icon: Zap },
+  { id: 'integrations', icon: Plug },
+  { id: 'security', icon: Shield },
+] as const
 
-  const wsId = workspace?.id || user?.workspaceId || ''
-  const { data: allDocumentTypes, refetch: refetchDocTypes } = useSupabaseData(() => getDocumentTypes(wsId), [], [wsId])
-
-  // Document type modal state
-  const [docTypeModalOpen, setDocTypeModalOpen] = useState(false)
-  const [editingDocType, setEditingDocType] = useState<{ id: string; name: string; category: string; description: string; isRequired: boolean } | null>(null)
-  const [docTypeForm, setDocTypeForm] = useState({ name: '', category: 'general', description: '', isRequired: false })
-  const [docTypeSaving, setDocTypeSaving] = useState(false)
-  const [docTypeError, setDocTypeError] = useState('')
-
-  const DOC_CATEGORIES = [
-    { value: 'general', label: t('settings.docCatGeneral') },
-    { value: 'identity', label: t('settings.docCatIdentity') },
-    { value: 'financial', label: t('settings.docCatFinancial') },
-    { value: 'legal', label: t('settings.docCatLegal') },
-    { value: 'property', label: t('settings.docCatProperty') },
-  ]
-
-  // Document type handlers
-  const openAddDocType = () => {
-    setDocTypeForm({ name: '', category: 'general', description: '', isRequired: false })
-    setEditingDocType(null)
-    setDocTypeError('')
-    setDocTypeModalOpen(true)
-  }
-
-  const openEditDocType = (dt: { id: string; name: string; category: string; description: string; isRequired: boolean }) => {
-    setDocTypeForm({ name: dt.name, category: dt.category, description: dt.description, isRequired: dt.isRequired })
-    setEditingDocType(dt)
-    setDocTypeError('')
-    setDocTypeModalOpen(true)
-  }
-
-  const handleSaveDocType = async () => {
-    if (!docTypeForm.name.trim()) {
-      setDocTypeError(t('settings.docTypeNameRequired'))
-      return
-    }
-    const wsId = workspace?.id || user?.workspaceId || ''
-    if (!wsId) return
-    setDocTypeSaving(true)
-    setDocTypeError('')
-    try {
-      if (editingDocType) {
-        await updateDocumentType(editingDocType.id, {
-          name: docTypeForm.name.trim(),
-          category: docTypeForm.category,
-          description: docTypeForm.description.trim(),
-          isRequired: docTypeForm.isRequired,
-        })
-      } else {
-        await createDocumentType(wsId, {
-          name: docTypeForm.name.trim(),
-          category: docTypeForm.category,
-          description: docTypeForm.description.trim(),
-          isRequired: docTypeForm.isRequired,
-        })
-      }
-      setDocTypeModalOpen(false)
-      refetchDocTypes()
-    } catch (err: any) {
-      setDocTypeError(err?.message || 'Failed to save')
-    } finally {
-      setDocTypeSaving(false)
-    }
-  }
-
-  const handleDeleteDocType = async (id: string) => {
-    try {
-      await deleteDocumentType(id)
-      refetchDocTypes()
-    } catch (err) {
-      console.error('Failed to delete document type:', err)
-    }
-  }
-
-  // Workspace form state
-  const [wsForm, setWsForm] = useState({
-    name: '',
-    businessType: '',
-    email: '',
-    phone: '',
-    contactPerson: '',
-  })
-  const [wsSaving, setWsSaving] = useState(false)
-  const [wsSuccess, setWsSuccess] = useState(false)
-  const [logoUploading, setLogoUploading] = useState(false)
-  const logoInputRef = useRef<HTMLInputElement>(null)
-
-  // Populate form from workspace data
-  useEffect(() => {
-    if (workspace) {
-      setWsForm({
-        name: workspace.name || '',
-        businessType: workspace.businessType || 'other',
-        email: workspace.email || '',
-        phone: workspace.phone || '',
-        contactPerson: workspace.contactPerson || '',
-      })
-    }
-  }, [workspace])
-
-  const handleSaveWorkspace = async () => {
-    if (!workspace?.id) return
-    setWsSaving(true)
-    setWsSuccess(false)
-    try {
-      await updateWorkspace(workspace.id, {
-        name: wsForm.name,
-        businessType: wsForm.businessType,
-        email: wsForm.email,
-        phone: wsForm.phone,
-        contactPerson: wsForm.contactPerson,
-      })
-      await refreshProfile()
-      setWsSuccess(true)
-      setTimeout(() => setWsSuccess(false), 3000)
-    } catch (err) {
-      console.error('Failed to save workspace:', err)
-    } finally {
-      setWsSaving(false)
-    }
-  }
-
-  const handleLogoUpload = async (file: File) => {
-    if (!workspace?.id) return
-    setLogoUploading(true)
-    try {
-      const ext = file.name.split('.').pop() || 'png'
-      const fileName = `logo_${Date.now()}.${ext}`
-      const publicUrl = await uploadWorkspaceAsset(workspace.name || workspace.id, fileName, file)
-      await updateWorkspace(workspace.id, { logoUrl: publicUrl })
-      await refreshProfile()
-      setWsSuccess(true)
-      setTimeout(() => setWsSuccess(false), 3000)
-    } catch (err) {
-      console.error('Failed to upload logo:', err)
-    } finally {
-      setLogoUploading(false)
-    }
-  }
-
-  const handleRemoveLogo = async () => {
-    if (!workspace?.id) return
-    try {
-      await updateWorkspace(workspace.id, { logoUrl: null })
-      await refreshProfile()
-    } catch (err) {
-      console.error('Failed to remove logo:', err)
-    }
-  }
-
-  const { activeTab, setActiveTab, tabs } = useTabState([
-    { id: 'workspace', label: t('settings.workspace') },
-    { id: 'staff', label: t('settings.staff') },
-    { id: 'doc-types', label: t('settings.documentTypes') },
-    { id: 'notifications', label: t('settings.notifications') },
-    { id: 'appearance', label: t('settings.appearance') },
-    { id: 'integrations', label: t('settings.integrations') },
-  ])
-
-  const staffMembers = [
-    { id: user?.id || '1', name: user?.name || '', email: user?.email || '', role: (user?.role || 'owner') as string, avatar: null },
-  ]
-
-  const roleColors: Record<string, string> = { owner: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300', admin: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300', member: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }
-
+function SaveBar({ dirty, busy, onSave, onReset }: { dirty: boolean; busy: boolean; onSave: () => void; onReset: () => void }) {
+  const { t } = useI18n()
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
-        <p className="text-sm text-[var(--text-tertiary)] mt-1">{t('settings.subtitle')}</p>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-5">
-        {/* Sidebar nav */}
-        <div className="lg:w-56 shrink-0">
-          <nav className="space-y-1">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-start transition-colors',
-                  activeTab === tab.id
-                    ? 'bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300 font-medium'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                )}
-              >
-                {tab.id === 'workspace' && <Building className="w-4 h-4" />}
-                {tab.id === 'staff' && <Users className="w-4 h-4" />}
-                {tab.id === 'doc-types' && <FileText className="w-4 h-4" />}
-                {tab.id === 'notifications' && <Bell className="w-4 h-4" />}
-                {tab.id === 'appearance' && <Palette className="w-4 h-4" />}
-                {tab.id === 'integrations' && <Link className="w-4 h-4" />}
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-4">
-          {activeTab === 'workspace' && (
-            <>
-              {/* Logo Upload Card */}
-              <Card>
-                <CardHeader title={t('settings.workspaceLogo') || 'Workspace Logo'} />
-                <CardContent>
-                  <div className="flex items-center gap-6">
-                    <div className="relative group">
-                      {workspace?.logo ? (
-                        <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-gray-200 dark:border-gray-700 shadow-sm">
-                          <img src={workspace.logo} alt="Logo" className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="w-24 h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
-                          <ImageIcon className="w-8 h-8 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-[var(--text-secondary)]">
-                        {t('settings.logoDesc') || 'Upload your company logo. It will appear in the public portal that clients see.'}
-                      </p>
-                      <p className="text-xs text-[var(--text-tertiary)]">
-                        {t('settings.logoHint') || 'Recommended: Square image, at least 200×200px. PNG or JPG.'}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          icon={logoUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                          onClick={() => logoInputRef.current?.click()}
-                          disabled={logoUploading}
-                        >
-                          {workspace?.logo ? (t('settings.changeLogo') || 'Change Logo') : (t('settings.uploadLogo') || 'Upload Logo')}
-                        </Button>
-                        {workspace?.logo && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            icon={<Trash2 className="w-4 h-4" />}
-                            onClick={handleRemoveLogo}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            {t('common.remove') || 'Remove'}
-                          </Button>
-                        )}
-                      </div>
-                      <input
-                        ref={logoInputRef}
-                        type="file"
-                        className="hidden"
-                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                        onChange={e => {
-                          const file = e.target.files?.[0]
-                          if (file) handleLogoUpload(file)
-                          e.target.value = ''
-                        }}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader title={t('settings.workspaceDetails')} />
-                <CardContent>
-                  <div className="space-y-4 max-w-lg">
-                    {wsSuccess && (
-                      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm">
-                        {t('common.saved') || 'Saved successfully'}
-                      </div>
-                    )}
-                    <Input label={t('settings.workspaceName')} value={wsForm.name} onChange={e => setWsForm(p => ({ ...p, name: e.target.value }))} />
-                    <Select
-                      label={t('settings.businessType')}
-                      value={wsForm.businessType}
-                      onChange={e => setWsForm(p => ({ ...p, businessType: e.target.value }))}
-                      options={[
-                        { value: 'mortgage', label: t('businessTypes.mortgage') },
-                        { value: 'law', label: t('businessTypes.law') },
-                        { value: 'accounting', label: t('businessTypes.accounting') },
-                        { value: 'insurance', label: t('businessTypes.insurance') },
-                        { value: 'admin', label: t('businessTypes.admin') },
-                        { value: 'other', label: t('businessTypes.other') },
-                      ]}
-                    />
-                    <Input label={t('onboarding.contactPerson')} value={wsForm.contactPerson} onChange={e => setWsForm(p => ({ ...p, contactPerson: e.target.value }))} />
-                    <Input label={t('settings.companyEmail')} type="email" value={wsForm.email} onChange={e => setWsForm(p => ({ ...p, email: e.target.value }))} />
-                    <Input label={t('settings.phone')} type="tel" value={wsForm.phone} onChange={e => setWsForm(p => ({ ...p, phone: e.target.value }))} />
-                    <div className="pt-2">
-                      <Button onClick={handleSaveWorkspace} loading={wsSaving} icon={<Save className="w-4 h-4" />}>{t('common.save')}</Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader title={t('settings.dataRetention')} />
-                <CardContent>
-                  <div className="space-y-3 max-w-lg">
-                    <Select
-                      label={t('settings.documentRetention')}
-                      defaultValue="365"
-                      options={[
-                        { value: '90', label: '90 ' + t('common.days') },
-                        { value: '180', label: '180 ' + t('common.days') },
-                        { value: '365', label: '1 ' + t('common.year') },
-                        { value: '730', label: '2 ' + t('common.years') },
-                        { value: '0', label: t('settings.keepForever') },
-                      ]}
-                    />
-                    <Select
-                      label={t('settings.archivedCases')}
-                      defaultValue="730"
-                      options={[
-                        { value: '365', label: '1 ' + t('common.year') },
-                        { value: '730', label: '2 ' + t('common.years') },
-                        { value: '0', label: t('settings.keepForever') },
-                      ]}
-                    />
-                    <Button variant="outline" icon={<Save className="w-4 h-4" />}>{t('common.save')}</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-
-          {activeTab === 'staff' && (
-            <>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-[var(--text-tertiary)]">{staffMembers.length} {t('settings.teamMembers')}</p>
-                <Button icon={<Plus className="w-4 h-4" />} size="sm">{t('settings.inviteMember')}</Button>
-              </div>
-
-              <div className="space-y-2">
-                {staffMembers.map(member => (
-                  <Card key={member.id}>
-                    <div className="flex items-center gap-4 p-4">
-                      <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold text-sm">
-                        {member.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{member.name}</p>
-                        <p className="text-xs text-[var(--text-tertiary)]">{member.email}</p>
-                      </div>
-                      <span className={cn('text-xs px-2.5 py-1 rounded-full font-medium capitalize', roleColors[member.role])}>
-                        {member.role}
-                      </span>
-                      <div className="flex gap-1">
-                        <button className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]"><Edit2 className="w-3.5 h-3.5" /></button>
-                        {member.role !== 'owner' && (
-                          <button className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'doc-types' && (
-            <>
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-[var(--text-tertiary)]">{allDocumentTypes.length} {t('settings.docTypesConfigured')}</p>
-                <Button onClick={openAddDocType} icon={<Plus className="w-4 h-4" />} size="sm">{t('settings.addDocType')}</Button>
-              </div>
-
-              {allDocumentTypes.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Upload className="w-10 h-10 text-[var(--text-tertiary)] mx-auto mb-3" />
-                    <p className="text-sm font-medium mb-1">{t('settings.noDocTypes')}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] mb-4">{t('settings.noDocTypesDesc')}</p>
-                    <Button onClick={openAddDocType} icon={<Plus className="w-4 h-4" />} size="sm">{t('settings.addDocType')}</Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  {allDocumentTypes.map(dt => (
-                    <Card key={dt.id}>
-                      <div className="flex items-center gap-4 p-4">
-                        <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-950/30 flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-primary-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{dt.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-[var(--text-tertiary)]">{DOC_CATEGORIES.find(c => c.value === dt.category)?.label || dt.category}</span>
-                            {dt.isRequired && (
-                              <Badge variant="status" status="pending" size="sm">{t('settings.required')}</Badge>
-                            )}
-                          </div>
-                        </div>
-                        <Badge variant="status" status={dt.status === 'active' ? 'approved' : 'missing'} size="sm">
-                          {dt.status === 'active' ? t('common.active') : t('common.inactive')}
-                        </Badge>
-                        <button onClick={() => openEditDocType(dt)} className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]">
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => handleDeleteDocType(dt.id)} className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-red-400">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {activeTab === 'notifications' && (
-            <Card>
-              <CardHeader title={t('settings.notificationPreferences')} />
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { key: 'newDocument', label: t('settings.notifyNewDocument'), desc: t('settings.notifyNewDocumentDesc') },
-                    { key: 'supportRequest', label: t('settings.notifySupportRequest'), desc: t('settings.notifySupportRequestDesc') },
-                    { key: 'caseCompleted', label: t('settings.notifyCaseCompleted'), desc: t('settings.notifyCaseCompletedDesc') },
-                    { key: 'dailySummary', label: t('settings.notifyDailySummary'), desc: t('settings.notifyDailySummaryDesc') },
-                    { key: 'deadlineReminder', label: t('settings.notifyDeadlineReminder'), desc: t('settings.notifyDeadlineReminderDesc') },
-                  ].map((item) => (
-                    <label key={item.key} className="flex items-start gap-3 p-3 bg-[var(--bg-tertiary)] rounded-lg cursor-pointer">
-                      <input type="checkbox" defaultChecked className="mt-1 rounded" />
-                      <div>
-                        <p className="text-sm font-medium">{item.label}</p>
-                        <p className="text-xs text-[var(--text-tertiary)]">{item.desc}</p>
-                      </div>
-                    </label>
-                  ))}
-                  <div className="pt-2">
-                    <Button icon={<Save className="w-4 h-4" />}>{t('common.save')}</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {activeTab === 'appearance' && (
-            <Card>
-              <CardHeader title={t('settings.appearanceSettings')} />
-              <CardContent>
-                <div className="space-y-6 max-w-lg">
-                  <div>
-                    <p className="text-sm font-medium mb-3">{t('settings.theme')}</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      {(['light', 'dark', 'system'] as const).map(opt => (
-                        <button
-                          key={opt}
-                          onClick={() => setTheme(opt)}
-                          className={cn(
-                            'p-3 rounded-xl border-2 text-center transition-all',
-                            theme === opt ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
-                          )}
-                        >
-                          <p className="text-sm font-medium capitalize">{t(`settings.${opt}`)}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium mb-3">{t('common.language')}</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {([{ code: 'en' as const, label: 'English' }, { code: 'he' as const, label: 'עברית' }]).map(opt => (
-                        <button
-                          key={opt.code}
-                          onClick={() => setLanguage(opt.code)}
-                          className={cn(
-                            'p-3 rounded-xl border-2 text-center transition-all',
-                            language === opt.code ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
-                          )}
-                        >
-                          <p className="text-sm font-medium">{opt.label}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {activeTab === 'integrations' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { name: 'WhatsApp Business', desc: t('settings.whatsappDesc'), icon: '💬', connected: true, color: 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' },
-                { name: 'Supabase', desc: t('settings.supabaseDesc'), icon: '⚡', connected: true, color: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800' },
-                { name: 'Google Drive', desc: t('settings.googleDriveDesc'), icon: '📁', connected: false, color: 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' },
-                { name: 'Email SMTP', desc: t('settings.emailSmtpDesc'), icon: '📧', connected: true, color: 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800' },
-              ].map(integration => (
-                <Card key={integration.name}>
-                  <div className={cn('p-5 border rounded-xl', integration.color)}>
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="text-2xl">{integration.icon}</span>
-                      <Badge variant="status" status={integration.connected ? 'approved' : 'missing'} size="sm">
-                        {integration.connected ? t('common.connected') : t('common.notConnected')}
-                      </Badge>
-                    </div>
-                    <p className="text-sm font-semibold">{integration.name}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] mt-1">{integration.desc}</p>
-                    <Button variant="outline" size="sm" className="mt-3">
-                      {integration.connected ? t('common.configure') : t('common.connect')}
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Document Type Modal */}
-      <Modal
-        isOpen={docTypeModalOpen}
-        onClose={() => setDocTypeModalOpen(false)}
-        title={editingDocType ? t('settings.editDocType') : t('settings.addDocType')}
-        size="md"
-      >
-        <div className="space-y-5 p-6">
-          {docTypeError && (
-            <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-lg text-sm">{docTypeError}</div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5">{t('settings.docTypeName')}</label>
-            <Input
-              value={docTypeForm.name}
-              onChange={(e) => setDocTypeForm(f => ({ ...f, name: e.target.value }))}
-              placeholder={t('settings.docTypeNamePlaceholder')}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5">{t('settings.docTypeCategory')}</label>
-            <Select
-              value={docTypeForm.category}
-              onChange={(e) => setDocTypeForm(f => ({ ...f, category: e.target.value }))}
-              options={DOC_CATEGORIES}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5">{t('settings.docTypeDescription')}</label>
-            <Textarea
-              value={docTypeForm.description}
-              onChange={(e) => setDocTypeForm(f => ({ ...f, description: e.target.value }))}
-              placeholder={t('settings.docTypeDescPlaceholder')}
-              rows={2}
-            />
-          </div>
-
-          <label className="flex items-center gap-3 p-3 bg-[var(--bg-tertiary)] rounded-xl cursor-pointer">
-            <input
-              type="checkbox"
-              checked={docTypeForm.isRequired}
-              onChange={(e) => setDocTypeForm(f => ({ ...f, isRequired: e.target.checked }))}
-              className="rounded"
-            />
-            <div>
-              <p className="text-sm font-medium">{t('settings.docTypeRequired')}</p>
-              <p className="text-xs text-[var(--text-tertiary)]">{t('settings.docTypeRequiredDesc')}</p>
-            </div>
-          </label>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-[var(--border-primary)]">
-            <Button variant="outline" onClick={() => setDocTypeModalOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={handleSaveDocType} loading={docTypeSaving} icon={<Save className="w-4 h-4" />}>{t('common.save')}</Button>
-          </div>
-        </div>
-      </Modal>
+    <div className="flex items-center justify-end gap-2 border-t border-line bg-surface-2 px-5 py-3">
+      {dirty && <span className="me-auto text-xs text-fg-3">{t('settings.unsaved')}</span>}
+      <Button onClick={onReset} disabled={!dirty || busy}>{t('common.cancel')}</Button>
+      <Button variant="primary" onClick={onSave} loading={busy} disabled={!dirty}>{t('common.save')}</Button>
     </div>
+  )
+}
+
+function ProfileSection() {
+  const { t } = useI18n()
+  const { user, setUser } = useAuth()
+  const { toast, toastError } = useApp()
+  const [f, setF] = useState({ name: user?.name || '', phone: user?.phone || '' })
+  const [pw, setPw] = useState({ current: '', next: '' })
+  const [busy, setBusy] = useState(false)
+  const [pwBusy, setPwBusy] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const dirty = f.name !== (user?.name || '') || f.phone !== (user?.phone || '')
+  const save = async () => {
+    setBusy(true)
+    try { const me = await authApi.updateProfile(f); if (me.user) setUser(me.user); toast({ tone: 'success', title: t('common.saved') }) } catch (e) { toastError(e, t('settings.saveFailed')) } finally { setBusy(false) }
+  }
+  const changePw = async () => {
+    setPwError('')
+    if (pw.next.length < 8) { setPwError(t('auth.passwordHint')); return }
+    setPwBusy(true)
+    try { await authApi.changePassword(pw.current, pw.next); setPw({ current: '', next: '' }); toast({ tone: 'success', title: t('settings.passwordChanged') }) } catch (e) { setPwError(e instanceof ApiError ? e.message : t('common.error')) } finally { setPwBusy(false) }
+  }
+  return (
+    <>
+      <Card>
+        <CardHeader title={t('settings.profile.title')} description={t('settings.profile.hint')} />
+        <CardBody className="space-y-4">
+          <div className="flex items-center gap-3"><Avatar name={f.name || user?.email || ''} size="lg" /><div><p className="font-medium">{user?.email}</p><Badge tone="brand">{t(`roles.${user?.role}`)}</Badge></div></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label={t('auth.name')} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+            <Input label={t('auth.phone')} value={f.phone} dir="ltr" onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          </div>
+        </CardBody>
+        <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={() => setF({ name: user?.name || '', phone: user?.phone || '' })} />
+      </Card>
+      <Card>
+        <CardHeader title={t('settings.password.title')} description={t('settings.password.hint')} />
+        <CardBody className="grid gap-4 sm:grid-cols-2">
+          <Input label={t('settings.password.current')} type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} />
+          <Input label={t('settings.password.new')} type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} hint={t('auth.passwordHint')} error={pwError} />
+          <div className="sm:col-span-2"><Button onClick={changePw} loading={pwBusy} disabled={!pw.current || !pw.next}>{t('settings.password.change')}</Button></div>
+        </CardBody>
+      </Card>
+    </>
+  )
+}
+
+function WorkspaceSection() {
+  const { t } = useI18n()
+  const { workspace, setWorkspace } = useAuth()
+  const { toast, toastError } = useApp()
+  const init = () => ({ name: workspace?.name || '', phone: workspace?.phone || '', email: workspace?.email || '', defaultLanguage: (workspace?.defaultLanguage || 'he') as Language, timezone: workspace?.timezone || 'Asia/Jerusalem' })
+  const [f, setF] = useState(init)
+  const [busy, setBusy] = useState(false)
+  const dirty = JSON.stringify(f) !== JSON.stringify(init())
+  const zones = ['Asia/Jerusalem', 'Europe/London', 'Europe/Berlin', 'America/New_York', 'America/Los_Angeles', 'UTC']
+  const save = async () => {
+    setBusy(true)
+    try { setWorkspace(await workspaceApi.update(f)); toast({ tone: 'success', title: t('common.saved') }) } catch (e) { toastError(e, t('settings.saveFailed')) } finally { setBusy(false) }
+  }
+  return (
+    <Card>
+      <CardHeader title={t('settings.workspace.title')} description={t('settings.workspace.hint')} />
+      <CardBody className="space-y-4">
+        <Input label={t('onboarding.businessName')} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label={t('onboarding.phone')} dir="ltr" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} hint={t('onboarding.contactHint')} />
+          <Input label={t('onboarding.email')} dir="ltr" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+          <Select label={t('onboarding.clientLanguage')} value={f.defaultLanguage} onChange={(e) => setF({ ...f, defaultLanguage: e.target.value as Language })} options={[{ value: 'he', label: 'עברית' }, { value: 'en', label: 'English' }]} />
+          <Select label={t('settings.workspace.timezone')} value={f.timezone} onChange={(e) => setF({ ...f, timezone: e.target.value })} options={(zones.includes(f.timezone) ? zones : [f.timezone, ...zones]).map((z) => ({ value: z, label: z }))} hint={t('settings.workspace.timezoneHint')} />
+        </div>
+      </CardBody>
+      <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={() => setF(init())} />
+    </Card>
+  )
+}
+
+const SWATCHES = ['#4B4ACF', '#2563EB', '#0E7490', '#047857', '#B45309', '#BE123C', '#7C3AED', '#111827']
+
+function BrandingSection() {
+  const { t } = useI18n()
+  const { workspace, setWorkspace } = useAuth()
+  const { toast, toastError } = useApp()
+  const [color, setColor] = useState(workspace?.brandColor || '#4B4ACF')
+  const [message, setMessage] = useState(workspace?.portalMessage || '')
+  const [busy, setBusy] = useState(false)
+  const [logoBusy, setLogoBusy] = useState(false)
+  const file = useRef<HTMLInputElement>(null)
+  const dirty = color !== (workspace?.brandColor || '#4B4ACF') || message !== (workspace?.portalMessage || '')
+  const save = async () => {
+    setBusy(true)
+    try { setWorkspace(await workspaceApi.update({ brandColor: color, portalMessage: message })); toast({ tone: 'success', title: t('common.saved') }) } catch (e) { toastError(e, t('settings.saveFailed')) } finally { setBusy(false) }
+  }
+  const uploadLogo = async (f: File) => {
+    setLogoBusy(true)
+    try { setWorkspace(await workspaceApi.uploadLogo(f)); toast({ tone: 'success', title: t('settings.branding.logoSaved') }) } catch (e) { toastError(e, t('settings.branding.logoFailed')) } finally { setLogoBusy(false) }
+  }
+  return (
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <Card>
+        <CardHeader title={t('settings.branding.title')} description={t('settings.branding.hint')} />
+        <CardBody className="space-y-6">
+          <div>
+            <p className="mb-2 text-sm font-medium text-fg-2">{t('settings.branding.logo')}</p>
+            <div className="flex items-center gap-4">
+              <div className="flex size-16 items-center justify-center overflow-hidden rounded-xl border border-line bg-white">
+                {workspace?.logo ? <img src={workspace.logo} alt="" className="size-full object-contain" /> : <Building2 className="size-6 text-slate-400" />}
+              </div>
+              <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadLogo(f) }} />
+              <Button icon={<Upload className="size-4" />} loading={logoBusy} onClick={() => file.current?.click()}>{t('settings.branding.uploadLogo')}</Button>
+              {workspace?.logo && <Button variant="ghost" icon={<Trash2 className="size-4" />} onClick={() => workspaceApi.update({ logoUrl: null }).then(setWorkspace).catch((e) => toastError(e, t('common.error')))}>{t('common.remove')}</Button>}
+            </div>
+            <p className="mt-2 text-xs text-fg-3">{t('settings.branding.logoHint')}</p>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-medium text-fg-2">{t('settings.branding.color')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {SWATCHES.map((s) => (
+                <button key={s} type="button" onClick={() => setColor(s)} aria-label={s} aria-pressed={color.toLowerCase() === s.toLowerCase()} className={cn('size-8 rounded-full border-2', color.toLowerCase() === s.toLowerCase() ? 'border-fg ring-2 ring-offset-2 ring-offset-surface ring-line-2' : 'border-transparent')} style={{ background: s }} />
+              ))}
+              <label className="ms-2 flex items-center gap-2 text-sm text-fg-3">
+                <input type="color" value={color} onChange={(e) => setColor(e.target.value.toUpperCase())} className="size-8 cursor-pointer rounded border border-line bg-transparent" aria-label={t('settings.branding.custom')} />
+                <span className="font-mono text-xs" dir="ltr">{color}</span>
+              </label>
+            </div>
+          </div>
+          <Textarea label={t('settings.branding.message')} value={message} onChange={(e) => setMessage(e.target.value)} rows={3} maxLength={1000} hint={t('settings.branding.messageHint')} />
+        </CardBody>
+        <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={() => { setColor(workspace?.brandColor || '#4B4ACF'); setMessage(workspace?.portalMessage || '') }} />
+      </Card>
+      <div>
+        <p className="mb-2 text-sm font-medium text-fg-3">{t('settings.branding.preview')}</p>
+        <div className="overflow-hidden rounded-2xl border border-line bg-canvas shadow-sm" style={brandStyle(color)}>
+          <div className="h-1 bg-brand-600" />
+          <div className="flex items-center gap-2 border-b border-line bg-surface px-3 py-2.5">
+            {workspace?.logo ? <img src={workspace.logo} alt="" className="size-7 rounded-md object-contain" /> : <span className="flex size-7 items-center justify-center rounded-md bg-brand-600 text-xs font-semibold text-brand-fg">{workspace?.name.slice(0, 1)}</span>}
+            <span className="truncate text-sm font-semibold">{workspace?.name}</span>
+          </div>
+          <div className="space-y-3 p-3">
+            <p className="text-sm font-semibold">{t('portal.greeting', { name: t('settings.branding.sampleName') })}</p>
+            {message && <p className="whitespace-pre-wrap text-xs text-fg-3">{message}</p>}
+            <div className="rounded-lg border border-line bg-surface p-3">
+              <p className="text-xs font-medium">{t('settings.branding.sampleDoc')}</p>
+              <span className="mt-2 inline-flex h-8 items-center rounded-md bg-brand-600 px-3 text-xs font-semibold text-brand-fg">{t('portal.upload')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TeamSection() {
+  const { t, fmt } = useI18n()
+  const { can, user } = useAuth()
+  const { toast, toastError } = useApp()
+  const { data, error, loading, refetch } = useApi('team', workspaceApi.team)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inv, setInv] = useState({ email: '', name: '', role: 'member' as Exclude<Role, 'owner'> })
+  const [link, setLink] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null)
+  const admin = can('admin')
+  const roles: Role[] = user?.role === 'owner' ? ['owner', 'admin', 'member', 'viewer'] : ['admin', 'member', 'viewer']
+  const invite = async () => {
+    setBusy(true)
+    try {
+      const r = await workspaceApi.invite(inv)
+      setLink(r.link)
+      refetch()
+      toast({ tone: 'success', title: r.emailed ? t('settings.team.invitedEmailed') : t('settings.team.invitedLink') })
+    } catch (e) { toastError(e, t('settings.team.inviteFailed')) } finally { setBusy(false) }
+  }
+  return (
+    <>
+      <Card className="overflow-hidden">
+        <CardHeader title={t('settings.team.title')} description={t('settings.team.hint')} action={admin && <Button variant="primary" size="sm" icon={<UserPlus className="size-4" />} onClick={() => { setInv({ email: '', name: '', role: 'member' }); setLink(null); setInviteOpen(true) }}>{t('settings.team.invite')}</Button>} />
+        {error ? <ErrorState onRetry={refetch} /> : loading || !data ? <CardBody><Skeleton className="h-32" /></CardBody> : (
+          <ul className="divide-y divide-line border-t border-line">
+            {data.members.map((m) => (
+              <li key={m.id} className={cn('flex flex-wrap items-center gap-3 px-5 py-3', !m.isActive && 'opacity-50')}>
+                <Avatar name={m.name} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{m.name}{m.isYou && <span className="ms-1.5 text-xs text-fg-4">({t('common.you')})</span>}</p>
+                  <p className="truncate text-xs text-fg-3">{m.email}{m.lastLoginAt ? ` · ${t('settings.team.lastSeen', { date: fmt.relative(m.lastLoginAt) })}` : ''}</p>
+                </div>
+                {!m.isActive ? <Badge>{t('settings.team.removed')}</Badge> : admin && !m.isYou ? (
+                  <>
+                    <Select selectSize="sm" aria-label={t('settings.team.role')} value={m.role} wrapperClassName="w-36" disabled={m.role === 'owner' && user?.role !== 'owner'}
+                      onChange={(e) => workspaceApi.setRole(m.id, e.target.value as Role).then(() => { refetch(); toast({ tone: 'success', title: t('settings.team.roleChanged') }) }).catch((err) => toastError(err, t('common.error')))}
+                      options={(roles.includes(m.role) ? roles : [m.role, ...roles]).map((r) => ({ value: r, label: t(`roles.${r}`) }))} />
+                    <Button size="sm" variant="ghost" className="text-danger-fg" onClick={() => setRemoving({ id: m.id, name: m.name })}>{t('common.remove')}</Button>
+                  </>
+                ) : <Badge tone="brand">{t(`roles.${m.role}`)}</Badge>}
+              </li>
+            ))}
+            {data.invites.map((i) => (
+              <li key={i.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                <span className="flex size-8 items-center justify-center rounded-full border border-dashed border-line-2 text-fg-4"><Mail className="size-4" /></span>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm">{i.email}</p><p className="text-xs text-fg-3">{t('settings.team.pending', { role: t(`roles.${i.role}`), date: fmt.date(i.expiresAt) })}</p></div>
+                {admin && <Button size="sm" variant="ghost" icon={<XCircle className="size-4" />} onClick={() => workspaceApi.revokeInvite(i.id).then(refetch).catch((e) => toastError(e, t('common.error')))}>{t('settings.team.revoke')}</Button>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+      <Card>
+        <CardHeader title={t('settings.team.rolesTitle')} />
+        <CardBody>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            {(['owner', 'admin', 'member', 'viewer'] as Role[]).map((r) => (
+              <div key={r} className="rounded-lg border border-line p-3"><dt className="text-sm font-medium">{t(`roles.${r}`)}</dt><dd className="mt-0.5 text-xs text-fg-3">{t(`settings.team.roleHelp.${r}`)}</dd></div>
+            ))}
+          </dl>
+        </CardBody>
+      </Card>
+      <Dialog open={inviteOpen} onClose={() => setInviteOpen(false)} title={t('settings.team.invite')} description={t('settings.team.inviteHint')}
+        footer={link ? <Button variant="primary" onClick={() => setInviteOpen(false)}>{t('common.done')}</Button> : <><Button onClick={() => setInviteOpen(false)}>{t('common.cancel')}</Button><Button variant="primary" loading={busy} onClick={invite} disabled={!/\S+@\S+\.\S+/.test(inv.email)}>{t('settings.team.sendInvite')}</Button></>}>
+        {link ? (
+          <div className="space-y-3">
+            <p className="flex items-center gap-2 text-sm text-success-fg"><CheckCircle2 className="size-4" />{t('settings.team.linkReady')}</p>
+            <div className="flex items-center gap-2 rounded-md border border-line bg-surface-2 px-3 py-2"><span className="min-w-0 flex-1 truncate font-mono text-xs" dir="ltr">{link}</span><CopyButton value={link} /></div>
+            <p className="text-xs text-fg-3">{t('settings.team.linkOnce')}</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Input label={t('auth.email')} type="email" dir="ltr" value={inv.email} onChange={(e) => setInv({ ...inv, email: e.target.value })} autoFocus required />
+            <Input label={t('auth.name')} value={inv.name} onChange={(e) => setInv({ ...inv, name: e.target.value })} optionalLabel={t('common.optional')} />
+            <Select label={t('settings.team.role')} value={inv.role} onChange={(e) => setInv({ ...inv, role: e.target.value as Exclude<Role, 'owner'> })} options={(['admin', 'member', 'viewer'] as const).map((r) => ({ value: r, label: t(`roles.${r}`) }))} hint={t(`settings.team.roleHelp.${inv.role}`)} />
+          </div>
+        )}
+      </Dialog>
+      <ConfirmDialog open={Boolean(removing)} onClose={() => setRemoving(null)} title={t('settings.team.removeTitle', { name: removing?.name || '' })} description={t('settings.team.removeHint')} confirmLabel={t('common.remove')}
+        onConfirm={async () => { try { await workspaceApi.removeMember(removing!.id); refetch() } catch (e) { toastError(e, t('common.error')); throw e } }} />
+    </>
+  )
+}
+
+function NumberField({ label, value, onChange, min = 1, max = 60, suffix }: { label: string; value: number; onChange: (n: number) => void; min?: number; max?: number; suffix?: string }) {
+  return (
+    <Input inputSize="sm" type="number" label={label} min={min} max={max} value={value} onChange={(e) => onChange(Math.max(min, Math.min(max, Number(e.target.value) || min)))}
+      trailing={suffix ? <span className="pe-1 text-xs text-fg-4">{suffix}</span> : undefined} />
+  )
+}
+
+function AutomationSection() {
+  const { t } = useI18n()
+  const { can } = useAuth()
+  const { toast, toastError } = useApp()
+  const { data, error, loading, refetch } = useApi('automation', workspaceApi.automation)
+  const [s, setS] = useState<AutomationSettings | null>(null)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { if (data) setS(data.settings) }, [data])
+  if (error) return <Card><ErrorState onRetry={refetch} /></Card>
+  if (loading || !s || !data) return <Skeleton className="h-96 rounded-xl" />
+  const admin = can('admin')
+  const dirty = JSON.stringify(s) !== JSON.stringify(data.settings)
+  const set = <K extends keyof AutomationSettings>(k: K, v: AutomationSettings[K]) => setS({ ...s, [k]: v })
+  const save = async () => {
+    setBusy(true)
+    try { await workspaceApi.saveAutomation(s); invalidate('automation'); toast({ tone: 'success', title: t('common.saved') }) } catch (e) { toastError(e, t('settings.saveFailed')) } finally { setBusy(false) }
+  }
+  const days = t('settings.automation.daysUnit')
+  const waOk = data.channels.whatsapp.configured
+  const emailOk = data.channels.email.configured
+  const channelWarn = (c: 'whatsapp' | 'email') => (c === 'whatsapp' ? !waOk : !emailOk)
+  const weekdayNames = Array.from({ length: 7 }, (_, i) => new Intl.DateTimeFormat(t('settings.automation.locale'), { weekday: 'short' }).format(new Date(2026, 0, 4 + i)))
+  return (
+    <Card>
+      <CardHeader title={t('settings.automation.title')} description={t('settings.automation.hint')} />
+      <CardBody className="space-y-6">
+        {!data.schedulerEnabled && <p className="flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-sm text-warning-fg"><AlertTriangle className="mt-0.5 size-4 shrink-0" />{t('settings.automation.schedulerOff')}</p>}
+        <fieldset disabled={!admin} className="space-y-6">
+          <section className="space-y-3">
+            <Switch checked={s.requestReminders.enabled} onChange={(v) => set('requestReminders', { ...s.requestReminders, enabled: v })} label={t('settings.automation.requestReminders')} description={t('settings.automation.requestRemindersHint')} />
+            {s.requestReminders.enabled && (
+              <div className="grid gap-3 rounded-lg border border-line bg-surface-2 p-3 sm:grid-cols-4">
+                <NumberField label={t('settings.automation.firstAfter')} value={s.requestReminders.firstAfterDays} suffix={days} onChange={(n) => set('requestReminders', { ...s.requestReminders, firstAfterDays: n })} />
+                <NumberField label={t('settings.automation.repeatEvery')} value={s.requestReminders.repeatEveryDays} suffix={days} onChange={(n) => set('requestReminders', { ...s.requestReminders, repeatEveryDays: n })} />
+                <NumberField label={t('settings.automation.max')} value={s.requestReminders.maxReminders} max={10} onChange={(n) => set('requestReminders', { ...s.requestReminders, maxReminders: n })} />
+                <Select selectSize="sm" label={t('settings.automation.channel')} value={s.requestReminders.channel} onChange={(e) => set('requestReminders', { ...s.requestReminders, channel: e.target.value as 'whatsapp' | 'email' })} options={[{ value: 'whatsapp', label: 'WhatsApp' }, { value: 'email', label: t('requests.create.channel.email') }]} />
+                {channelWarn(s.requestReminders.channel) && <p className="text-xs text-warning-fg sm:col-span-4">{t('settings.automation.channelOff')}</p>}
+              </div>
+            )}
+          </section>
+          <section className="space-y-3 border-t border-line pt-5">
+            <Switch checked={s.deadlineReminder.enabled} onChange={(v) => set('deadlineReminder', { ...s.deadlineReminder, enabled: v })} label={t('settings.automation.deadline')} description={t('settings.automation.deadlineHint')} />
+            {s.deadlineReminder.enabled && <div className="max-w-[200px]"><NumberField label={t('settings.automation.daysBefore')} value={s.deadlineReminder.daysBefore} max={30} suffix={days} onChange={(n) => set('deadlineReminder', { daysBefore: n, enabled: true })} /></div>}
+          </section>
+          <section className="space-y-3 border-t border-line pt-5">
+            <Switch checked={s.signatureReminders.enabled} onChange={(v) => set('signatureReminders', { ...s.signatureReminders, enabled: v })} label={t('settings.automation.signatureReminders')} description={t('settings.automation.signatureRemindersHint')} />
+            {s.signatureReminders.enabled && (
+              <div className="grid gap-3 rounded-lg border border-line bg-surface-2 p-3 sm:grid-cols-3">
+                <NumberField label={t('settings.automation.firstAfter')} value={s.signatureReminders.firstAfterDays} suffix={days} onChange={(n) => set('signatureReminders', { ...s.signatureReminders, firstAfterDays: n })} />
+                <NumberField label={t('settings.automation.repeatEvery')} value={s.signatureReminders.repeatEveryDays} suffix={days} onChange={(n) => set('signatureReminders', { ...s.signatureReminders, repeatEveryDays: n })} />
+                <NumberField label={t('settings.automation.max')} value={s.signatureReminders.maxReminders} max={10} onChange={(n) => set('signatureReminders', { ...s.signatureReminders, maxReminders: n })} />
+                {!emailOk && <p className="text-xs text-warning-fg sm:col-span-3">{t('settings.automation.signatureEmailOnly')}</p>}
+              </div>
+            )}
+          </section>
+          <section className="space-y-3 border-t border-line pt-5">
+            <Switch checked={s.quietHours.enabled} onChange={(v) => set('quietHours', { ...s.quietHours, enabled: v })} label={t('settings.automation.quiet')} description={t('settings.automation.quietHint')} />
+            {s.quietHours.enabled && (
+              <div className="flex max-w-xs gap-3">
+                <Input inputSize="sm" type="time" label={t('settings.automation.from')} value={s.quietHours.start} onChange={(e) => set('quietHours', { ...s.quietHours, start: e.target.value })} />
+                <Input inputSize="sm" type="time" label={t('settings.automation.until')} value={s.quietHours.end} onChange={(e) => set('quietHours', { ...s.quietHours, end: e.target.value })} />
+              </div>
+            )}
+            <div>
+              <p className="mb-2 text-sm font-medium text-fg-2">{t('settings.automation.noSendDays')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {weekdayNames.map((n, i) => {
+                  const on = s.weekendDays.includes(i)
+                  return <button key={i} type="button" aria-pressed={on} onClick={() => set('weekendDays', on ? s.weekendDays.filter((d) => d !== i) : [...s.weekendDays, i])} className={cn('h-8 min-w-12 rounded-md border px-2 text-xs', on ? 'border-brand-500 bg-brand-soft font-medium text-brand-700' : 'border-line text-fg-3')}>{n}</button>
+                })}
+              </div>
+            </div>
+          </section>
+        </fieldset>
+        {!admin && <p className="text-xs text-fg-4">{t('settings.adminOnly')}</p>}
+      </CardBody>
+      {admin && <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={() => setS(data.settings)} />}
+    </Card>
+  )
+}
+
+function StatusRow({ icon, title, ok, okText, offText, children }: { icon: ReactNode; title: string; ok: boolean; okText: string; offText: string; children?: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-fg-2">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2"><p className="font-medium">{title}</p>{ok ? <Badge tone="success" dot>{okText}</Badge> : <Badge tone="warning" dot>{offText}</Badge>}</div>
+        <div className="mt-1 space-y-1 text-sm text-fg-3">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+function IntegrationsSection() {
+  const { t } = useI18n()
+  const { data, error, loading, refetch } = useApi('integrations', workspaceApi.integrations)
+  if (error) return <Card><ErrorState onRetry={refetch} /></Card>
+  if (loading || !data) return <Skeleton className="h-64 rounded-xl" />
+  const webhook = `${window.location.origin}/api/whatsapp/webhook`
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader title={t('settings.integrations.title')} description={t('settings.integrations.hint')} />
+      <div className="divide-y divide-line border-t border-line">
+        <StatusRow icon={<MessageCircle className="size-5" />} title="WhatsApp Business (Cloud API)" ok={data.whatsapp.configured} okText={t('settings.integrations.connected')} offText={data.whatsapp.mode === 'log' ? t('settings.integrations.simulation') : t('settings.integrations.notConnected')}>
+          <p>{data.whatsapp.configured ? t('settings.integrations.waConnected') : t('settings.integrations.waOff')}</p>
+          {data.whatsapp.configured && !data.whatsapp.webhookVerified && <p className="flex items-center gap-1.5 text-warning-fg"><AlertTriangle className="size-4" />{t('settings.integrations.waNoSecret')}</p>}
+          <div className="flex items-center gap-2 pt-1"><span className="text-xs">{t('settings.integrations.webhookUrl')}</span><code className="truncate rounded bg-surface-3 px-1.5 py-0.5 text-xs" dir="ltr">{webhook}</code><CopyButton value={webhook} /></div>
+        </StatusRow>
+        <StatusRow icon={<Mail className="size-5" />} title={t('settings.integrations.email')} ok={data.email.configured} okText={t('settings.integrations.connected')} offText={t('settings.integrations.notConnected')}>
+          <p>{data.email.configured ? t('settings.integrations.emailOn') : t('settings.integrations.emailOff')}</p>
+        </StatusRow>
+      </div>
+    </Card>
+  )
+}
+
+function SecuritySection() {
+  const { t } = useI18n()
+  const { toastError } = useApp()
+  const navigate = useNavigate()
+  const [confirm, setConfirm] = useState(false)
+  return (
+    <>
+      <Card>
+        <CardHeader title={t('settings.security.title')} description={t('settings.security.hint')} />
+        <CardBody className="space-y-3 text-sm text-fg-2">
+          <p className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />{t('settings.security.point1')}</p>
+          <p className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />{t('settings.security.point2')}</p>
+          <p className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />{t('settings.security.point3')}</p>
+          <p className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />{t('settings.security.point4')}</p>
+        </CardBody>
+      </Card>
+      <Card>
+        <CardHeader title={t('settings.security.sessions')} description={t('settings.security.sessionsHint')} action={<Button icon={<LogOut className="size-4" />} onClick={() => setConfirm(true)}>{t('settings.security.signOutAll')}</Button>} />
+      </Card>
+      <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} tone="primary" title={t('settings.security.signOutAllTitle')} description={t('settings.security.signOutAllHint')} confirmLabel={t('settings.security.signOutAll')}
+        onConfirm={async () => { try { await authApi.signOutAll(); window.location.assign('/auth/signin') } catch (e) { toastError(e, t('common.error')); throw e } }} />
+      <span hidden>{String(navigate === null)}</span>
+    </>
+  )
+}
+
+export default function SettingsPage() {
+  const { section = 'profile' } = useParams()
+  const { t } = useI18n()
+  const { can } = useAuth()
+  const visible = SECTIONS.filter((s) => !('admin' in s) || can('admin'))
+  const current = visible.find((s) => s.id === section)?.id || 'profile'
+  const content: Record<string, ReactNode> = {
+    profile: <ProfileSection />, workspace: <WorkspaceSection />, branding: <BrandingSection />, team: <TeamSection />,
+    automation: <AutomationSection />, integrations: <IntegrationsSection />, security: <SecuritySection />,
+  }
+  return (
+    <>
+      <PageHeader title={t('nav.settings')} description={t('settings.subtitle')} />
+      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <nav aria-label={t('nav.settings')} className="flex gap-1 overflow-x-auto lg:flex-col">
+          {visible.map((s) => (
+            <NavLink key={s.id} to={`/settings/${s.id}`} className={() => cn('flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium', current === s.id ? 'bg-surface text-fg shadow-xs ring-1 ring-line' : 'text-fg-3 hover:bg-surface-3 hover:text-fg-2')}>
+              <s.icon className="size-4" />{t(`settings.nav.${s.id}`)}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="min-w-0 space-y-6">{content[current]}</div>
+      </div>
+      <span hidden><Copy /></span>
+    </>
   )
 }

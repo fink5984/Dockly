@@ -1,0 +1,60 @@
+const he = {
+  common: {
+    save: 'שמירה', saving: 'שומר…', saved: 'נשמר', cancel: 'ביטול', close: 'סגירה', dismiss: 'הסתרה', delete: 'מחיקה', edit: 'עריכה',
+    back: 'חזרה', next: 'המשך', create: 'יצירה', add: 'הוספה', remove: 'הסרה', retry: 'ניסיון חוזר', loading: 'טוען…',
+    search: 'חיפוש', filter: 'סינון', sort: 'מיון', all: 'הכול', none: 'ללא', optional: 'רשות', required: 'חובה',
+    copy: 'העתקה', copied: 'הועתק', copyFailed: 'לא ניתן היה להעתיק', copyLink: 'העתקת קישור', linkCopied: 'הקישור הועתק',
+    view: 'צפייה', download: 'הורדה', open: 'פתיחה', more: 'עוד', yes: 'כן', no: 'לא', done: 'סיום', confirm: 'אישור',
+    loadFailed: 'הטעינה נכשלה', loadFailedHint: 'בדקו את החיבור ונסו שוב.', error: 'משהו השתבש',
+    unsavedChanges: 'יש שינויים שלא נשמרו. לצאת בכל זאת?', breadcrumbs: 'נתיב ניווט', progress: 'התקדמות',
+    clear: 'ניקוי', clearFilters: 'ניקוי סינון', showing: 'מוצגים {{count}} מתוך {{total}}', previous: 'הקודם',
+    page: 'עמוד {{page}}', viewAll: 'לכל הרשימה', learnMore: 'מידע נוסף', language: 'שפה', english: 'אנגלית', hebrew: 'עברית',
+    today: 'היום', never: 'אף פעם', you: 'את/ה', system: 'מערכת', client: 'לקוח', or: 'או', undo: 'ביטול פעולה', and: 'ו',
+    readOnly: 'יש לך הרשאת צפייה בלבד', poweredBy: 'מופעל על ידי Dockly',
+  },
+  errors: {
+    crashTitle: 'אירעה תקלה בעמוד', crashBody: 'רעננו כדי לנסות שוב. הנתונים השמורים שלכם בטוחים.', reload: 'רענון העמוד',
+    notFoundTitle: 'העמוד לא נמצא', notFoundBody: 'העמוד שחיפשתם לא קיים או שהועבר.', goHome: 'למסך הראשי',
+  },
+  nav: {
+    main: 'ניווט ראשי', group: { work: 'עבודה', workspace: 'סביבת עבודה' },
+    overview: 'סקירה', requests: 'בקשות', clients: 'לקוחות', signatures: 'חתימות', documents: 'מסמכים',
+    activity: 'פעילות', templates: 'תבניות', automation: 'אוטומציה', integrations: 'חיבורים', settings: 'הגדרות',
+    profile: 'הפרופיל שלי', account: 'תפריט חשבון', collapse: 'כיווץ התפריט', expand: 'הרחבת התפריט', openMenu: 'פתיחת ניווט',
+    skipToContent: 'דילוג לתוכן',
+  },
+  theme: { label: 'מראה', light: 'בהיר', dark: 'כהה', system: 'לפי המכשיר' },
+  quickCreate: { label: 'חדש', request: 'בקשת מסמכים חדשה', client: 'לקוח חדש', signature: 'בקשת חתימה חדשה' },
+  search: {
+    open: 'חיפוש', placeholder: 'חיפוש לקוחות, בקשות וחתימות…', actions: 'פעולות מהירות', goTo: 'מעבר אל',
+    typeMore: 'הקלידו לפחות 2 תווים', noResults: 'לא נמצאו תוצאות',
+  },
+  notifications: { label: 'התראות', labelUnread_one: 'התראות, התראה אחת שלא נקראה', labelUnread_two: 'התראות, {{count}} שלא נקראו', labelUnread_other: 'התראות, {{count}} שלא נקראו', markAll: 'סימון הכול כנקרא', empty: 'אין התראות חדשות' },
+  upload: {
+    choose: 'בחירת קובץ', chooseFiles: 'בחירת קבצים', orDrag: 'או גררו לכאן', takePhoto: 'צילום',
+    formats: 'קבצים מותרים: {{formats}} · עד {{size}} MB', uploading: 'מעלה…', processing: 'מעבד…', cancel: 'ביטול העלאה',
+    tooLarge: 'הקובץ גדול מ-{{size}} MB', wrongType: 'סוג הקובץ אינו נתמך. ניתן להעלות {{formats}}', empty: 'הקובץ ריק',
+    failed: 'ההעלאה נכשלה', retry: 'ניסיון חוזר', cancelled: 'ההעלאה בוטלה',
+  },
+  status: {
+    request: { new: 'טרם נשלחה', 'waiting-for-client': 'ממתינה ללקוח', 'partial-submission': 'בתהליך', completed: 'הכול התקבל', closed: 'סגורה', overdue: 'באיחור' },
+    doc: { missing: 'חסר', uploaded: 'ממתין לבדיקה', approved: 'אושר', rejected: 'נדרש מסמך חלופי' },
+    signature: { draft: 'טיוטה', pending: 'נשלחה', viewed: 'נצפתה', signed: 'נחתמה', declined: 'נדחתה', expired: 'פג תוקף', cancelled: 'בוטלה' },
+    delivery: { queued: 'בתור', accepted: 'התקבלה אצל הספק', sent: 'נשלחה', delivered: 'נמסרה', read: 'נקראה', failed: 'נכשלה', skipped: 'לא נשלחה (מצב סימולציה)' },
+  },
+  roles: { owner: 'בעלים', admin: 'מנהל/ת', member: 'חבר/ת צוות', viewer: 'צפייה בלבד' },
+  auth: {
+    signIn: 'כניסה', signUp: 'יצירת חשבון', signOut: 'יציאה', email: 'דוא"ל', password: 'סיסמה', name: 'שם מלא', phone: 'טלפון',
+    welcomeBack: 'שמחים לראות אותך שוב', signInSubtitle: 'כניסה לסביבת העבודה שלך ב-Dockly', noAccount: 'חדשים ב-Dockly?', haveAccount: 'כבר יש לך חשבון?',
+    forgot: 'שכחת סיסמה?', createTitle: 'פתיחת סביבת עבודה', createSubtitle: 'איסוף מסמכים וחתימות מלקוחות — תוך דקות.',
+    passwordHint: 'לפחות 8 תווים', showPassword: 'הצגת הסיסמה', hidePassword: 'הסתרת הסיסמה',
+    invalidCredentials: 'דוא"ל או סיסמה שגויים', locked: 'יותר מדי ניסיונות. נסו שוב בעוד כמה דקות.', emailTaken: 'כבר קיים חשבון עם כתובת זו',
+    forgotTitle: 'איפוס סיסמה', forgotBody: 'מטעמי אבטחה, איפוס סיסמה מתבצע על ידי הבעלים או המנהל של סביבת העבודה. בקשו מהם לשלוח לכם הזמנה חדשה, או פנו לתמיכה של Dockly מהדוא"ל הרשום.', backToSignIn: 'חזרה לכניסה',
+    inviteTitle: 'הצטרפות ל-{{workspace}}', inviteSubtitle: 'הוזמנת בתפקיד {{role}}. הגדירו שם וסיסמה כדי להמשיך.', acceptInvite: 'הצטרפות',
+    inviteInvalid: 'קישור ההזמנה אינו תקף או שכבר נעשה בו שימוש.', inviteExpired: 'תוקף ההזמנה פג. בקשו הזמנה חדשה.',
+    marketing1: 'פורטל ממותג ללקוח שעובד מכל טלפון', marketing2: 'בדיקה, אישור או בקשת מסמך חלופי — במקום אחד', marketing3: 'חתימות אלקטרוניות עם תיעוד מלא',
+    terms: 'ביצירת החשבון אתם מתחייבים לשמור על סודיות נתוני הלקוחות ולהשתמש ב-Dockly כחוק.',
+  },
+}
+
+export default he

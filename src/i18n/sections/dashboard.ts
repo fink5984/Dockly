@@ -1,0 +1,56 @@
+export default {
+  en: {
+    morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening',
+    subtitle: 'Here’s what needs your attention today.', addClient: 'Add client', newRequest: 'New request', kpis: 'Key numbers',
+    kpi: {
+      active: 'Active requests', activeHint_one: '{{count}} not sent yet', activeHint_other: '{{count}} not sent yet',
+      review: 'Documents to review', reviewHint_one: 'across {{count}} request', reviewHint_other: 'across {{count}} requests',
+      overdue: 'Overdue requests', awaiting_one: '{{count}} waiting on a client', awaiting_other: '{{count}} waiting on clients',
+      signatures: 'Awaiting signature', signedMonth_one: '{{count}} signed this month', signedMonth_other: '{{count}} signed this month',
+    },
+    actionRequired: 'Action required', actionRequiredHint: 'Prioritised by urgency — click to act.',
+    allClear: 'Nothing needs you right now', allClearHint: 'New uploads, overdue requests and replies will show up here.',
+    action: {
+      support: '{{client}} is waiting for a reply',
+      review_one: 'Review {{count}} document from {{client}}', review_other: 'Review {{count}} documents from {{client}}',
+      overdue: '{{client}} is past the deadline',
+      stalled_one: '{{client}} still owes {{count}} document', stalled_other: '{{client}} still owes {{count}} documents',
+      signature: '{{client}} hasn’t signed yet', unsent: 'Request for {{client}} wasn’t sent',
+    },
+    dueOn: 'due {{date}}', showAll: 'Show all {{count}}', showLess: 'Show less',
+    pipeline: 'Request pipeline', trendTitle: 'Requests completed per week', week: 'Week', weekOf: 'Week of {{date}}',
+    completedShort: 'completed', uploadsShort: 'uploads', completedTotal_one: '{{count}} request completed in the last 8 weeks', completedTotal_other: '{{count}} requests completed in the last 8 weeks',
+    avgDays: 'Average {{days}} days from sending to complete', recentActivity: 'Recent activity',
+    start: {
+      title: 'Get set up', progress: '{{done}} of {{total}} done', client: 'Add your first client', request: 'Create a document request',
+      send: 'Send it to the client', branding: 'Add your logo and color', signature: 'Send a document for signature',
+    },
+  },
+  he: {
+    morning: 'בוקר טוב', afternoon: 'צהריים טובים', evening: 'ערב טוב',
+    subtitle: 'זה מה שדורש את תשומת לבך היום.', addClient: 'לקוח חדש', newRequest: 'בקשה חדשה', kpis: 'מדדים מרכזיים',
+    kpi: {
+      active: 'בקשות פעילות', activeHint_one: 'אחת טרם נשלחה', activeHint_two: '{{count}} טרם נשלחו', activeHint_other: '{{count}} טרם נשלחו',
+      review: 'מסמכים לבדיקה', reviewHint_one: 'בבקשה אחת', reviewHint_two: 'ב-{{count}} בקשות', reviewHint_other: 'ב-{{count}} בקשות',
+      overdue: 'בקשות באיחור', awaiting_one: 'בקשה אחת ממתינה ללקוח', awaiting_two: '{{count}} ממתינות ללקוחות', awaiting_other: '{{count}} ממתינות ללקוחות',
+      signatures: 'ממתינות לחתימה', signedMonth_one: 'אחת נחתמה החודש', signedMonth_two: '{{count}} נחתמו החודש', signedMonth_other: '{{count}} נחתמו החודש',
+    },
+    actionRequired: 'דורש טיפול', actionRequiredHint: 'לפי דחיפות — לחצו כדי לטפל.',
+    allClear: 'אין כרגע משימות פתוחות', allClearHint: 'העלאות חדשות, בקשות באיחור ופניות יופיעו כאן.',
+    action: {
+      support: '{{client}} ממתין/ה לתשובה',
+      review_one: 'בדיקת מסמך אחד מ{{client}}', review_two: 'בדיקת {{count}} מסמכים מ{{client}}', review_other: 'בדיקת {{count}} מסמכים מ{{client}}',
+      overdue: 'הבקשה של {{client}} עברה את המועד',
+      stalled_one: '{{client}} עדיין חייב/ת מסמך אחד', stalled_two: '{{client}} עדיין חייב/ת {{count}} מסמכים', stalled_other: '{{client}} עדיין חייב/ת {{count}} מסמכים',
+      signature: '{{client}} טרם חתם/ה', unsent: 'הבקשה ל{{client}} לא נשלחה',
+    },
+    dueOn: 'יעד {{date}}', showAll: 'הצגת כל ה-{{count}}', showLess: 'הצגת פחות',
+    pipeline: 'מצב הבקשות', trendTitle: 'בקשות שהושלמו בכל שבוע', week: 'שבוע', weekOf: 'שבוע {{date}}',
+    completedShort: 'הושלמו', uploadsShort: 'העלאות', completedTotal_one: 'בקשה אחת הושלמה ב-8 השבועות האחרונים', completedTotal_two: '{{count}} בקשות הושלמו ב-8 השבועות האחרונים', completedTotal_other: '{{count}} בקשות הושלמו ב-8 השבועות האחרונים',
+    avgDays: 'בממוצע {{days}} ימים משליחה ועד השלמה', recentActivity: 'פעילות אחרונה',
+    start: {
+      title: 'צעדים ראשונים', progress: '{{done}} מתוך {{total}} הושלמו', client: 'הוספת הלקוח הראשון', request: 'יצירת בקשת מסמכים',
+      send: 'שליחה ללקוח', branding: 'הוספת לוגו וצבע', signature: 'שליחת מסמך לחתימה',
+    },
+  },
+}

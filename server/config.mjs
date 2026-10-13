@@ -3,7 +3,12 @@
  * In production, missing security-critical settings abort startup instead
  * of silently falling back to insecure defaults.
  */
-import 'dotenv/config'
+import dotenv from 'dotenv'
+
+// .env.local (git-ignored, local dev) takes precedence over .env.
+// Not loaded in production so a stray local file can't override real settings.
+if (process.env.NODE_ENV !== 'production') dotenv.config({ path: '.env.local', quiet: true })
+dotenv.config({ quiet: true })
 
 const env = process.env
 const isProduction = env.NODE_ENV === 'production'

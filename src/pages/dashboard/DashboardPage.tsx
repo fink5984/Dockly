@@ -1,263 +1,243 @@
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  ClipboardList, Inbox, AlertTriangle, PenLine, ArrowRight, CheckCircle2, Clock, MessageSquare, Send, Plus,
+  UserPlus, Upload, Circle, Sparkles, Hourglass,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { getCaseStatusKey } from '@/lib/utils'
-import { useSupabaseData } from '@/hooks/useSupabaseData'
-import { getCases } from '@/services/casesService'
-import { getDashboardStats } from '@/services/settingsService'
-import {
-  Users, ClipboardList, CheckCircle, AlertTriangle, Clock, FileX, FileCheck,
-  ArrowUpRight, TrendingUp, Loader2,
-} from 'lucide-react'
-import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
+import { useApi } from '@/hooks/useApi'
+import { insightsApi } from '@/services'
+import { Card, CardHeader, CardBody } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { PageHeader, Stat } from '@/components/ui/Misc'
+import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
+import { ActivityFeed } from '@/components/domain/ActivityFeed'
+import type { ActionKind, Dashboard, RequestStatus } from '@/types'
 
-const STATUS_COLORS: Record<string, string> = {
-  new: '#3b82f6',
-  'waiting-for-client': '#f59e0b',
-  'partial-submission': '#8b5cf6',
-  completed: '#16a34a',
-  closed: '#16a34a',
-  delayed: '#dc2626',
+const ACTION_META: Record<ActionKind, { icon: typeof Inbox; tone: string }> = {
+  support: { icon: MessageSquare, tone: 'bg-info-soft text-info' },
+  review: { icon: Inbox, tone: 'bg-brand-soft text-brand-600' },
+  overdue: { icon: AlertTriangle, tone: 'bg-danger-soft text-danger' },
+  stalled: { icon: Hourglass, tone: 'bg-warning-soft text-warning' },
+  signature: { icon: PenLine, tone: 'bg-surface-3 text-fg-3' },
+  unsent: { icon: Send, tone: 'bg-surface-3 text-fg-3' },
 }
 
-const defaultStats = {
-  totalClients: 0, openCases: 0, completedCases: 0,
-  noSubmissionClients: 0, partialSubmissionClients: 0,
-  fullyCompletedClients: 0, delayedCases: 0, activeSupportRequests: 0,
+function ActionQueue({ actions }: { actions: Dashboard['actions'] }) {
+  const { t, fmt } = useI18n()
+  const [showAll, setShowAll] = useState(false)
+  const list = showAll ? actions : actions.slice(0, 6)
+  if (actions.length === 0) {
+    return (
+      <EmptyState compact icon={<CheckCircle2 />} title={t('dashboard.allClear')} description={t('dashboard.allClearHint')} />
+    )
+  }
+  return (
+    <>
+      <ul className="divide-y divide-line">
+        {list.map((a) => {
+          const meta = ACTION_META[a.kind]
+          const Icon = meta.icon
+          return (
+            <li key={`${a.kind}-${a.id}`}>
+              <Link to={a.href} className="group flex items-center gap-3 px-5 py-3 hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none">
+                <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', meta.tone)}><Icon className="size-4" /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-fg">{t(`dashboard.action.${a.kind}`, { count: a.count ?? 0, client: a.clientName })}</p>
+                  <p className="truncate text-xs text-fg-3">{a.title}{a.at ? ` · ${a.kind === 'overdue' ? t('dashboard.dueOn', { date: fmt.date(a.at) }) : fmt.relative(a.at)}` : ''}</p>
+                </div>
+                <ArrowRight className="size-4 shrink-0 text-fg-4 transition-transform group-hover:translate-x-0.5 rtl-flip" aria-hidden />
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+      {actions.length > 6 && (
+        <div className="border-t border-line px-5 py-2.5">
+          <button type="button" onClick={() => setShowAll((s) => !s)} className="text-sm font-medium text-brand-600 hover:text-brand-700">
+            {showAll ? t('dashboard.showLess') : t('dashboard.showAll', { count: actions.length })}
+          </button>
+        </div>
+      )}
+    </>
+  )
 }
 
-export function DashboardPage() {
+const PIPELINE: RequestStatus[] = ['new', 'waiting-for-client', 'partial-submission', 'completed', 'closed']
+
+function Pipeline({ pipeline }: { pipeline: Dashboard['pipeline'] }) {
   const { t } = useI18n()
-  const { user, workspace } = useAuth()
-  const navigate = useNavigate()
-  const wsId = workspace?.id || user?.workspaceId || ''
+  const max = Math.max(1, ...PIPELINE.map((s) => pipeline[s] || 0))
+  return (
+    <ul className="space-y-3">
+      {PIPELINE.map((s) => {
+        const n = pipeline[s] || 0
+        return (
+          <li key={s}>
+            <Link to={`/requests?status=${s}`} className="group block rounded-md focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]">
+              <div className="mb-1 flex items-center justify-between text-sm">
+                <span className="text-fg-2 group-hover:text-fg">{t(`status.request.${s}`)}</span>
+                <span className="font-medium tabular text-fg">{n}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-surface-3">
+                <div className="h-full rounded-full bg-brand-500 transition-[width] duration-500" style={{ width: `${(n / max) * 100}%` }} />
+              </div>
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
 
-  const { data: stats, loading } = useSupabaseData(() => getDashboardStats(wsId), defaultStats, [wsId])
-  const { data: cases } = useSupabaseData(() => getCases(wsId), [], [wsId])
-
-  if (loading) return (
-    <div className="flex items-center justify-center py-32">
-      <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+/** Single-series weekly bar chart with hover tooltips and an accessible table. */
+function WeeklyChart({ trend }: { trend: Dashboard['trend'] }) {
+  const { t, fmt } = useI18n()
+  const [hover, setHover] = useState<number | null>(null)
+  const max = Math.max(1, ...trend.map((w) => w.completed))
+  const total = trend.reduce((n, w) => n + w.completed, 0)
+  return (
+    <div>
+      <p className="mb-4 text-sm text-fg-3">{t('dashboard.completedTotal', { count: total })}</p>
+      <div className="relative flex h-36 items-end gap-2" aria-hidden>
+        {[0.5, 1].map((g) => <div key={g} className="pointer-events-none absolute inset-x-0 border-t border-dashed border-line" style={{ bottom: `${g * 100}%` }} />)}
+        {trend.map((w, i) => (
+          <div
+            key={w.week}
+            className="relative flex h-full flex-1 items-end"
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover(null)}
+          >
+            <div
+              className={cn('w-full rounded-t-[4px] transition-colors', hover === i ? 'bg-brand-600' : 'bg-brand-400')}
+              style={{ height: `${Math.max(w.completed ? 4 : 0, (w.completed / max) * 100)}%` }}
+            />
+            {w.completed === 0 && <div className="absolute bottom-0 h-px w-full bg-line-2" />}
+            {hover === i && (
+              <div className="absolute bottom-full start-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs shadow-md rtl:translate-x-1/2">
+                <p className="font-medium text-fg">{t('dashboard.weekOf', { date: fmt.date(w.week, { day: 'numeric', month: 'short' }) })}</p>
+                <p className="text-fg-3"><span className="font-semibold tabular text-fg">{w.completed}</span> {t('dashboard.completedShort')} · <span className="tabular">{w.uploads}</span> {t('dashboard.uploadsShort')}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2 text-2xs text-fg-4" aria-hidden>
+        {trend.map((w) => <span key={w.week} className="flex-1 text-center">{fmt.date(w.week, { day: 'numeric', month: 'numeric' })}</span>)}
+      </div>
+      <table className="sr-only">
+        <caption>{t('dashboard.trendTitle')}</caption>
+        <thead><tr><th>{t('dashboard.week')}</th><th>{t('dashboard.completedShort')}</th><th>{t('dashboard.uploadsShort')}</th></tr></thead>
+        <tbody>{trend.map((w) => <tr key={w.week}><td>{fmt.date(w.week)}</td><td>{w.completed}</td><td>{w.uploads}</td></tr>)}</tbody>
+      </table>
     </div>
   )
+}
 
-  // Compute pie chart data from real cases
-  const statusCounts: Record<string, number> = {}
-  cases.forEach(c => {
-    statusCounts[c.status] = (statusCounts[c.status] || 0) + 1
-  })
-  const pieData = Object.entries(statusCounts).map(([status, value]) => ({
-    name: status,
-    value,
-    color: STATUS_COLORS[status] || '#94a3b8',
-  }))
-
-  // Compute trend data from real cases (last 6 months)
-  const now = new Date()
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const trendData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
-    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-    const casesUpToMonth = cases.filter(c => new Date(c.createdAt) <= endOfMonth)
-    const completedUpToMonth = casesUpToMonth.filter(c => c.status === 'completed' || c.status === 'closed')
-    return {
-      month: monthNames[d.getMonth()],
-      total: casesUpToMonth.length,
-      completed: completedUpToMonth.length,
-    }
-  })
-
-  const trendGrowth = trendData.length >= 2 && trendData[trendData.length - 2].total > 0
-    ? Math.round(((trendData[trendData.length - 1].total - trendData[trendData.length - 2].total) / trendData[trendData.length - 2].total) * 100)
-    : 0
-
-  // Primary hero KPIs
-  const heroKpis = [
-    { key: 'totalClients', value: stats.totalClients, icon: Users, accent: '#6366f1', link: '/clients' },
-    { key: 'openCases', value: stats.openCases, icon: ClipboardList, accent: '#3b82f6', link: '/requests' },
-    { key: 'completedCases', value: stats.completedCases, icon: CheckCircle, accent: '#16a34a', link: '/requests?filter=completed' },
-    { key: 'delayedCases', value: stats.delayedCases, icon: AlertTriangle, accent: '#ef4444', link: '/requests?filter=delayed' },
+function GettingStarted({ o }: { o: Dashboard['onboarding'] }) {
+  const { t } = useI18n()
+  const steps = [
+    { done: o.hasClient, label: t('dashboard.start.client'), to: '/clients?new=1' },
+    { done: o.hasRequest, label: t('dashboard.start.request'), to: '/requests/new' },
+    { done: o.hasSent, label: t('dashboard.start.send'), to: '/requests' },
+    { done: o.hasBranding, label: t('dashboard.start.branding'), to: '/settings/branding' },
+    { done: o.hasSignature, label: t('dashboard.start.signature'), to: '/signatures/new' },
   ]
+  const done = steps.filter((s) => s.done).length
+  if (done === steps.length) return null
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-600"><Sparkles className="size-5" /></div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-md font-semibold">{t('dashboard.start.title')}</h2>
+          <p className="text-sm text-fg-3">{t('dashboard.start.progress', { done, total: steps.length })}</p>
+        </div>
+      </div>
+      <ol className="grid border-t border-line sm:grid-cols-5">
+        {steps.map((s, i) => (
+          <li key={i} className="border-b border-line sm:border-b-0 sm:border-e last:border-0">
+            <Link to={s.to} className={cn('flex h-full items-center gap-2.5 px-4 py-3 text-sm hover:bg-surface-2', s.done ? 'text-fg-3' : 'font-medium text-fg')}>
+              {s.done ? <CheckCircle2 className="size-4 shrink-0 text-success" /> : <Circle className="size-4 shrink-0 text-fg-4" />}
+              <span className={cn(s.done && 'line-through decoration-fg-4')}>{s.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  )
+}
 
-  // Secondary mini stats
-  const miniStats = [
-    { key: 'noSubmission', value: stats.noSubmissionClients, icon: FileX },
-    { key: 'partialSubmission', value: stats.partialSubmissionClients, icon: Clock },
-    { key: 'fullyCompleted', value: stats.fullyCompletedClients, icon: FileCheck },
-  ]
-
-  // Time-based greeting
+export default function DashboardPage() {
+  const { t, fmt } = useI18n()
+  const { user, can } = useAuth()
+  const { data, error, loading, refetch } = useApi('dashboard', insightsApi.dashboard, { topics: ['requests', 'signatures', 'support', 'clients'] })
+  const activity = useApi('activity:recent', () => insightsApi.activity({ limit: 12 }), { topics: ['activity'] })
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? t('dashboard.goodMorning') : hour < 17 ? t('dashboard.goodAfternoon') : t('dashboard.goodEvening')
-
-  // Hebrew date
-  const hebrewDate = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  }).format(new Date())
+  const greeting = hour < 12 ? t('dashboard.morning') : hour < 18 ? t('dashboard.afternoon') : t('dashboard.evening')
 
   return (
-    <div className="space-y-5">
-      {/* ── Greeting Row ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            {greeting}, {user?.name} 👋
-          </h1>
-          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{hebrewDate}</p>
-        </div>
-      </div>
+    <>
+      <PageHeader
+        title={`${greeting}, ${user?.name?.split(' ')[0] || ''}`}
+        description={t('dashboard.subtitle')}
+        actions={can('member') && (
+          <>
+            <Button to="/clients?new=1" icon={<UserPlus className="size-4" />}>{t('dashboard.addClient')}</Button>
+            <Button to="/requests/new" variant="primary" icon={<Plus className="size-4" />}>{t('dashboard.newRequest')}</Button>
+          </>
+        )}
+      />
 
-      {/* ── Hero Stats ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {heroKpis.map(kpi => {
-          const Icon = kpi.icon
-          return (
-            <div
-              key={kpi.key}
-              onClick={() => navigate(kpi.link)}
-              className="relative overflow-hidden rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)]
-                         p-4 group hover:shadow-md transition-shadow cursor-pointer"
-            >
-              {/* Subtle accent background blob */}
-              <div
-                className="absolute -top-6 -end-6 w-20 h-20 rounded-full opacity-[0.07]"
-                style={{ backgroundColor: kpi.accent }}
+      {error ? <Card><ErrorState onRetry={refetch} /></Card> : (
+        <div className="space-y-6">
+          {data && <GettingStarted o={data.onboarding} />}
+
+          <section aria-label={t('dashboard.kpis')} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {loading || !data ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[106px] rounded-xl" />) : (
+              <>
+                <Stat label={t('dashboard.kpi.active')} value={fmt.number(data.kpis.activeRequests)} hint={t('dashboard.kpi.activeHint', { count: data.kpis.drafts })} icon={<ClipboardList />} to="/requests?status=open" />
+                <Stat label={t('dashboard.kpi.review')} value={fmt.number(data.kpis.documentsNeedingReview)} hint={t('dashboard.kpi.reviewHint', { count: data.kpis.requestsNeedingReview })} icon={<Inbox />} tone={data.kpis.documentsNeedingReview ? 'brand' : 'neutral'} to="/requests?status=needs-review" />
+                <Stat label={t('dashboard.kpi.overdue')} value={fmt.number(data.kpis.overdue)} hint={t('dashboard.kpi.awaiting', { count: data.kpis.awaitingClient })} icon={<Clock />} tone={data.kpis.overdue ? 'danger' : 'neutral'} to="/requests?status=overdue" />
+                <Stat label={t('dashboard.kpi.signatures')} value={fmt.number(data.kpis.pendingSignatures)} hint={t('dashboard.kpi.signedMonth', { count: data.kpis.signedThisMonth })} icon={<PenLine />} to="/signatures" />
+              </>
+            )}
+          </section>
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <Card className="overflow-hidden">
+              <CardHeader title={t('dashboard.actionRequired')} description={t('dashboard.actionRequiredHint')} />
+              {loading || !data ? <div className="space-y-3 px-5 pb-5">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-11" />)}</div> : <ActionQueue actions={data.actions} />}
+            </Card>
+            <Card>
+              <CardHeader title={t('dashboard.pipeline')} action={<Link to="/requests" className="text-sm font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')}</Link>} />
+              <CardBody>{data ? <Pipeline pipeline={data.pipeline} /> : <Skeleton className="h-40" />}</CardBody>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <Card>
+              <CardHeader
+                title={t('dashboard.trendTitle')}
+                description={data?.kpis.avgDaysToComplete != null ? t('dashboard.avgDays', { days: fmt.number(data.kpis.avgDaysToComplete) }) : undefined}
               />
-              <div className="flex items-start justify-between mb-3 relative">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: `${kpi.accent}18` }}
-                >
-                  <Icon className="w-5 h-5" style={{ color: kpi.accent }} />
-                </div>
-                <ArrowUpRight className="w-4 h-4 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <p className="text-2xl font-bold tabular-nums">{kpi.value}</p>
-              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{t(`dashboard.${kpi.key}`)}</p>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* ── Mini Stats Row ── */}
-      <div className="flex items-center rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)] divide-x divide-[var(--border-secondary)] overflow-hidden">
-        {miniStats.map(ms => {
-          const Icon = ms.icon
-          return (
-            <div key={ms.key} className="flex-1 flex items-center gap-2 px-4 py-3">
-              <Icon className="w-4 h-4 text-[var(--text-tertiary)]" />
-              <span className="text-sm font-semibold tabular-nums">{ms.value}</span>
-              <span className="text-xs text-[var(--text-tertiary)] hidden sm:inline truncate">{t(`dashboard.${ms.key}`)}</span>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* ── Charts Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Trend chart */}
-        <div className="lg:col-span-3 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold">{t('dashboard.progressTrend')}</h3>
-              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                {t('dashboard.last6Months')}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#6366f1' }} />
-                {t('dashboard.total')}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#16a34a' }} />
-                {t('dashboard.completed')}
-              </div>
-              <div className="flex items-center gap-1 text-xs font-medium" style={{ color: trendGrowth >= 0 ? '#16a34a' : '#ef4444' }}>
-                <TrendingUp className="w-3.5 h-3.5" />
-                {trendGrowth > 0 ? '+' : ''}{trendGrowth}%
-              </div>
-            </div>
-          </div>
-          <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData}>
-                <defs>
-                  <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="compGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#16a34a" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} width={24} />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-primary)',
-                    background: 'var(--bg-primary)',
-                    fontSize: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,.08)',
-                  }}
-                />
-                <Area type="monotone" dataKey="total" stroke="#6366f1" strokeWidth={2.5} fill="url(#totalGrad)" dot={false} />
-                <Area type="monotone" dataKey="completed" stroke="#16a34a" strokeWidth={2.5} fill="url(#compGrad)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+              <CardBody>{data ? <WeeklyChart trend={data.trend} /> : <Skeleton className="h-44" />}</CardBody>
+            </Card>
+            <Card>
+              <CardHeader title={t('dashboard.recentActivity')} action={<Link to="/activity" className="text-sm font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')}</Link>} />
+              <CardBody>
+                {activity.loading ? <Skeleton className="h-44" /> : activity.data && activity.data.length > 0 ? (
+                  <ActivityFeed items={activity.data.slice(0, 7)} compact />
+                ) : (
+                  <EmptyState compact icon={<Upload />} title={t('activity.empty')} description={t('activity.emptyHint')} />
+                )}
+              </CardBody>
+            </Card>
           </div>
         </div>
-
-        {/* Donut chart */}
-        <div className="lg:col-span-2 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-primary)] p-5">
-          <h3 className="text-sm font-semibold mb-4">{t('dashboard.statusDistribution')}</h3>
-
-          {pieData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-52 text-[var(--text-tertiary)]">
-              <ClipboardList className="w-10 h-10 mb-2 opacity-30" />
-              <p className="text-sm">{t('dashboard.noData')}</p>
-            </div>
-          ) : (
-            <>
-              <div className="flex justify-center">
-                <div className="w-44 h-44">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={48}
-                        outerRadius={72}
-                        paddingAngle={3}
-                        dataKey="value"
-                        strokeWidth={0}
-                      >
-                        {pieData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-4">
-                {pieData.map(d => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-xs">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                    <span className="text-[var(--text-secondary)]">{t(getCaseStatusKey(d.name))}</span>
-                    <span className="font-bold">{d.value}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ── Support Requests — moved to Topbar indicator ── */}
-    </div>
+      )}
+    </>
   )
 }

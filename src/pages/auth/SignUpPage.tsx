@@ -1,89 +1,58 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { ApiError } from '@/lib/api'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Globe, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Input } from '@/components/ui/Field'
+import { AuthShell, PasswordInput } from './AuthShell'
 
-export function SignUpPage() {
-  const { t, language, setLanguage, direction } = useI18n()
+export default function SignUpPage() {
+  const { t, language } = useI18n()
   const { signUp } = useAuth()
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const isRtl = direction === 'rtl'
-  const Arrow = isRtl ? ArrowLeft : ArrowRight
+  const navigate = useNavigate()
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState(false)
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-    if (form.password !== form.confirm) {
-      setError(t('auth.passwordMismatch') || 'Passwords do not match')
-      return
-    }
-    if (form.password.length < 6) {
-      setError(t('auth.passwordTooShort') || 'Password must be at least 6 characters')
-      return
-    }
-    setLoading(true)
+    const errs: Record<string, string> = {}
+    if (!form.name.trim()) errs.name = t('common.required')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = t('onboarding.invalidEmail')
+    if (form.password.length < 8) errs.password = t('auth.passwordHint')
+    setErrors(errs)
+    if (Object.keys(errs).length) return
+    setBusy(true)
     try {
-      await signUp(form)
-    } catch (err: any) {
-      setError(err?.message || 'Sign up failed')
+      await signUp({ ...form, email: form.email.trim(), language })
+      navigate('/onboarding', { replace: true })
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'email_taken') setErrors({ email: t('auth.emailTaken') })
+      else if (err instanceof ApiError && err.code === 'weak_password') setErrors({ password: err.message })
+      else if (err instanceof ApiError && err.code === 'rate_limited') setErrors({ _: t('auth.locked') })
+      else setErrors({ _: t('common.loadFailedHint') })
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
-  const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }))
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--bg-secondary)]" dir={direction}>
-      <div className="w-full max-w-md">
-        <div className="flex justify-between items-center mb-10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold text-sm">D</div>
-            <span className="font-semibold">Dockly</span>
-          </div>
-          <button
-            onClick={() => setLanguage(language === 'en' ? 'he' : 'en')}
-            className="flex items-center gap-1.5 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-          >
-            <Globe className="w-4 h-4" />
-            {language === 'en' ? 'עברית' : 'English'}
-          </button>
-        </div>
-
-        <div className="bg-[var(--bg-primary)] rounded-2xl shadow-xl border border-[var(--border-primary)] p-8">
-          <h2 className="text-2xl font-bold mb-1">{t('auth.createWorkspace')}</h2>
-          <p className="text-[var(--text-tertiary)] mb-6">{t('auth.signUpSubtitle')}</p>
-
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label={t('auth.fullName')} value={form.name} onChange={e => update('name', e.target.value)} placeholder="David Cohen" />
-            <Input label={t('auth.email')} type="email" value={form.email} onChange={e => update('email', e.target.value)} placeholder="you@company.com" />
-            <Input label={t('auth.phone')} type="tel" value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="+972-50-000-0000" />
-            <Input label={t('auth.password')} type="password" value={form.password} onChange={e => update('password', e.target.value)} placeholder="••••••••" />
-            <Input label={t('auth.confirmPassword')} type="password" value={form.confirm} onChange={e => update('confirm', e.target.value)} placeholder="••••••••" />
-            <Button type="submit" loading={loading} className="w-full" size="lg">
-              {t('auth.createAccount')} <Arrow className="w-4 h-4" />
-            </Button>
-          </form>
-
-          <p className="text-center text-sm text-[var(--text-tertiary)] mt-5">
-            {t('auth.hasAccount')}{' '}
-            <Link to="/auth/signin" className="text-primary-600 font-medium hover:underline">
-              {t('auth.signIn')}
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+    <AuthShell
+      title={t('auth.createTitle')}
+      subtitle={t('auth.createSubtitle')}
+      footer={<>{t('auth.haveAccount')} <Link to="/auth/signin" className="font-medium text-brand-600 hover:text-brand-700">{t('auth.signIn')}</Link></>}
+    >
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        {errors._ && <div role="alert" className="rounded-md border border-danger/20 bg-danger-soft px-3 py-2.5 text-sm text-danger-fg">{errors._}</div>}
+        <Input label={t('auth.name')} autoComplete="name" required value={form.name} onChange={set('name')} error={errors.name} inputSize="lg" autoFocus />
+        <Input label={t('auth.email')} type="email" autoComplete="email" required value={form.email} onChange={set('email')} error={errors.email} inputSize="lg" />
+        <Input label={t('auth.phone')} type="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} optionalLabel={t('common.optional')} inputSize="lg" dir="ltr" />
+        <PasswordInput label={t('auth.password')} autoComplete="new-password" required value={form.password} onChange={set('password')} error={errors.password} hint={t('auth.passwordHint')} inputSize="lg" />
+        <Button type="submit" variant="primary" size="lg" fullWidth loading={busy}>{t('auth.signUp')}</Button>
+        <p className="text-center text-xs text-fg-4">{t('auth.terms')}</p>
+      </form>
+    </AuthShell>
   )
 }

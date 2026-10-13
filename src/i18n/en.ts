@@ -1,0 +1,60 @@
+const en = {
+  common: {
+    save: 'Save', saving: 'Saving…', saved: 'Saved', cancel: 'Cancel', close: 'Close', dismiss: 'Dismiss', delete: 'Delete', edit: 'Edit',
+    back: 'Back', next: 'Continue', create: 'Create', add: 'Add', remove: 'Remove', retry: 'Try again', loading: 'Loading…',
+    search: 'Search', filter: 'Filter', sort: 'sort', all: 'All', none: 'None', optional: 'Optional', required: 'Required',
+    copy: 'Copy', copied: 'Copied', copyFailed: 'Couldn’t copy to clipboard', copyLink: 'Copy link', linkCopied: 'Link copied',
+    view: 'View', download: 'Download', open: 'Open', more: 'More', yes: 'Yes', no: 'No', done: 'Done', confirm: 'Confirm',
+    loadFailed: 'Couldn’t load this', loadFailedHint: 'Check your connection and try again.', error: 'Something went wrong',
+    unsavedChanges: 'You have unsaved changes. Leave anyway?', breadcrumbs: 'Breadcrumb', progress: 'Progress',
+    clear: 'Clear', clearFilters: 'Clear filters', showing: 'Showing {{count}} of {{total}}', previous: 'Previous',
+    page: 'Page {{page}}', viewAll: 'View all', learnMore: 'Learn more', language: 'Language', english: 'English', hebrew: 'Hebrew',
+    today: 'Today', never: 'Never', you: 'You', system: 'System', client: 'Client', or: 'or', undo: 'Undo', and: 'and',
+    readOnly: 'You have view-only access', poweredBy: 'Powered by Dockly',
+  },
+  errors: {
+    crashTitle: 'This page hit a problem', crashBody: 'Reload to try again. Your saved data is safe.', reload: 'Reload page',
+    notFoundTitle: 'Page not found', notFoundBody: 'The page you’re looking for doesn’t exist or was moved.', goHome: 'Go to overview',
+  },
+  nav: {
+    main: 'Main navigation', group: { work: 'Work', workspace: 'Workspace' },
+    overview: 'Overview', requests: 'Requests', clients: 'Clients', signatures: 'Signatures', documents: 'Documents',
+    activity: 'Activity', templates: 'Templates', automation: 'Automation', integrations: 'Integrations', settings: 'Settings',
+    profile: 'Your profile', account: 'Account menu', collapse: 'Collapse sidebar', expand: 'Expand sidebar', openMenu: 'Open navigation',
+    skipToContent: 'Skip to content',
+  },
+  theme: { label: 'Appearance', light: 'Light', dark: 'Dark', system: 'System' },
+  quickCreate: { label: 'New', request: 'New document request', client: 'New client', signature: 'New signature request' },
+  search: {
+    open: 'Search', placeholder: 'Search clients, requests, signatures…', actions: 'Quick actions', goTo: 'Go to',
+    typeMore: 'Type at least 2 characters', noResults: 'No matches',
+  },
+  notifications: { label: 'Notifications', labelUnread_one: 'Notifications, {{count}} unread', labelUnread_other: 'Notifications, {{count}} unread', markAll: 'Mark all read', empty: 'You’re all caught up' },
+  upload: {
+    choose: 'Choose a file', chooseFiles: 'Choose files', orDrag: 'or drag it here', takePhoto: 'Take a photo',
+    formats: 'Accepted: {{formats}} · up to {{size}} MB', uploading: 'Uploading…', processing: 'Processing…', cancel: 'Cancel upload',
+    tooLarge: 'This file is larger than {{size}} MB', wrongType: 'This file type isn’t accepted. Use {{formats}}', empty: 'This file is empty',
+    failed: 'Upload failed', retry: 'Retry upload', cancelled: 'Upload cancelled',
+  },
+  status: {
+    request: { new: 'Not sent', 'waiting-for-client': 'Waiting for client', 'partial-submission': 'In progress', completed: 'All received', closed: 'Closed', overdue: 'Overdue' },
+    doc: { missing: 'Missing', uploaded: 'Needs review', approved: 'Approved', rejected: 'Needs replacement' },
+    signature: { draft: 'Draft', pending: 'Sent', viewed: 'Viewed', signed: 'Signed', declined: 'Declined', expired: 'Expired', cancelled: 'Cancelled' },
+    delivery: { queued: 'Queued', accepted: 'Accepted by provider', sent: 'Sent', delivered: 'Delivered', read: 'Read', failed: 'Failed', skipped: 'Not sent (simulation)' },
+  },
+  roles: { owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Read-only' },
+  auth: {
+    signIn: 'Sign in', signUp: 'Create account', signOut: 'Sign out', email: 'Work email', password: 'Password', name: 'Full name', phone: 'Phone',
+    welcomeBack: 'Welcome back', signInSubtitle: 'Sign in to your Dockly workspace', noAccount: 'New to Dockly?', haveAccount: 'Already have an account?',
+    forgot: 'Forgot password?', createTitle: 'Create your workspace', createSubtitle: 'Collect documents and signatures from clients — in minutes.',
+    passwordHint: 'At least 8 characters', showPassword: 'Show password', hidePassword: 'Hide password',
+    invalidCredentials: 'Incorrect email or password', locked: 'Too many attempts. Try again in a few minutes.', emailTaken: 'An account with this email already exists',
+    forgotTitle: 'Reset your password', forgotBody: 'For security, password resets are handled by your workspace owner or admin. Ask them to send you a new invitation, or contact Dockly support from your registered email.', backToSignIn: 'Back to sign in',
+    inviteTitle: 'Join {{workspace}}', inviteSubtitle: 'You were invited as {{role}}. Set your name and password to continue.', acceptInvite: 'Join workspace',
+    inviteInvalid: 'This invitation link is invalid or has already been used.', inviteExpired: 'This invitation has expired. Ask for a new one.',
+    marketing1: 'Branded client portal that works on any phone', marketing2: 'Review, approve or request replacements in one place', marketing3: 'Electronic signatures with a full audit trail',
+    terms: 'By creating an account you agree to keep client data confidential and use Dockly lawfully.',
+  },
+}
+
+export default en

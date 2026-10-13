@@ -1,158 +1,116 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Check } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { useApp } from '@/contexts/AppContext'
+import { workspaceApi, libraryApi } from '@/services'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Input'
-import { Building2, ArrowRight, ArrowLeft } from 'lucide-react'
-import { updateWorkspace } from '@/services/settingsService'
+import { Input, Select } from '@/components/ui/Field'
+import { Stepper } from '@/components/ui/Misc'
+import { Logo } from '@/components/layout/Logo'
+import type { Language } from '@/types'
 
-export function OnboardingPage() {
-  const { t, direction } = useI18n()
-  const { user, workspace, completeOnboarding } = useAuth()
-  const isRtl = direction === 'rtl'
-  const Arrow = isRtl ? ArrowLeft : ArrowRight
+const BUSINESS_TYPES = ['accounting', 'legal', 'mortgage', 'insurance', 'finance', 'consulting', 'realEstate', 'other']
 
-  const [business, setBusiness] = useState({
-    name: '',
-    type: 'mortgage',
-    contact: user?.name || '',
-    phone: user?.phone || '',
-    email: user?.email || '',
-    language: 'en',
-    timezone: 'Asia/Jerusalem',
+export default function OnboardingPage() {
+  const { t, language, setLanguage } = useI18n()
+  const { user, workspace, setWorkspace } = useAuth()
+  const { toastError } = useApp()
+  const navigate = useNavigate()
+  const [step, setStep] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const [form, setForm] = useState({
+    name: '', businessType: 'accounting', phone: user?.phone || '', email: user?.email || '',
+    defaultLanguage: (workspace?.defaultLanguage || language) as Language, timezone: 'Asia/Jerusalem',
   })
-  const [loading, setLoading] = useState(false)
+  const [starters, setStarters] = useState<{ key: string; en: string; he: string; docs: [string, string][] }[]>([])
+  const [chosen, setChosen] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
 
-  const handleFinish = async (e: React.FormEvent) => {
+  useEffect(() => { libraryApi.starters().then(setStarters).catch(() => {}) }, [])
+  useEffect(() => {
+    const map: Record<string, string> = { accounting: 'tax', legal: 'legal', mortgage: 'mortgage', insurance: 'insurance' }
+    const k = map[form.businessType]
+    setChosen(k ? new Set([k]) : new Set())
+  }, [form.businessType])
+
+  const saveDetails = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    if (!form.name.trim()) { setError(t('onboarding.nameRequired')); return }
+    setStep(1)
+  }
 
-    if (!business.name.trim()) {
-      setError(t('onboarding.businessNameRequired') || 'Business name is required')
-      return
-    }
-
-    if (!workspace?.id && !user?.workspaceId) {
-      setError('No workspace found. Please sign up again.')
-      return
-    }
-
-    const wsId = workspace?.id || user?.workspaceId || ''
-
-    setLoading(true)
+  const finish = async () => {
+    setBusy(true)
     try {
-      const updatedWs = await updateWorkspace(wsId, {
-        name: business.name.trim(),
-        businessType: business.type,
-        contactPerson: business.contact,
-        phone: business.phone,
-        email: business.email,
-        defaultLanguage: business.language,
-        timezone: business.timezone,
-      })
-      completeOnboarding(updatedWs)
-    } catch (err: any) {
-      console.error('[Onboarding] Save failed:', err)
-      setError(err?.message || 'Failed to save business details')
+      const ws = await workspaceApi.update({ ...form, name: form.name.trim(), contactPerson: user?.name || '' })
+      for (const key of chosen) await libraryApi.installStarter(key, form.defaultLanguage).catch(() => {})
+      setLanguage(form.defaultLanguage)
+      setWorkspace(ws)
+      navigate('/', { replace: true })
+    } catch (err) {
+      toastError(err, t('onboarding.saveFailed'))
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-secondary)] flex flex-col" dir={direction}>
-      {/* Header */}
-      <div className="bg-[var(--bg-primary)] border-b border-[var(--border-primary)] px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold text-sm">D</div>
-          <span className="font-semibold">Dockly</span>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 px-6 py-12">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mx-auto mb-4">
-              <Building2 className="w-7 h-7 text-primary-600" />
+    <div className="min-h-dvh bg-canvas">
+      <header className="flex h-16 items-center gap-2.5 border-b border-line bg-surface px-6">
+        <Logo className="size-8" /><span className="font-semibold">Dockly</span>
+      </header>
+      <main className="mx-auto max-w-xl px-5 py-10">
+        <Stepper steps={[{ id: 'details', label: t('onboarding.stepDetails') }, { id: 'templates', label: t('onboarding.stepTemplates') }]} current={step} onStepClick={setStep} />
+        {step === 0 ? (
+          <form onSubmit={saveDetails} className="mt-8 space-y-5" noValidate>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{t('onboarding.title', { name: user?.name ? `, ${user.name.split(' ')[0]}` : '' })}</h1>
+              <p className="mt-1 text-sm text-fg-3">{t('onboarding.subtitle')}</p>
             </div>
-            <h1 className="text-2xl font-bold mb-2">{t('onboarding.title')}</h1>
-            <p className="text-[var(--text-tertiary)]">{t('onboarding.subtitle')}</p>
-          </div>
-
-          <form onSubmit={handleFinish}>
-            <div className="bg-[var(--bg-primary)] rounded-2xl border border-[var(--border-primary)] p-8 shadow-sm">
-              <h2 className="text-lg font-semibold mb-6">{t('onboarding.step1')}</h2>
-
-              {error && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label={t('onboarding.businessName')}
-                  value={business.name}
-                  onChange={e => setBusiness(p => ({ ...p, name: e.target.value }))}
-                  placeholder="Acme Mortgage"
-                  required
-                />
-                <Select
-                  label={t('onboarding.businessType')}
-                  value={business.type}
-                  onChange={e => setBusiness(p => ({ ...p, type: e.target.value }))}
-                  options={[
-                    { value: 'mortgage', label: t('businessTypes.mortgage') },
-                    { value: 'law', label: t('businessTypes.law') },
-                    { value: 'accounting', label: t('businessTypes.accounting') },
-                    { value: 'insurance', label: t('businessTypes.insurance') },
-                    { value: 'admin', label: t('businessTypes.admin') },
-                    { value: 'other', label: t('businessTypes.other') },
-                  ]}
-                />
-                <Input
-                  label={t('onboarding.contactPerson')}
-                  value={business.contact}
-                  onChange={e => setBusiness(p => ({ ...p, contact: e.target.value }))}
-                />
-                <Input
-                  label={t('auth.phone')}
-                  value={business.phone}
-                  onChange={e => setBusiness(p => ({ ...p, phone: e.target.value }))}
-                />
-                <Input
-                  label={t('auth.email')}
-                  type="email"
-                  value={business.email}
-                  onChange={e => setBusiness(p => ({ ...p, email: e.target.value }))}
-                />
-                <Select
-                  label={t('onboarding.defaultLanguage')}
-                  value={business.language}
-                  onChange={e => setBusiness(p => ({ ...p, language: e.target.value }))}
-                  options={[
-                    { value: 'en', label: t('common.english') },
-                    { value: 'he', label: t('common.hebrew') },
-                  ]}
-                />
-              </div>
+            <Input label={t('onboarding.businessName')} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setError('') }} error={error} required autoFocus inputSize="lg" hint={t('onboarding.businessNameHint')} />
+            <Select label={t('onboarding.businessType')} value={form.businessType} onChange={(e) => setForm({ ...form, businessType: e.target.value })} options={BUSINESS_TYPES.map((b) => ({ value: b, label: t(`onboarding.types.${b}`) }))} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input label={t('onboarding.phone')} type="tel" dir="ltr" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} hint={t('onboarding.contactHint')} />
+              <Input label={t('onboarding.email')} type="email" dir="ltr" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
-
-            <div className="flex justify-end mt-6">
-              <Button type="submit" loading={loading} size="lg">
-                {t('onboarding.finish')} <Arrow className="w-4 h-4" />
-              </Button>
-            </div>
+            <Select label={t('onboarding.clientLanguage')} value={form.defaultLanguage} onChange={(e) => setForm({ ...form, defaultLanguage: e.target.value as Language })} options={[{ value: 'he', label: 'עברית' }, { value: 'en', label: 'English' }]} hint={t('onboarding.clientLanguageHint')} />
+            <Button type="submit" variant="primary" size="lg" fullWidth>{t('common.next')}</Button>
           </form>
-
-          <p className="text-center text-xs text-[var(--text-tertiary)] mt-6">
-            {t('onboarding.finishDesc')}
-          </p>
-        </div>
-      </div>
+        ) : (
+          <div className="mt-8 space-y-5">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{t('onboarding.templatesTitle')}</h1>
+              <p className="mt-1 text-sm text-fg-3">{t('onboarding.templatesSubtitle')}</p>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {starters.map((s) => {
+                const on = chosen.has(s.key)
+                return (
+                  <li key={s.key}>
+                    <button
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setChosen((c) => { const n = new Set(c); if (n.has(s.key)) n.delete(s.key); else n.add(s.key); return n })}
+                      className={cn('relative w-full rounded-xl border p-4 text-start transition-colors', on ? 'border-brand-500 bg-brand-soft' : 'border-line bg-surface hover:border-line-2')}
+                    >
+                      {on && <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-brand-600 text-brand-fg"><Check className="size-3" /></span>}
+                      <p className="pe-6 text-sm font-semibold">{form.defaultLanguage === 'he' ? s.he : s.en}</p>
+                      <p className="mt-1 text-xs text-fg-3 line-clamp-2">{s.docs.map((d) => (form.defaultLanguage === 'he' ? d[1] : d[0])).join(' · ')}</p>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            <div className="flex gap-3">
+              <Button variant="secondary" size="lg" onClick={() => setStep(0)}>{t('common.back')}</Button>
+              <Button variant="primary" size="lg" className="flex-1" loading={busy} onClick={finish}>{t('onboarding.finish')}</Button>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   )
 }

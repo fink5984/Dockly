@@ -1,0 +1,28 @@
+export default {
+  en: {
+    greeting: 'Hi {{name}} 👋', intro: '{{business}} needs a few documents from you for “{{title}}”. Upload each one below — it only takes a few minutes.',
+    deadline: 'Please upload by {{date}}', yourDocuments: 'Your documents', counter: '{{done}} of {{total}} received',
+    upload: 'Upload', uploadReplacement: 'Upload a new file', replace: 'Replace file', viewFile: 'View', received: 'Received', approved: 'Approved',
+    needsReplacement: 'Please upload a new file', oneFile: 'Choose one file, or several photos (JPG/PNG) of the same document.', combineFailed: 'Couldn’t combine the photos — try one at a time.',
+    multiPhotoHint: 'several photos of one document are combined into a single PDF', networkError: 'The connection dropped. Check your internet and try again.',
+    alreadyApproved: 'This document was already approved.', linkInactive: 'This link is no longer active.', slowDown: 'Too many uploads at once — wait a moment and try again.',
+    doneTitle: 'All set — thank you!', doneBody: '{{business}} received everything they asked for. They’ll contact you if anything else is needed.',
+    closed: 'This request is closed, so new uploads are turned off.',
+    invalidTitle: 'This link isn’t valid', invalidBody: 'Check that you opened the full link, or ask the sender for a new one.',
+    expiredTitle: 'This link has expired', expiredBody: 'Ask the sender for a new link.', disabledTitle: 'This link is no longer active', disabledBody: 'The sender turned it off. Contact them for a new link.',
+    questions: 'Questions? Contact {{name}}:', secure: 'Encrypted connection · files are stored privately and shared only with the sender',
+  },
+  he: {
+    greeting: 'שלום {{name}} 👋', intro: '{{business}} צריכים ממך כמה מסמכים עבור "{{title}}". העלו כל מסמך כאן למטה — זה לוקח כמה דקות.',
+    deadline: 'נא להעלות עד {{date}}', yourDocuments: 'המסמכים שלך', counter: 'התקבלו {{done}} מתוך {{total}}',
+    upload: 'העלאה', uploadReplacement: 'העלאת קובץ חדש', replace: 'החלפת הקובץ', viewFile: 'צפייה', received: 'התקבל', approved: 'אושר',
+    needsReplacement: 'נא להעלות קובץ חדש', oneFile: 'בחרו קובץ אחד, או כמה תמונות (JPG/PNG) של אותו מסמך.', combineFailed: 'לא ניתן היה לאחד את התמונות — נסו אחת בכל פעם.',
+    multiPhotoHint: 'כמה תמונות של אותו מסמך יאוחדו ל-PDF אחד', networkError: 'החיבור נקטע. בדקו את האינטרנט ונסו שוב.',
+    alreadyApproved: 'המסמך הזה כבר אושר.', linkInactive: 'הקישור כבר אינו פעיל.', slowDown: 'יותר מדי העלאות בבת אחת — המתינו רגע ונסו שוב.',
+    doneTitle: 'הכול הושלם — תודה!', doneBody: '{{business}} קיבלו את כל מה שביקשו. הם ייצרו קשר אם יידרש משהו נוסף.',
+    closed: 'הבקשה סגורה, ולכן לא ניתן להעלות קבצים חדשים.',
+    invalidTitle: 'הקישור אינו תקין', invalidBody: 'ודאו שפתחתם את הקישור המלא, או בקשו מהשולח קישור חדש.',
+    expiredTitle: 'תוקף הקישור פג', expiredBody: 'בקשו מהשולח קישור חדש.', disabledTitle: 'הקישור כבר אינו פעיל', disabledBody: 'השולח כיבה את הקישור. פנו אליו לקבלת קישור חדש.',
+    questions: 'שאלות? פנו אל {{name}}:', secure: 'חיבור מוצפן · הקבצים נשמרים באופן פרטי ומשותפים רק עם השולח',
+  },
+}

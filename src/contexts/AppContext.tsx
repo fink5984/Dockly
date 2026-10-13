@@ -1,138 +1,79 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import type { Notification } from '@/types'
-import { supabase } from '@/lib/supabase'
-import { mapNotification } from '@/lib/mappers'
-import { useAuth } from './AuthContext'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ApiError } from '@/lib/api'
 
-interface ToastType {
+export type ToastTone = 'success' | 'error' | 'info' | 'warning'
+
+export interface Toast {
   id: string
-  type: 'success' | 'error' | 'info' | 'warning'
+  tone: ToastTone
   title: string
   message?: string
+  action?: { label: string; onClick: () => void }
+  duration?: number
 }
 
 interface AppContextType {
-  notifications: Notification[]
-  unreadCount: number
-  markAsRead: (id: string) => void
-  markAllRead: () => void
-  toasts: ToastType[]
-  addToast: (toast: Omit<ToastType, 'id'>) => void
-  removeToast: (id: string) => void
-  sidebarOpen: boolean
-  setSidebarOpen: (open: boolean) => void
-  mobileSidebarOpen: boolean
-  setMobileSidebarOpen: (open: boolean) => void
+  toasts: Toast[]
+  toast: (t: Omit<Toast, 'id'>) => string
+  dismissToast: (id: string) => void
+  /** Show an error toast from any thrown value, preferring the server's safe message. */
+  toastError: (err: unknown, fallbackTitle: string) => void
+  sidebarCollapsed: boolean
+  setSidebarCollapsed: (v: boolean) => void
+  mobileNavOpen: boolean
+  setMobileNavOpen: (v: boolean) => void
+  commandOpen: boolean
+  setCommandOpen: (v: boolean) => void
 }
 
 const AppContext = createContext<AppContextType | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [toasts, setToasts] = useState<ToastType[]>([])
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [toasts, setToasts] = useState<Toast[]>([])
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const [sidebarCollapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('dockly-sidebar') === 'collapsed' } catch { return false }
+  })
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [commandOpen, setCommandOpen] = useState(false)
 
-  // Fetch notifications from Supabase when user is available
-  useEffect(() => {
-    if (!user) {
-      setNotifications([])
-      return
-    }
-
-    const fetchNotifications = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(50)
-
-        if (!error && data) {
-          setNotifications(data.map(mapNotification))
-        }
-      } catch {
-        // Silently fail — notifications are non-critical
-      }
-    }
-
-    fetchNotifications()
-
-    // Real-time subscription for new notifications
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotif = mapNotification(payload.new as any)
-          setNotifications((prev) => [newNotif, ...prev])
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user])
-
-  const unreadCount = notifications.filter((n) => !n.read).length
-
-  const markAsRead = useCallback(async (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
-    // Update in DB
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('id', id)
+  const dismissToast = useCallback((id: string) => {
+    setToasts((ts) => ts.filter((t) => t.id !== id))
+    const timer = timers.current.get(id)
+    if (timer) clearTimeout(timer)
+    timers.current.delete(id)
   }, [])
 
-  const markAllRead = useCallback(async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-    if (user) {
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user.id)
-        .eq('read', false)
+  const toast = useCallback((t: Omit<Toast, 'id'>) => {
+    const id = Math.random().toString(36).slice(2)
+    setToasts((ts) => [...ts.slice(-3), { ...t, id }])
+    const duration = t.duration ?? (t.action ? 7000 : t.tone === 'error' ? 6000 : 4000)
+    timers.current.set(id, setTimeout(() => dismissToast(id), duration))
+    return id
+  }, [dismissToast])
+
+  const toastError = useCallback((err: unknown, fallbackTitle: string) => {
+    if (err instanceof ApiError) {
+      toast({ tone: 'error', title: fallbackTitle, message: err.status === 0 || err.status >= 500 ? undefined : err.message })
+    } else {
+      toast({ tone: 'error', title: fallbackTitle })
     }
-  }, [user])
+  }, [toast])
 
-  const addToast = (toast: Omit<ToastType, 'id'>) => {
-    const id = Math.random().toString(36).substring(7)
-    setToasts((prev) => [...prev, { ...toast, id }])
-    setTimeout(() => removeToast(id), 4000)
-  }
+  const setSidebarCollapsed = useCallback((v: boolean) => {
+    setCollapsed(v)
+    try { localStorage.setItem('dockly-sidebar', v ? 'collapsed' : 'expanded') } catch { /* ignore */ }
+  }, [])
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
-  }
+  const value = useMemo(() => ({
+    toasts, toast, dismissToast, toastError, sidebarCollapsed, setSidebarCollapsed, mobileNavOpen, setMobileNavOpen, commandOpen, setCommandOpen,
+  }), [toasts, toast, dismissToast, toastError, sidebarCollapsed, setSidebarCollapsed, mobileNavOpen, commandOpen])
 
-  return (
-    <AppContext.Provider
-      value={{
-        notifications, unreadCount, markAsRead, markAllRead,
-        toasts, addToast, removeToast,
-        sidebarOpen, setSidebarOpen,
-        mobileSidebarOpen, setMobileSidebarOpen,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
-  )
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
 
 export function useApp() {
-  const context = useContext(AppContext)
-  if (!context) throw new Error('useApp must be used within AppProvider')
-  return context
+  const ctx = useContext(AppContext)
+  if (!ctx) throw new Error('useApp must be used within AppProvider')
+  return ctx
 }

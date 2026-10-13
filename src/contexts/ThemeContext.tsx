@@ -1,46 +1,53 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Theme } from '@/types'
 
 interface ThemeContextType {
   theme: Theme
-  toggleTheme: () => void
+  resolved: 'light' | 'dark'
   setTheme: (theme: Theme) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null)
+const KEY = 'dockly-theme'
+
+function systemPrefersDark() {
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+}
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem('dockly-theme')
-    if (saved) return saved as Theme
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    try {
+      const saved = localStorage.getItem(KEY)
+      if (saved === 'light' || saved === 'dark' || saved === 'system') return saved
+    } catch { /* ignore */ }
+    return 'system'
   })
+  const [systemDark, setSystemDark] = useState(systemPrefersDark)
 
   useEffect(() => {
-    const root = document.documentElement
-    const effective = theme === 'system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : theme
-    if (effective === 'dark') {
-      root.classList.add('dark')
-    } else {
-      root.classList.remove('dark')
-    }
-    localStorage.setItem('dockly-theme', theme)
-  }, [theme])
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
+    if (!mq) return
+    const onChange = () => setSystemDark(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
-  const toggleTheme = () => setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'))
-  const setTheme = (t: Theme) => setThemeState(t)
+  const resolved = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  )
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', resolved === 'dark')
+  }, [resolved])
+
+  const setTheme = (t: Theme) => {
+    setThemeState(t)
+    try { localStorage.setItem(KEY, t) } catch { /* ignore */ }
+  }
+
+  return <ThemeContext.Provider value={{ theme, resolved, setTheme }}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme() {
-  const context = useContext(ThemeContext)
-  if (!context) throw new Error('useTheme must be used within ThemeProvider')
-  return context
+  const ctx = useContext(ThemeContext)
+  if (!ctx) throw new Error('useTheme must be used within ThemeProvider')
+  return ctx
 }
