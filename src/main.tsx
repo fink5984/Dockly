@@ -11,12 +11,12 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <I18nProvider>
       <ThemeProvider>
-        <AuthProvider>
-          <AppProvider>
+        <AppProvider>
+          <AuthProvider>
             <App />
-          </AppProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </AppProvider>
       </ThemeProvider>
     </I18nProvider>
-  </StrictMode>
+  </StrictMode>,
 )

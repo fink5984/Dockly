@@ -1,0 +1,28 @@
+export default {
+  en: {
+    title: 'Templates', subtitle: 'Reusable document packs and the document types your clients upload.',
+    tabTemplates: 'Request templates', tabTypes: 'Document types', new: 'New template', edit: 'Edit template', newType: 'New document type', editType: 'Edit document type',
+    name: 'Template name', defaultTitle: 'Default request title', defaultTitleHint: 'Pre-filled when you use the template', dueIn: 'Due in (days)', dueInHint: 'Sets the deadline automatically',
+    documents: 'Documents in this template', addDocument: 'Add a document…', saved: 'Saved', saveFailed: 'Couldn’t save',
+    docCount_one: '{{count}} document', docCount_other: '{{count}} documents', dueInShort_one: 'due in {{count}} day', dueInShort_other: 'due in {{count}} days',
+    duplicate: 'Duplicate', emptyTitle: 'No templates yet', emptyHint: 'Create a template for the document packs you request often, or install a ready-made one below.',
+    starters: 'Ready-made templates', install: 'Install', installed: 'Template installed',
+    typeName: 'Document name', clientHelp: 'Help text for clients', clientHelpHint: 'e.g. “Both sides, all pages, clearly readable”', formats: 'Accepted file types', maxSize: 'Max file size (MB)',
+    noTypes: 'No document types yet', noTypesHint: 'Document types are the building blocks of requests.', usedIn_one: 'used in {{count}} request', usedIn_other: 'used in {{count}} requests',
+    archivedBadge: 'Archived', archive: 'Archive', deleteTitle: 'Delete “{{name}}”?', deleteTypeHint: 'Types already used in requests are archived instead, so those requests keep working.',
+    archivedInstead: 'This type is in use, so it was archived instead',
+  },
+  he: {
+    title: 'תבניות', subtitle: 'חבילות מסמכים לשימוש חוזר וסוגי המסמכים שהלקוחות מעלים.',
+    tabTemplates: 'תבניות בקשה', tabTypes: 'סוגי מסמכים', new: 'תבנית חדשה', edit: 'עריכת תבנית', newType: 'סוג מסמך חדש', editType: 'עריכת סוג מסמך',
+    name: 'שם התבנית', defaultTitle: 'כותרת ברירת מחדל לבקשה', defaultTitleHint: 'ממולאת אוטומטית בשימוש בתבנית', dueIn: 'מועד יעד (ימים)', dueInHint: 'קובע את מועד היעד אוטומטית',
+    documents: 'המסמכים בתבנית', addDocument: 'הוספת מסמך…', saved: 'נשמר', saveFailed: 'לא ניתן היה לשמור',
+    docCount_one: 'מסמך אחד', docCount_two: '{{count}} מסמכים', docCount_other: '{{count}} מסמכים', dueInShort_one: 'יעד בעוד יום', dueInShort_two: 'יעד בעוד יומיים', dueInShort_other: 'יעד בעוד {{count}} ימים',
+    duplicate: 'שכפול', emptyTitle: 'אין עדיין תבניות', emptyHint: 'צרו תבנית לחבילות המסמכים שאתם מבקשים לעיתים קרובות, או התקינו תבנית מוכנה למטה.',
+    starters: 'תבניות מוכנות', install: 'התקנה', installed: 'התבנית הותקנה',
+    typeName: 'שם המסמך', clientHelp: 'הסבר ללקוח', clientHelpHint: 'למשל "שני הצדדים, כל העמודים, קריא"', formats: 'סוגי קבצים מותרים', maxSize: 'גודל קובץ מרבי (MB)',
+    noTypes: 'אין עדיין סוגי מסמכים', noTypesHint: 'סוגי מסמכים הם אבני הבניין של בקשות.', usedIn_one: 'בשימוש בבקשה אחת', usedIn_two: 'בשימוש ב-{{count}} בקשות', usedIn_other: 'בשימוש ב-{{count}} בקשות',
+    archivedBadge: 'בארכיון', archive: 'העברה לארכיון', deleteTitle: 'למחוק את "{{name}}"?', deleteTypeHint: 'סוגים שכבר נמצאים בשימוש בבקשות יועברו לארכיון במקום, כדי שהבקשות ימשיכו לעבוד.',
+    archivedInstead: 'הסוג בשימוש ולכן הועבר לארכיון',
+  },
+}

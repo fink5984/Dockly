@@ -1,205 +1,104 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { FolderOpen, HardDrive, Eye } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
-import { useAuth } from '@/contexts/AuthContext'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { useApi } from '@/hooks/useApi'
+import { insightsApi, clientsApi, requestsApi, signaturesApi } from '@/services'
+import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { SearchInput } from '@/components/ui/Input'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { cn, formatFileSize, getStatusColor, getDocStatusKey } from '@/lib/utils'
-import { useSupabaseData } from '@/hooks/useSupabaseData'
-import { getCases } from '@/services/casesService'
-import { FileText, Download, Eye, Filter, Grid3X3, List, CheckCircle2, XCircle, AlertTriangle, UploadCloud, Clock } from 'lucide-react'
-import type { CaseDocument, DocumentStatus } from '@/types'
+import { SearchInput, Select, Input } from '@/components/ui/Field'
+import { PageHeader } from '@/components/ui/Misc'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Badge, SignatureStatusBadge, DocStatusBadge } from '@/components/ui/Badge'
+import { EmptyState, ErrorState, ListSkeleton } from '@/components/ui/States'
+import { FileIcon } from '@/components/ui/Upload'
+import { FilePreview } from '@/components/domain/FilePreview'
+import type { DocStatus, LibraryItem, SignatureStatus } from '@/types'
 
-interface FlatDocument extends CaseDocument {
-  caseId: string
-  clientName: string
-  caseType: string
-}
-
-const statusIcons: Record<DocumentStatus, typeof CheckCircle2> = {
-  missing: XCircle,
-  'pending-upload': UploadCloud,
-  uploaded: UploadCloud,
-  received: UploadCloud,
-  'under-review': Eye,
-  approved: CheckCircle2,
-  rejected: AlertTriangle,
-  expired: Clock,
-  blurry: AlertTriangle,
-  'missing-pages': AlertTriangle,
-}
-
-const statusBg: Record<DocumentStatus, string> = {
-  missing: 'bg-gray-100 dark:bg-gray-900',
-  'pending-upload': 'bg-amber-50 dark:bg-amber-950/20',
-  uploaded: 'bg-blue-50 dark:bg-blue-950/20',
-  received: 'bg-blue-50 dark:bg-blue-950/20',
-  'under-review': 'bg-indigo-50 dark:bg-indigo-950/20',
-  approved: 'bg-green-50 dark:bg-green-950/20',
-  rejected: 'bg-red-50 dark:bg-red-950/20',
-  expired: 'bg-orange-50 dark:bg-orange-950/20',
-  blurry: 'bg-red-50 dark:bg-red-950/20',
-  'missing-pages': 'bg-red-50 dark:bg-red-950/20',
-}
-
-export function DocumentsPage() {
-  const { t } = useI18n()
-  const { user, workspace } = useAuth()
-  const wsId = workspace?.id || user?.workspaceId || ''
+export default function DocumentsPage() {
+  const { t, fmt } = useI18n()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all')
-  const [view, setView] = useState<'grid' | 'table'>('table')
+  const [q, setQ] = useState('')
+  const [filters, setFilters] = useState({ source: '', clientId: '', type: '', from: '', to: '' })
+  const [preview, setPreview] = useState<LibraryItem | null>(null)
+  useEffect(() => { const id = setTimeout(() => setQ(search), 250); return () => clearTimeout(id) }, [search])
+  const key = `documents:${q}:${JSON.stringify(filters)}`
+  const { data, error, loading, refetch } = useApi(key, () => insightsApi.documents({ search: q || undefined, ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) }), { topics: ['requests', 'signatures'] })
+  const clients = useApi('clients:all', () => clientsApi.list(), { topics: ['clients'] })
+  const set = (k: keyof typeof filters) => (v: string) => setFilters((f) => ({ ...f, [k]: v }))
+  const active = Object.values(filters).some(Boolean) || q
 
-  const { data: allCases } = useSupabaseData(() => getCases(wsId), [], [wsId])
-
-  // Flatten all documents from all cases
-  const allDocs: FlatDocument[] = allCases.flatMap(c =>
-    c.requiredDocuments.map(doc => ({
-      ...doc,
-      caseId: c.id,
-      clientName: c.clientName,
-      caseType: c.caseType,
-    }))
-  )
-
-  const filtered = allDocs.filter(doc => {
-    if (statusFilter !== 'all' && doc.status !== statusFilter) return false
-    if (search) {
-      const q = search.toLowerCase()
-      return doc.documentTypeName.toLowerCase().includes(q) || doc.clientName.toLowerCase().includes(q) || (doc.fileName && doc.fileName.toLowerCase().includes(q))
-    }
-    return true
-  })
-
-  const statusCounts: Record<string, number> = { all: allDocs.length }
-  allDocs.forEach(d => { statusCounts[d.status] = (statusCounts[d.status] || 0) + 1 })
-
-  const statuses: (DocumentStatus | 'all')[] = ['all', 'missing', 'pending-upload', 'uploaded', 'under-review', 'approved', 'rejected', 'expired']
+  const columns: Column<LibraryItem>[] = [
+    {
+      id: 'file', header: t('documents.col.file'),
+      cell: (d) => (
+        <div className="flex min-w-0 items-center gap-3">
+          <FileIcon mime={d.mimeType} name={d.fileName} />
+          <div className="min-w-0">
+            <p className="truncate font-medium">{d.label}</p>
+            <p className="truncate text-xs text-fg-3"><bdi>{d.fileName}</bdi> · {fmt.bytes(d.size)}{d.versions > 1 ? ` · ${t('requests.detail.versionCount', { count: d.versions })}` : ''}</p>
+          </div>
+        </div>
+      ),
+    },
+    { id: 'client', header: t('documents.col.client'), hideBelow: 'md', cell: (d) => <Link to={`/clients/${d.clientId}`} className="text-fg-2 hover:underline">{d.clientName}</Link> },
+    {
+      id: 'source', header: t('documents.col.source'), hideBelow: 'lg',
+      cell: (d) => <Link to={d.source === 'requests' ? `/requests/${d.parentId}` : `/signatures/${d.parentId}`} className="flex items-center gap-1.5 text-fg-3 hover:text-fg-2"><Badge>{t(`documents.source.${d.source}`)}</Badge><span className="truncate">{d.parentTitle}</span></Link>,
+    },
+    { id: 'status', header: t('documents.col.status'), cell: (d) => (d.source === 'signatures' ? <SignatureStatusBadge status={d.status as SignatureStatus} /> : <DocStatusBadge status={d.status as DocStatus} />) },
+    { id: 'date', header: t('documents.col.date'), hideBelow: 'md', cell: (d) => <span className="text-fg-3">{fmt.date(d.at)}</span> },
+    { id: 'actions', header: <span className="sr-only">{t('common.view')}</span>, align: 'end', cell: (d) => <Button size="sm" variant="ghost" icon={<Eye className="size-4" />} onClick={() => setPreview(d)}>{t('common.view')}</Button> },
+  ]
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{t('documents.title')}</h1>
-          <p className="text-sm text-[var(--text-tertiary)] mt-1">{allDocs.length} {t('documents.documentsLabel').toLowerCase()} {t('common.total').toLowerCase()}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" icon={<Download className="w-3.5 h-3.5" />}>{t('common.export')}</Button>
-          <div className="flex rounded-lg overflow-hidden border border-[var(--border-primary)]">
-            <button onClick={() => setView('table')} className={cn('p-1.5 transition-colors', view === 'table' ? 'bg-primary-600 text-white' : 'bg-[var(--bg-primary)] text-[var(--text-tertiary)]')}>
-              <List className="w-4 h-4" />
-            </button>
-            <button onClick={() => setView('grid')} className={cn('p-1.5 transition-colors', view === 'grid' ? 'bg-primary-600 text-white' : 'bg-[var(--bg-primary)] text-[var(--text-tertiary)]')}>
-              <Grid3X3 className="w-4 h-4" />
-            </button>
+    <>
+      <PageHeader
+        title={t('documents.title')}
+        description={t('documents.subtitle')}
+        meta={data && <span className="inline-flex items-center gap-1.5"><HardDrive className="size-3.5" />{t('documents.usage', { size: fmt.bytes(data.usage.bytes), count: data.usage.versions })}</span>}
+      />
+      <Card className="overflow-hidden">
+        <div className="grid gap-3 border-b border-line p-4 sm:grid-cols-2 lg:grid-cols-6 sm:px-5">
+          <SearchInput value={search} onChange={setSearch} placeholder={t('documents.search')} aria-label={t('documents.search')} className="lg:col-span-2" clearLabel={t('common.clear')} />
+          <Select selectSize="sm" aria-label={t('documents.col.client')} value={filters.clientId} onChange={(e) => set('clientId')(e.target.value)} options={[{ value: '', label: t('documents.allClients') }, ...(clients.data || []).map((c) => ({ value: c.id, label: c.name }))]} />
+          <Select selectSize="sm" aria-label={t('documents.col.source')} value={filters.source} onChange={(e) => set('source')(e.target.value)} options={[{ value: '', label: t('documents.allSources') }, { value: 'requests', label: t('documents.source.requests') }, { value: 'signatures', label: t('documents.source.signatures') }]} />
+          <Select selectSize="sm" aria-label={t('documents.type')} value={filters.type} onChange={(e) => set('type')(e.target.value)} options={[{ value: '', label: t('documents.allTypes') }, { value: 'pdf', label: 'PDF' }, { value: 'image', label: t('documents.images') }]} />
+          <div className="flex items-center gap-2">
+            <Input inputSize="sm" type="date" aria-label={t('documents.from')} value={filters.from} onChange={(e) => set('from')(e.target.value)} />
+            <Input inputSize="sm" type="date" aria-label={t('documents.to')} value={filters.to} onChange={(e) => set('to')(e.target.value)} />
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5 pb-1">
-        {statuses.map(s => (
-          <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap',
-              statusFilter === s
-                ? 'bg-primary-600 text-white'
-                : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border border-[var(--border-primary)] hover:bg-[var(--bg-tertiary)]'
+        {error ? <ErrorState onRetry={refetch} /> : loading ? <ListSkeleton /> : !data?.items.length ? (
+          <EmptyState icon={<FolderOpen />} title={active ? t('documents.noMatches') : t('documents.emptyTitle')} description={active ? undefined : t('documents.emptyHint')}
+            action={active ? <Button size="sm" onClick={() => { setSearch(''); setFilters({ source: '', clientId: '', type: '', from: '', to: '' }) }}>{t('common.clearFilters')}</Button> : undefined} />
+        ) : (
+          <DataTable
+            caption={t('documents.title')}
+            columns={columns}
+            rows={data.items}
+            rowKey={(d) => `${d.source}:${d.id}`}
+            onRowClick={setPreview}
+            mobileRow={(d) => (
+              <div className="flex items-center gap-3">
+                <FileIcon mime={d.mimeType} name={d.fileName} />
+                <div className="min-w-0 flex-1"><p className="truncate font-medium">{d.label}</p><p className="truncate text-xs text-fg-3">{d.clientName} · {fmt.date(d.at)}</p></div>
+              </div>
             )}
-          >
-            {s === 'all' ? t('common.all') : t(getDocStatusKey(s))}
-            <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-bold', statusFilter === s ? 'bg-white/20' : 'bg-[var(--bg-tertiary)]')}>
-              {statusCounts[s] || 0}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <SearchInput value={search} onChange={setSearch} placeholder={t('documents.searchDocuments')} className="max-w-sm" />
-
-      {filtered.length === 0 ? (
-        <EmptyState icon={<FileText className="w-6 h-6" />} title={t('documents.noDocuments')} />
-      ) : view === 'table' ? (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border-primary)]">
-                  <th className="text-start p-3 text-xs font-medium text-[var(--text-tertiary)]">{t('documents.documentName')}</th>
-                  <th className="text-start p-3 text-xs font-medium text-[var(--text-tertiary)]">{t('cases.client')}</th>
-                  <th className="text-start p-3 text-xs font-medium text-[var(--text-tertiary)]">{t('common.status')}</th>
-                  <th className="text-start p-3 text-xs font-medium text-[var(--text-tertiary)]">{t('documents.fileName')}</th>
-                  <th className="text-start p-3 text-xs font-medium text-[var(--text-tertiary)]">{t('documents.size')}</th>
-                  <th className="text-end p-3 text-xs font-medium text-[var(--text-tertiary)]">{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((doc, i) => {
-                  const StatusIcon = statusIcons[doc.status]
-                  return (
-                    <tr key={`${doc.caseId}-${doc.documentTypeId}-${i}`} className="border-b border-[var(--border-primary)] last:border-0 hover:bg-[var(--bg-tertiary)] transition-colors">
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <StatusIcon className={cn('w-4 h-4 shrink-0', getStatusColor(doc.status).replace('bg-', 'text-').replace('-100', '-500'))} />
-                          <span className="font-medium truncate max-w-[200px]">{doc.documentTypeName}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-[var(--text-secondary)]">{doc.clientName}</td>
-                      <td className="p-3"><Badge variant="status" status={doc.status} size="sm">{t(getDocStatusKey(doc.status))}</Badge></td>
-                      <td className="p-3 text-[var(--text-tertiary)] text-xs truncate max-w-[150px]">{doc.fileName || '-'}</td>
-                      <td className="p-3 text-[var(--text-tertiary)] text-xs">{doc.fileSize ? formatFileSize(doc.fileSize) : '-'}</td>
-                      <td className="p-3 text-end">
-                        <div className="flex justify-end gap-1">
-                          {doc.fileName && (
-                            <>
-                              <button className="p-1.5 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)]"><Eye className="w-3.5 h-3.5" /></button>
-                              <button className="p-1.5 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)]"><Download className="w-3.5 h-3.5" /></button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {filtered.map((doc, i) => {
-            const StatusIcon = statusIcons[doc.status]
-            return (
-              <Card key={`${doc.caseId}-${doc.documentTypeId}-${i}`} hover>
-                <div className={cn('p-4 border-s-4', getStatusColor(doc.status).replace('bg-', 'border-').replace('-100', '-400'))}>
-                  <div className="flex items-start justify-between mb-2">
-                    <StatusIcon className={cn('w-5 h-5', getStatusColor(doc.status).replace('bg-', 'text-').replace('-100', '-500'))} />
-                    <Badge variant="status" status={doc.status} size="sm">{t(getDocStatusKey(doc.status))}</Badge>
-                  </div>
-                  <p className="text-sm font-medium truncate">{doc.documentTypeName}</p>
-                  <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{doc.clientName}</p>
-                  {doc.fileName && (
-                    <div className="mt-2 p-2 bg-[var(--bg-tertiary)] rounded text-xs truncate text-[var(--text-tertiary)]">
-                      {doc.fileName}
-                    </div>
-                  )}
-                  <div className="flex gap-1 mt-3">
-                    {doc.fileName && (
-                      <>
-                        <Button variant="ghost" size="sm" icon={<Eye className="w-3 h-3" />} className="flex-1">{t('documents.preview')}</Button>
-                        <Button variant="ghost" size="sm" icon={<Download className="w-3 h-3" />} />
-                      </>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            )
-          })}
-        </div>
+          />
+        )}
+      </Card>
+      {preview && (
+        <FilePreview
+          open
+          onClose={() => setPreview(null)}
+          title={preview.label}
+          fileName={preview.fileName}
+          mimeType={preview.mimeType}
+          getUrl={() => (preview.source === 'requests' ? requestsApi.fileUrl(preview.parentId, preview.id) : signaturesApi.fileUrl(preview.id, { variant: preview.status === 'signed' ? 'signed' : 'original' }))}
+          getDownloadUrl={() => (preview.source === 'requests' ? requestsApi.fileUrl(preview.parentId, preview.id, { disposition: 'attachment' }) : signaturesApi.fileUrl(preview.id, { variant: preview.status === 'signed' ? 'signed' : 'original', disposition: 'attachment' }))}
+        />
       )}
-    </div>
+    </>
   )
 }

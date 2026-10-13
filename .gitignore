@@ -26,3 +26,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+# Local data (dev storage driver, test artifacts)
+.data
+test-results
+playwright-report

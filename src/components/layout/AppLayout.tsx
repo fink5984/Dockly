@@ -1,33 +1,34 @@
+import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
-import { useI18n } from '@/contexts/I18nContext'
+import { cn } from '@/lib/utils'
 import { useApp } from '@/contexts/AppContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
-import { ToastContainer } from '@/components/ui/Toast'
-import { cn } from '@/lib/utils'
+import { CommandPalette } from './CommandPalette'
+import { PageLoader } from './PageLoader'
+import { ErrorBoundary } from './ErrorBoundary'
 
 export function AppLayout() {
-  const { direction } = useI18n()
-  const { sidebarOpen } = useApp()
-  const isRtl = direction === 'rtl'
-
+  const { sidebarCollapsed } = useApp()
+  const { t } = useI18n()
   return (
-    <div className="min-h-screen bg-[var(--bg-secondary)]" dir={direction}>
+    <div className="min-h-dvh bg-canvas">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[400] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:shadow-lg">
+        {t('nav.skipToContent')}
+      </a>
       <Sidebar />
-      <div
-        className={cn(
-          'transition-all duration-300 ease-in-out',
-          isRtl
-            ? sidebarOpen ? 'lg:mr-64' : 'lg:mr-[72px]'
-            : sidebarOpen ? 'lg:ml-64' : 'lg:ml-[72px]'
-        )}
-      >
+      <div className={cn('flex min-h-dvh flex-col transition-[padding] duration-200', sidebarCollapsed ? 'lg:ps-[68px]' : 'lg:ps-60')}>
         <Topbar />
-        <main className="p-4 lg:p-6 max-w-[1600px] mx-auto">
-          <Outlet />
+        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 focus:outline-none sm:px-6 lg:px-8 lg:py-8">
+          <ErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
-      <ToastContainer />
+      <CommandPalette />
     </div>
   )
 }

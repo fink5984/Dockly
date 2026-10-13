@@ -1,24 +1,54 @@
-import en from './en.json'
-import he from './he.json'
+import en from './en'
+import he from './he'
+import { sections } from './sections'
 import type { Language } from '@/types'
 
-const translations: Record<Language, Record<string, unknown>> = { en, he }
+export type Dict = { [k: string]: string | Dict }
 
-export function getNestedValue(obj: Record<string, unknown>, path: string): string {
-  const keys = path.split('.')
-  let current: unknown = obj
-  for (const key of keys) {
-    if (current && typeof current === 'object' && key in (current as Record<string, unknown>)) {
-      current = (current as Record<string, unknown>)[key]
-    } else {
-      return path
-    }
+function merge(base: Dict, lang: Language): Dict {
+  const out: Dict = { ...base }
+  for (const [ns, s] of Object.entries(sections)) out[ns] = s[lang] as Dict
+  return out
+}
+
+export const dictionaries: Record<Language, Dict> = { en: merge(en, 'en'), he: merge(he, 'he') }
+
+function lookup(dict: Dict, path: string): string | undefined {
+  let cur: string | Dict | undefined = dict
+  for (const part of path.split('.')) {
+    if (!cur || typeof cur === 'string') return undefined
+    cur = cur[part]
   }
-  return typeof current === 'string' ? current : path
+  return typeof cur === 'string' ? cur : undefined
 }
 
-export function t(key: string, lang: Language): string {
-  return getNestedValue(translations[lang] as Record<string, unknown>, key)
+export type Vars = Record<string, string | number | undefined | null>
+
+/**
+ * Translate `key`, interpolating {{name}} placeholders.
+ * Plurals: when vars.count is given, `key_one` / `key_two` / `key_other` are tried first.
+ */
+export function translate(lang: Language, key: string, vars?: Vars): string {
+  const dict = dictionaries[lang]
+  let template: string | undefined
+  if (vars && typeof vars.count === 'number') {
+    const rule = new Intl.PluralRules(lang === 'he' ? 'he' : 'en').select(vars.count)
+    template = lookup(dict, `${key}_${rule}`) ?? lookup(dict, `${key}_other`)
+  }
+  template = template ?? lookup(dict, key) ?? lookup(dictionaries.en, key)
+  if (template === undefined) {
+    if (import.meta.env.DEV) console.warn(`[i18n] missing key: ${key}`)
+    return key
+  }
+  if (!vars) return template
+  return template.replace(/\{\{(\w+)\}\}/g, (_, name) => {
+    const v = vars[name]
+    return v === undefined || v === null ? '' : String(v)
+  })
 }
 
-export { en, he, translations }
+/** Flatten nested keys, ignoring plural-form suffixes (used by the parity test). */
+export function flattenKeys(dict: Dict, prefix = ''): string[] {
+  return Object.entries(dict).flatMap(([k, v]) =>
+    typeof v === 'string' ? [`${prefix}${k.replace(/_(zero|one|two|few|many|other)$/, '')}`] : flattenKeys(v, `${prefix}${k}.`))
+}

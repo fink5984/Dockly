@@ -1,49 +1,49 @@
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react'
 import { useApp } from '@/contexts/AppContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
-import { X, CheckCircle, AlertTriangle, AlertCircle, Info } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 
-export function ToastContainer() {
-  const { toasts, removeToast } = useApp()
-  const { direction } = useI18n()
+const icons = {
+  success: <CheckCircle2 className="size-5 text-success" />,
+  error: <AlertCircle className="size-5 text-danger" />,
+  warning: <AlertTriangle className="size-5 text-warning" />,
+  info: <Info className="size-5 text-info" />,
+}
 
+/** Toasts are announced politely (errors assertively) to screen readers. */
+export function ToastViewport() {
+  const { toasts, dismissToast } = useApp()
+  const { t } = useI18n()
   return (
-    <div className={cn(
-      'fixed bottom-4 z-[100] flex flex-col gap-2 max-w-sm',
-      direction === 'rtl' ? 'left-4' : 'right-4'
-    )}>
-      <AnimatePresence>
-        {toasts.map((toast) => {
-          const icon = {
-            success: <CheckCircle className="w-5 h-5 text-success" />,
-            error: <AlertCircle className="w-5 h-5 text-danger" />,
-            warning: <AlertTriangle className="w-5 h-5 text-warning" />,
-            info: <Info className="w-5 h-5 text-info" />,
-          }[toast.type]
-
-          return (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="bg-[var(--bg-primary)] rounded-xl shadow-xl border border-[var(--border-primary)] px-4 py-3 flex items-start gap-3"
-            >
-              {icon}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{toast.title}</p>
-                {toast.message && (
-                  <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{toast.message}</p>
-                )}
-              </div>
-              <button onClick={() => removeToast(toast.id)} className="shrink-0">
-                <X className="w-4 h-4 text-[var(--text-tertiary)]" />
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[300] flex flex-col items-center gap-2 p-4 sm:inset-x-auto sm:end-0 sm:items-end">
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          role={toast.tone === 'error' ? 'alert' : 'status'}
+          aria-live={toast.tone === 'error' ? 'assertive' : 'polite'}
+          className={cn(
+            'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border border-line bg-surface p-3.5 shadow-lg animate-slide-up',
+          )}
+        >
+          <span className="mt-px shrink-0">{icons[toast.tone]}</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-fg">{toast.title}</p>
+            {toast.message && <p className="mt-0.5 text-sm text-fg-3">{toast.message}</p>}
+            {toast.action && (
+              <button
+                type="button"
+                onClick={() => { toast.action!.onClick(); dismissToast(toast.id) }}
+                className="mt-2 text-sm font-semibold text-brand-600 hover:text-brand-700"
+              >
+                {toast.action.label}
               </button>
-            </motion.div>
-          )
-        })}
-      </AnimatePresence>
+            )}
+          </div>
+          <button type="button" onClick={() => dismissToast(toast.id)} className="shrink-0 rounded p-0.5 text-fg-4 hover:bg-surface-3 hover:text-fg-2" aria-label={t('common.dismiss')}>
+            <X className="size-4" />
+          </button>
+        </div>
+      ))}
     </div>
   )
 }

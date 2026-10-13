@@ -1,122 +1,31 @@
 /**
- * Dockly Server
- * Express server that:
- * 1. Serves the Vite production build (static files)
- * 2. Handles WhatsApp webhook API endpoints
- * 3. Provides a health check endpoint
+ * Dockly server entry point.
+ *   - serves the built SPA
+ *   - the authenticated JSON API (/api/*)
+ *   - public token endpoints for client portal & signing (/api/public/*)
+ *   - WhatsApp Cloud API webhook
+ *   - the automation scheduler
  */
+import { config, configWarnings } from './config.mjs'
+import { createApp } from './app.mjs'
+import { closePool } from './db/pool.mjs'
+import { logger } from './lib/logger.mjs'
+import { startScheduler, stopScheduler } from './automation/scheduler.mjs'
 
-import 'dotenv/config';
-import express from 'express';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { handleVerification, handleIncoming, sendInitialMessage, sendSupportReply, markSupportMessagesAsRead, shutdown } from './whatsappBot.mjs';
-import s3Routes from './s3Routes.mjs';
+for (const w of configWarnings()) logger.warn('config_warning', { warning: w })
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = dirname(__filename);
-const PORT       = process.env.PORT || 3001;
+const app = createApp()
+const server = app.listen(config.port, '0.0.0.0', () => {
+  logger.info('server_started', { port: config.port, storage: config.storage.driver, whatsapp: config.whatsapp.mode })
+})
+startScheduler()
 
-const app = express();
-
-// ── Middleware ───────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-
-// ── Health Check ────────────────────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// ── S3 Storage API ──────────────────────────────────────────────────────
-app.use('/api/storage', s3Routes);
-
-// ── WhatsApp Webhook ────────────────────────────────────────────────────
-app.get('/api/whatsapp/webhook', handleVerification);
-app.post('/api/whatsapp/webhook', handleIncoming);
-
-// ── WhatsApp Send Initial Message (from frontend) ──────────────────────
-app.post('/api/whatsapp/send', async (req, res) => {
-  try {
-    const { workspaceId, caseId, clientId, phoneNumber, language, caseTitle, pendingCount, messageType } = req.body;
-    
-    if (!phoneNumber || !caseId || !workspaceId || !clientId) {
-      return res.status(400).json({ success: false, error: 'Missing required fields' });
-    }
-
-    const result = await sendInitialMessage({
-      workspaceId,
-      caseId,
-      clientId,
-      phoneNumber,
-      language: language || 'he',
-      caseTitle: caseTitle || '',
-      pendingCount: pendingCount || 0,
-      messageType: messageType || 'initial',
-    });
-
-    res.json(result);
-  } catch (err) {
-    console.error('[API] Send WhatsApp error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── Support Chat Reply (staff → client via WhatsApp) ────────────────────
-app.post('/api/whatsapp/support/reply', async (req, res) => {
-  try {
-    const { supportRequestId, senderName, content } = req.body;
-    if (!supportRequestId || !content) {
-      return res.status(400).json({ success: false, error: 'Missing supportRequestId or content' });
-    }
-    const result = await sendSupportReply({ supportRequestId, senderName: senderName || 'צוות', content });
-    res.json(result);
-  } catch (err) {
-    console.error('[API] Support reply error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── Mark Support Messages as Read (when staff opens chat) ───────────────
-app.post('/api/whatsapp/support/mark-read', async (req, res) => {
-  try {
-    const { supportRequestId } = req.body;
-    if (!supportRequestId) {
-      return res.status(400).json({ success: false, error: 'Missing supportRequestId' });
-    }
-    
-    const markedCount = await markSupportMessagesAsRead(supportRequestId);
-    res.json({ success: true, markedCount });
-  } catch (err) {
-    console.error('[API] Mark messages read error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ── Serve Static Files (Vite build output) ──────────────────────────────
-const distPath = join(__dirname, '..', 'dist');
-app.use(express.static(distPath));
-
-// SPA fallback — serve index.html for all non-API routes
-app.get('/{*path}', (_req, res) => {
-  res.sendFile(join(distPath, 'index.html'));
-});
-
-// ── Start Server ────────────────────────────────────────────────────────
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Dockly server running on port ${PORT}`);
-  console.log(`   📡 WhatsApp webhook: /api/whatsapp/webhook`);
-  console.log(`   💊 Health check:     /api/health`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('Shutting down...');
-  await shutdown();
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  console.log('Shutting down...');
-  await shutdown();
-  process.exit(0);
-});
+async function shutdown(signal) {
+  logger.info('shutdown', { signal })
+  stopScheduler()
+  server.close()
+  await closePool().catch(() => {})
+  process.exit(0)
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
