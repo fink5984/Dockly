@@ -32,8 +32,8 @@ const he = {
   notifications: { label: 'התראות', labelUnread_one: 'התראות, התראה אחת שלא נקראה', labelUnread_two: 'התראות, {{count}} שלא נקראו', labelUnread_other: 'התראות, {{count}} שלא נקראו', markAll: 'סימון הכול כנקרא', empty: 'אין התראות חדשות' },
   upload: {
     choose: 'בחירת קובץ', chooseFiles: 'בחירת קבצים', orDrag: 'או גררו לכאן', takePhoto: 'צילום',
-    formats: 'קבצים מותרים: {{formats}} · עד {{size}} MB', uploading: 'מעלה…', processing: 'מעבד…', cancel: 'ביטול העלאה',
-    tooLarge: 'הקובץ גדול מ-{{size}} MB', wrongType: 'סוג הקובץ אינו נתמך. ניתן להעלות {{formats}}', empty: 'הקובץ ריק',
+    formats: 'קבצים מותרים: {{formats}} · עד {{size}}MB', uploading: 'מעלה…', processing: 'מעבד…', cancel: 'ביטול העלאה',
+    tooLarge: 'הקובץ גדול מ-{{size}}MB', wrongType: 'סוג הקובץ אינו נתמך. ניתן להעלות {{formats}}', empty: 'הקובץ ריק',
     failed: 'ההעלאה נכשלה', retry: 'ניסיון חוזר', cancelled: 'ההעלאה בוטלה',
   },
   status: {

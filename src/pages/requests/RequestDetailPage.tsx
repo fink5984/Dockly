@@ -87,7 +87,7 @@ function VersionsDrawer({ request, doc, onClose }: { request: DocRequest; doc: R
                 <div className="flex items-start gap-3">
                   <FileIcon mime={v.mimeType} name={v.fileName} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{v.fileName}</p>
+                    <p className="truncate text-sm font-medium"><bdi>{v.fileName}</bdi></p>
                     <p className="text-xs text-fg-3">{fmt.dateTime(v.createdAt)} · {fmt.bytes(v.size)} · {t(`requests.detail.via.${v.via}`)}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
                       {v.isCurrent && <Badge tone="brand">{t('requests.detail.current')}</Badge>}
@@ -335,7 +335,7 @@ function DocumentRow({ doc, request, onChanged, onPreview, onReject, onVersions 
           </div>
           {doc.hasFile ? (
             <p className="mt-0.5 truncate text-xs text-fg-3">
-              <button type="button" onClick={onPreview} className="hover:text-fg-2 hover:underline">{doc.fileName}</button>
+              <button type="button" onClick={onPreview} className="hover:text-fg-2 hover:underline"><bdi>{doc.fileName}</bdi></button>
               {doc.fileSize ? ` · ${fmt.bytes(doc.fileSize)}` : ''}{doc.uploadedAt ? ` · ${fmt.relative(doc.uploadedAt)}` : ''}
               {doc.versionCount > 1 && <> · <button type="button" onClick={onVersions} className="hover:text-fg-2 hover:underline">{t('requests.detail.versionCount', { count: doc.versionCount })}</button></>}
             </p>

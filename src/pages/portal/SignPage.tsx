@@ -102,7 +102,7 @@ function Signer({ token }: { token: string }) {
   const load = useCallback(() => {
     signerApi.get(token).then((d) => {
       setData(d)
-      setState('ready')
+      setState((cur) => (cur === 'done' ? 'done' : 'ready'))
       setSignerName((n) => n || d.clientName)
       if (!publicLanguageChoice()) setLanguage(d.language)
       if (!viewed.current && (d.status === 'pending' || d.status === 'viewed')) {
@@ -208,7 +208,7 @@ function Signer({ token }: { token: string }) {
         <div role="tablist" className="mb-3 flex gap-2 overflow-x-auto">
           {data.documents.map((d, i) => (
             <button key={d.id} role="tab" type="button" aria-selected={activeDoc === i} onClick={() => setActiveDoc(i)} className={cn('flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm', activeDoc === i ? 'border-brand-500 bg-brand-soft' : 'border-line bg-surface')}>
-              <FileText className="size-4" />{d.fileName}
+              <FileText className="size-4" /><bdi>{d.fileName}</bdi>
             </button>
           ))}
         </div>

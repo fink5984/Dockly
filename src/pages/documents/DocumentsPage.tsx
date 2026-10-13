@@ -36,7 +36,7 @@ export default function DocumentsPage() {
           <FileIcon mime={d.mimeType} name={d.fileName} />
           <div className="min-w-0">
             <p className="truncate font-medium">{d.label}</p>
-            <p className="truncate text-xs text-fg-3">{d.fileName} · {fmt.bytes(d.size)}{d.versions > 1 ? ` · ${t('requests.detail.versionCount', { count: d.versions })}` : ''}</p>
+            <p className="truncate text-xs text-fg-3"><bdi>{d.fileName}</bdi> · {fmt.bytes(d.size)}{d.versions > 1 ? ` · ${t('requests.detail.versionCount', { count: d.versions })}` : ''}</p>
           </div>
         </div>
       ),

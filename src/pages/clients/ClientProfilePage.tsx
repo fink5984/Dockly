@@ -135,7 +135,7 @@ export default function ClientProfilePage() {
                       <FileIcon mime={d.fileType} name={d.fileName} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{d.name}</span>
-                        <span className="block truncate text-xs text-fg-3">{d.fileName} · {fmt.bytes(d.fileSize)} · {fmt.date(d.uploadedAt)}</span>
+                        <span className="block truncate text-xs text-fg-3"><bdi>{d.fileName}</bdi> · {fmt.bytes(d.fileSize)} · {fmt.date(d.uploadedAt)}</span>
                       </span>
                       <Badge tone={d.status === 'approved' ? 'success' : d.status === 'rejected' ? 'danger' : 'info'}>{t(`status.doc.${['received', 'under-review'].includes(d.status) ? 'uploaded' : d.status === 'approved' || d.status === 'rejected' ? d.status : 'uploaded'}`)}</Badge>
                     </button>

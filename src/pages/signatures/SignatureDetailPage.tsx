@@ -103,7 +103,7 @@ export default function SignatureDetailPage() {
                 <li key={d.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                   <FileIcon mime="application/pdf" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{d.fileName}</p>
+                    <p className="truncate text-sm font-medium"><bdi>{d.fileName}</bdi></p>
                     <p className="text-xs text-fg-3">{d.hasSigned ? t('signatures.detail.signedAvailable') : t('signatures.detail.originalOnly')}</p>
                   </div>
                   <Button size="sm" variant="ghost" icon={<Eye className="size-4" />} onClick={() => setPreview({ doc: d.id, name: d.fileName, variant: d.hasSigned ? 'signed' : 'original' })}>{t('common.view')}</Button>

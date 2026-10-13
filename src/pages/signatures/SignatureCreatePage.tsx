@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, FileText, Link2, Mail, MessageCircle, Send, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -42,6 +42,7 @@ export default function SignatureCreatePage() {
   const [channel, setChannel] = useState<'email' | 'whatsapp' | 'link'>('link')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  const doneRef = useRef(false)
   const [error, setError] = useState('')
 
   const client = clients.data?.find((c) => c.id === form.clientId)
@@ -52,7 +53,7 @@ export default function SignatureCreatePage() {
 
   useEffect(() => { if (emailOk) setChannel('email') }, [emailOk])
 
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && !doneRef.current && currentLocation.pathname !== nextLocation.pathname)
   useEffect(() => {
     if (!dirty) return
     const h = (e: BeforeUnloadEvent) => e.preventDefault()
@@ -108,6 +109,7 @@ export default function SignatureCreatePage() {
         expiresAt: expires, language: form.language || null,
         send: channel === 'link' ? null : { channel },
       })
+      doneRef.current = true
       setDone(true)
       invalidate('signatures')
       invalidate('dashboard')
@@ -132,7 +134,7 @@ export default function SignatureCreatePage() {
             <div role="tablist" className="flex gap-2 overflow-x-auto">
               {ready.map((d, i) => (
                 <button key={d.localId} role="tab" aria-selected={activeDoc === i} type="button" onClick={() => setActiveDoc(i)} className={cn('flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm', activeDoc === i ? 'border-brand-500 bg-brand-soft' : 'border-line bg-surface')}>
-                  <FileText className="size-4" />{d.uploaded!.fileName}
+                  <FileText className="size-4" /><bdi>{d.uploaded!.fileName}</bdi>
                   <span className="rounded-full bg-surface-3 px-1.5 text-2xs tabular">{fields.filter((f) => f.docIndex === i).length}</span>
                 </button>
               ))}

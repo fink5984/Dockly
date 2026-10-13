@@ -32,7 +32,7 @@ export function Field({ label, hint, error, required, optionalLabel, className, 
           <label htmlFor={id} className="block text-sm font-medium text-fg-2">
             {label}
             {required && <span className="text-danger ms-0.5" aria-hidden>*</span>}
-            {!required && optionalLabel && <span className="ms-1.5 text-xs font-normal text-fg-4">{optionalLabel}</span>}
+            {!required && optionalLabel && <span className="ms-1.5 text-xs font-normal text-fg-4"> ({optionalLabel})</span>}
           </label>
           {labelAction}
         </div>

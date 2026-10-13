@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams, useBlocker } from 'react-router-dom'
 import { Check, Plus, UserPlus, Search, X, FileText, MessageCircle, Mail, Link2, LayoutTemplate, AlertCircle, CalendarDays, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -276,6 +276,7 @@ export default function RequestCreatePage() {
   const [channel, setChannel] = useState<Channel>('whatsapp')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
+  const savedRef = useRef(false)
   const [errors, setErrors] = useState('')
 
   const client = clients.data?.find((c) => c.id === draft.clientId)
@@ -291,7 +292,8 @@ export default function RequestCreatePage() {
   }, [phoneOk, emailOk, channel])
 
   // Unsaved-changes protection (in-app navigation + tab close)
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
+  // savedRef updates synchronously, so the redirect after creating isn't blocked by stale state.
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && !savedRef.current && currentLocation.pathname !== nextLocation.pathname)
   useEffect(() => {
     if (!dirty) return
     const h = (e: BeforeUnloadEvent) => { e.preventDefault() }
@@ -338,6 +340,7 @@ export default function RequestCreatePage() {
         items: draft.items,
         send: channel === 'link' ? null : { channel },
       })
+      savedRef.current = true
       setSaved(true)
       invalidate('requests:')
       invalidate('clients')

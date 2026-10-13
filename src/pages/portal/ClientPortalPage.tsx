@@ -100,7 +100,7 @@ function DocumentCard({ doc, token, onUploaded, closed }: { doc: PortalDocument;
           {received && !replacing && (
             <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-success-fg">
               <span className="font-medium">{doc.status === 'approved' ? t('portal.approved') : t('portal.received')}</span>
-              {doc.fileName && <span className="text-fg-3">· {doc.fileName}{doc.uploadedAt ? ` · ${fmt.relative(doc.uploadedAt)}` : ''}</span>}
+              {doc.fileName && <span className="text-fg-3">· <bdi>{doc.fileName}</bdi>{doc.uploadedAt ? ` · ${fmt.relative(doc.uploadedAt)}` : ''}</span>}
             </p>
           )}
           {received && !replacing && (
