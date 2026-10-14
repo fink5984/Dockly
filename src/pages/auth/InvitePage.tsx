@@ -35,7 +35,7 @@ export default function InvitePage() {
     setError('')
     try {
       await acceptInvite(token, name.trim(), password)
-      navigate('/', { replace: true })
+      navigate('/app', { replace: true })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('common.loadFailedHint'))
     } finally {

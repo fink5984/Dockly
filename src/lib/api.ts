@@ -27,6 +27,13 @@ export function onUnauthorized(fn: Listener) {
   return () => { unauthorizedListeners.delete(fn) }
 }
 
+const paymentRequiredListeners = new Set<(err: ApiError) => void>()
+/** Notified when the server refuses an action because of the plan (HTTP 402): drives the upgrade dialog. */
+export function onPaymentRequired(fn: (err: ApiError) => void) {
+  paymentRequiredListeners.add(fn)
+  return () => { paymentRequiredListeners.delete(fn) }
+}
+
 async function parseError(res: Response): Promise<ApiError> {
   let body: { error?: { code?: string; message?: string; details?: Record<string, unknown> } } | null = null
   try { body = await res.json() } catch { /* not json */ }
@@ -44,8 +51,10 @@ async function request<T>(method: string, path: string, body?: unknown, init: Re
     payload = JSON.stringify(body)
   }
   let res: Response
+  const { headers: extraHeaders, ...rest } = init
+  Object.assign(headers, extraHeaders as Record<string, string> | undefined)
   try {
-    res = await fetch(path, { method, headers, body: payload, credentials: 'same-origin', ...init })
+    res = await fetch(path, { method, headers, body: payload, credentials: 'same-origin', ...rest })
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw err
     throw new ApiError(0, 'network_error', 'You appear to be offline. Check your connection and try again.')
@@ -55,6 +64,7 @@ async function request<T>(method: string, path: string, body?: unknown, init: Re
     if (res.status === 401 && !path.startsWith('/api/auth/') && !path.startsWith('/api/public/')) {
       unauthorizedListeners.forEach((fn) => fn())
     }
+    if (res.status === 402) paymentRequiredListeners.forEach((fn) => fn(err))
     throw err
   }
   if (res.status === 204) return undefined as T
@@ -64,7 +74,7 @@ async function request<T>(method: string, path: string, body?: unknown, init: Re
 
 export const api = {
   get: <T>(path: string, init?: RequestInit) => request<T>('GET', path, undefined, init),
-  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
+  post: <T>(path: string, body?: unknown, headers?: Record<string, string>) => request<T>('POST', path, body ?? {}, headers ? { headers } : {}),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
   put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
   del: <T>(path: string) => request<T>('DELETE', path),
@@ -96,7 +106,9 @@ export function uploadFile<T>(path: string, file: File, onProgress?: (fraction: 
         onProgress?.(1)
         resolve(data as T)
       } else {
-        reject(new ApiError(xhr.status, data?.error?.code || `http_${xhr.status}`, data?.error?.message || 'Upload failed', data?.error?.details))
+        const err = new ApiError(xhr.status, data?.error?.code || `http_${xhr.status}`, data?.error?.message || 'Upload failed', data?.error?.details)
+        if (xhr.status === 402) paymentRequiredListeners.forEach((fn) => fn(err))
+        reject(err)
       }
     }
     xhr.onerror = () => reject(new ApiError(0, 'network_error', 'Connection lost during upload'))

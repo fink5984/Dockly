@@ -32,7 +32,7 @@ export async function loadSubscription(workspaceId, db = db0) {
   if (row) return row
   await db.query(
     `INSERT INTO workspace_subscriptions (workspace_id, status, trial_started_at, trial_ends_at)
-     VALUES ($1, 'trialing', now(), now() + make_interval(days => $2)) ON CONFLICT (workspace_id) DO NOTHING`,
+     VALUES ($1, 'trialing', now(), now() + make_interval(hours => $2 * 24)) ON CONFLICT (workspace_id) DO NOTHING`,
     [workspaceId, catalog.trial.days],
   )
   return db.queryOne('SELECT * FROM workspace_subscriptions WHERE workspace_id = $1', [workspaceId])

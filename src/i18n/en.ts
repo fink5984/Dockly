@@ -19,7 +19,7 @@ const en = {
   nav: {
     main: 'Main navigation', group: { work: 'Work', workspace: 'Workspace' },
     overview: 'Overview', requests: 'Requests', clients: 'Clients', signatures: 'Signatures', documents: 'Documents',
-    activity: 'Activity', templates: 'Templates', automation: 'Automation', integrations: 'Integrations', settings: 'Settings',
+    activity: 'Activity', templates: 'Templates', automation: 'Automation', integrations: 'Integrations', settings: 'Settings', billing: 'Plan & billing',
     profile: 'Your profile', account: 'Account menu', collapse: 'Collapse sidebar', expand: 'Expand sidebar', openMenu: 'Open navigation',
     skipToContent: 'Skip to content',
   },
@@ -53,7 +53,7 @@ const en = {
     inviteTitle: 'Join {{workspace}}', inviteSubtitle: 'You were invited as {{role}}. Set your name and password to continue.', acceptInvite: 'Join workspace',
     inviteInvalid: 'This invitation link is invalid or has already been used.', inviteExpired: 'This invitation has expired. Ask for a new one.',
     marketing1: 'Branded client portal that works on any phone', marketing2: 'Review, approve or request replacements in one place', marketing3: 'Electronic signatures with a full audit trail',
-    terms: 'By creating an account you agree to keep client data confidential and use Dockly lawfully.',
+    agreePrefix: 'By creating an account you agree to the', termsLink: 'Terms of Service', privacyLink: 'Privacy Policy', agreeJoin: ' and the ', trialNote: '30-day free trial · No credit card',
   },
 }
 

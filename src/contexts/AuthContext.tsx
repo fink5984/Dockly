@@ -2,18 +2,21 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { authApi, type Me } from '@/services'
 import { onUnauthorized } from '@/lib/api'
 import { clearCache } from '@/hooks/useApi'
-import { startLive, stopLive } from '@/lib/live'
+import { startLive, stopLive, subscribeLive } from '@/lib/live'
 import type { Language, Role, User, Workspace } from '@/types'
+import type { BillingSummary } from '@/types/billing'
 
 interface AuthContextType {
   user: User | null
   workspace: Workspace | null
+  /** Subscription summary (trial, plan, read-only) for banners and gating. Server enforces the real limits. */
+  billing: BillingSummary | null
   isAuthenticated: boolean
   isLoading: boolean
   /** Workspace exists but onboarding (business name) isn't complete. */
   isOnboarding: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (d: { email: string; password: string; name: string; phone?: string; language?: Language }) => Promise<void>
+  signUp: (d: { email: string; password: string; name: string; phone?: string; language?: Language; attribution?: Record<string, string> }) => Promise<void>
   acceptInvite: (token: string, name: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   refresh: () => Promise<void>
@@ -26,7 +29,7 @@ const AuthContext = createContext<AuthContextType | null>(null)
 const RANK: Record<Role, number> = { viewer: 0, member: 1, admin: 2, owner: 3 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<Me>({ user: null, workspace: null })
+  const [state, setState] = useState<Me>({ user: null, workspace: null, billing: null })
   const [isLoading, setIsLoading] = useState(true)
 
   const apply = useCallback((me: Me) => {
@@ -47,6 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh().finally(() => setIsLoading(false))
   }, [refresh])
 
+  // Plan changes (checkout completed, trial ended, …) arrive as live events.
+  useEffect(() => subscribeLive((evt) => { if (evt.topic === 'billing') refresh() }, { connect: false }), [refresh])
+
   // Session expired / revoked elsewhere → drop to signed-out state.
   useEffect(() => onUnauthorized(() => {
     clearCache()
@@ -56,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextType>(() => ({
     user: state.user,
     workspace: state.workspace,
+    billing: state.billing ?? null,
     isAuthenticated: Boolean(state.user),
     isLoading,
     isOnboarding: Boolean(state.user && state.workspace && !state.workspace.name),

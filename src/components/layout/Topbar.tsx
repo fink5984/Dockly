@@ -129,9 +129,9 @@ export function Topbar() {
           <Menu
             label={t('quickCreate.label')}
             items={[
-              { label: t('quickCreate.request'), icon: <ClipboardList />, onSelect: () => navigate('/requests/new') },
-              { label: t('quickCreate.client'), icon: <UserPlus />, onSelect: () => navigate('/clients?new=1') },
-              { label: t('quickCreate.signature'), icon: <PenLine />, onSelect: () => navigate('/signatures/new') },
+              { label: t('quickCreate.request'), icon: <ClipboardList />, onSelect: () => navigate('/app/requests/new') },
+              { label: t('quickCreate.client'), icon: <UserPlus />, onSelect: () => navigate('/app/clients?new=1') },
+              { label: t('quickCreate.signature'), icon: <PenLine />, onSelect: () => navigate('/app/signatures/new') },
             ]}
             trigger={(p) => (
               <Button ref={p.ref as (el: HTMLButtonElement | null) => void} onClick={p.onClick} aria-haspopup="menu" aria-expanded={p['aria-expanded']} aria-controls={p['aria-controls']} variant="primary" size="sm" icon={<Plus className="size-4" />}>
@@ -145,8 +145,8 @@ export function Topbar() {
           label={t('nav.account')}
           items={[
             { heading: user?.email || '' },
-            { label: t('nav.profile'), icon: <User />, onSelect: () => navigate('/settings/profile') },
-            { label: t('nav.settings'), icon: <Settings />, onSelect: () => navigate('/settings') },
+            { label: t('nav.profile'), icon: <User />, onSelect: () => navigate('/app/settings/profile') },
+            { label: t('nav.settings'), icon: <Settings />, onSelect: () => navigate('/app/settings') },
             'separator',
             { heading: t('theme.label') },
             { label: t('theme.light'), icon: <Sun />, onSelect: () => setTheme('light'), hint: theme === 'light' ? '✓' : undefined },

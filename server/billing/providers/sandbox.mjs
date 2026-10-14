@@ -111,7 +111,7 @@ export function completeSandboxSession(ref, card) {
   s.status = 'approved'
   s.transactionId = s.operation === 'CreateTokenOnly' ? null : id('sbxtx')
   s.token = `sbx_${card === 'renewal_decline' ? 'renewal_decline' : 'ok'}_${randomBytes(12).toString('hex')}`
-  s.card = { last4: card === 'renewal_decline' ? '0002' : '4242', expMonth: 12, expYear: new Date().getUTCFullYear() + 3, brand: 'Sandbox' }
+  s.card = { last4: card === 'renewal_decline' ? '0341' : '4242', expMonth: 12, expYear: new Date().getUTCFullYear() + 3, brand: 'Sandbox' }
   return true
 }
 

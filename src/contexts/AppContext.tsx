@@ -53,6 +53,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [dismissToast])
 
   const toastError = useCallback((err: unknown, fallbackTitle: string) => {
+    // Plan limits (402) are explained by the upgrade dialog instead of a toast.
+    if (err instanceof ApiError && err.status === 402) return
     if (err instanceof ApiError) {
       toast({ tone: 'error', title: fallbackTitle, message: err.status === 0 || err.status >= 500 ? undefined : err.message })
     } else {

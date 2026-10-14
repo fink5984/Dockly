@@ -1,0 +1,41 @@
+/* Marketing site stylesheet. Scans only the marketing sources (and the shared
+   logo) so the public pages ship a small CSS file, separate from the app's. */
+@import "tailwindcss" source(none);
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/heebo";
+@import "../styles/tokens.css";
+
+@source "./";
+@source "../components/layout/Logo.tsx";
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  .mk-root { font-size: 1rem; line-height: 1.6; }
+}
+
+/* Soft brand glow behind hero sections */
+.mk-hero-glow {
+  background:
+    radial-gradient(60% 55% at 50% 0%, rgb(101 99 227 / 0.16) 0%, transparent 70%),
+    radial-gradient(35% 40% at 85% 10%, rgb(21 112 239 / 0.08) 0%, transparent 70%);
+}
+.mk-final {
+  background-image: radial-gradient(80% 120% at 100% 0%, rgb(255 255 255 / 0.12) 0%, transparent 60%), linear-gradient(135deg, var(--dk-brand-700), var(--dk-brand-900));
+}
+
+/* Pricing variants: every tier × interval is in the HTML; toggles switch visibility. */
+.mk-pricing[data-interval='month'] [data-only-interval='year'],
+.mk-pricing[data-interval='year'] [data-only-interval='month'],
+.mk-pricing[data-tier='starter'] [data-only-tier='pro'],
+.mk-pricing[data-tier='pro'] [data-only-tier='starter'] { display: none; }
+
+/* Native <details>: hide the default disclosure triangle */
+.mk-root summary::-webkit-details-marker { display: none; }
+.mk-menu:not([open]) > nav { display: none; }
+
+/* Flip directional arrows in RTL */
+[dir='rtl'] .rtl-flip { transform: scaleX(-1); }
+
+@media print {
+  .mk-root header, .mk-root footer, .mk-root nav { display: none !important; }
+}

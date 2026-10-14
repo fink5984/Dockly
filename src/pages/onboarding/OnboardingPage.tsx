@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { Check, FileSignature, FolderInput, Layers, Sparkles } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
-import { workspaceApi, libraryApi } from '@/services'
+import { workspaceApi, libraryApi, billingApi } from '@/services'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/Field'
@@ -28,6 +28,7 @@ export default function OnboardingPage() {
   const [starters, setStarters] = useState<{ key: string; en: string; he: string; docs: [string, string][] }[]>([])
   const [chosen, setChosen] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
+  const [interest, setInterest] = useState<'collect' | 'sign' | 'both'>('both')
 
   useEffect(() => { libraryApi.starters().then(setStarters).catch(() => {}) }, [])
   useEffect(() => {
@@ -46,10 +47,11 @@ export default function OnboardingPage() {
     setBusy(true)
     try {
       const ws = await workspaceApi.update({ ...form, name: form.name.trim(), contactPerson: user?.name || '' })
-      for (const key of chosen) await libraryApi.installStarter(key, form.defaultLanguage).catch(() => {})
+      await billingApi.setInterest(interest).catch(() => {})
+      if (interest !== 'sign') for (const key of chosen) await libraryApi.installStarter(key, form.defaultLanguage).catch(() => {})
       setLanguage(form.defaultLanguage)
       setWorkspace(ws)
-      navigate('/', { replace: true })
+      navigate('/app', { replace: true })
     } catch (err) {
       toastError(err, t('onboarding.saveFailed'))
     } finally {
@@ -63,7 +65,8 @@ export default function OnboardingPage() {
         <Logo className="size-8" /><span className="font-semibold">Dockly</span>
       </header>
       <main className="mx-auto max-w-xl px-5 py-10">
-        <Stepper steps={[{ id: 'details', label: t('onboarding.stepDetails') }, { id: 'templates', label: t('onboarding.stepTemplates') }]} current={step} onStepClick={setStep} />
+        <Stepper steps={[{ id: 'details', label: t('onboarding.stepDetails') }, { id: 'needs', label: t('billing.onboarding.stepNeeds') }, { id: 'templates', label: t('onboarding.stepTemplates') }]} current={step} onStepClick={setStep} />
+        <p className="mt-6 flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2 text-sm text-success-fg"><Sparkles className="size-4 shrink-0" aria-hidden />{t('billing.onboarding.trialStarted')}</p>
         {step === 0 ? (
           <form onSubmit={saveDetails} className="mt-8 space-y-5" noValidate>
             <div>
@@ -79,6 +82,29 @@ export default function OnboardingPage() {
             <Select label={t('onboarding.clientLanguage')} value={form.defaultLanguage} onChange={(e) => setForm({ ...form, defaultLanguage: e.target.value as Language })} options={[{ value: 'he', label: 'עברית' }, { value: 'en', label: 'English' }]} hint={t('onboarding.clientLanguageHint')} />
             <Button type="submit" variant="primary" size="lg" fullWidth>{t('common.next')}</Button>
           </form>
+        ) : step === 1 ? (
+          <div className="mt-8 space-y-5">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{t('billing.onboarding.title')}</h1>
+              <p className="mt-1 text-sm text-fg-3">{t('billing.onboarding.subtitle')}</p>
+            </div>
+            <div role="radiogroup" aria-label={t('billing.onboarding.title')} className="grid gap-3">
+              {([['collect', FolderInput], ['sign', FileSignature], ['both', Layers]] as const).map(([k, Icon]) => (
+                <button key={k} type="button" role="radio" aria-checked={interest === k} onClick={() => setInterest(k)}
+                  className={cn('flex items-center gap-3 rounded-xl border p-4 text-start transition-colors', interest === k ? 'border-brand-500 bg-brand-soft' : 'border-line bg-surface hover:border-line-2')}>
+                  <span className="flex size-9 items-center justify-center rounded-lg bg-surface text-brand-600 ring-1 ring-line"><Icon className="size-5" /></span>
+                  <span className="flex-1 text-sm font-semibold">{t(`billing.onboarding.${k}`)}</span>
+                  {interest === k && <Check className="size-4 text-brand-600" />}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="secondary" size="lg" onClick={() => setStep(0)}>{t('common.back')}</Button>
+              {interest === 'sign'
+                ? <Button variant="primary" size="lg" className="flex-1" loading={busy} onClick={finish}>{t('onboarding.finish')}</Button>
+                : <Button variant="primary" size="lg" className="flex-1" onClick={() => setStep(2)}>{t('common.next')}</Button>}
+            </div>
+          </div>
         ) : (
           <div className="mt-8 space-y-5">
             <div>
@@ -105,7 +131,7 @@ export default function OnboardingPage() {
               })}
             </ul>
             <div className="flex gap-3">
-              <Button variant="secondary" size="lg" onClick={() => setStep(0)}>{t('common.back')}</Button>
+              <Button variant="secondary" size="lg" onClick={() => setStep(1)}>{t('common.back')}</Button>
               <Button variant="primary" size="lg" className="flex-1" loading={busy} onClick={finish}>{t('onboarding.finish')}</Button>
             </div>
           </div>

@@ -41,10 +41,10 @@ export default function DocumentsPage() {
         </div>
       ),
     },
-    { id: 'client', header: t('documents.col.client'), hideBelow: 'md', cell: (d) => <Link to={`/clients/${d.clientId}`} className="text-fg-2 hover:underline">{d.clientName}</Link> },
+    { id: 'client', header: t('documents.col.client'), hideBelow: 'md', cell: (d) => <Link to={`/app/clients/${d.clientId}`} className="text-fg-2 hover:underline">{d.clientName}</Link> },
     {
       id: 'source', header: t('documents.col.source'), hideBelow: 'lg',
-      cell: (d) => <Link to={d.source === 'requests' ? `/requests/${d.parentId}` : `/signatures/${d.parentId}`} className="flex items-center gap-1.5 text-fg-3 hover:text-fg-2"><Badge>{t(`documents.source.${d.source}`)}</Badge><span className="truncate">{d.parentTitle}</span></Link>,
+      cell: (d) => <Link to={d.source === 'requests' ? `/app/requests/${d.parentId}` : `/app/signatures/${d.parentId}`} className="flex items-center gap-1.5 text-fg-3 hover:text-fg-2"><Badge>{t(`documents.source.${d.source}`)}</Badge><span className="truncate">{d.parentTitle}</span></Link>,
     },
     { id: 'status', header: t('documents.col.status'), cell: (d) => (d.source === 'signatures' ? <SignatureStatusBadge status={d.status as SignatureStatus} /> : <DocStatusBadge status={d.status as DocStatus} />) },
     { id: 'date', header: t('documents.col.date'), hideBelow: 'md', cell: (d) => <span className="text-fg-3">{fmt.date(d.at)}</span> },

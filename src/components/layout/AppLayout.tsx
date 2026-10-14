@@ -8,6 +8,8 @@ import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
 import { PageLoader } from './PageLoader'
 import { ErrorBoundary } from './ErrorBoundary'
+import { BillingBanner } from '@/components/billing/BillingBanner'
+import { UpgradeDialog } from '@/components/billing/UpgradeDialog'
 
 export function AppLayout() {
   const { sidebarCollapsed } = useApp()
@@ -20,6 +22,7 @@ export function AppLayout() {
       <Sidebar />
       <div className={cn('flex min-h-dvh flex-col transition-[padding] duration-200', sidebarCollapsed ? 'lg:ps-[68px]' : 'lg:ps-60')}>
         <Topbar />
+        <BillingBanner />
         <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 focus:outline-none sm:px-6 lg:px-8 lg:py-8">
           <ErrorBoundary>
             <Suspense fallback={<PageLoader />}>
@@ -29,6 +32,7 @@ export function AppLayout() {
         </main>
       </div>
       <CommandPalette />
+      <UpgradeDialog />
     </div>
   )
 }

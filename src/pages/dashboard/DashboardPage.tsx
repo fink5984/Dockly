@@ -76,7 +76,7 @@ function Pipeline({ pipeline }: { pipeline: Dashboard['pipeline'] }) {
         const n = pipeline[s] || 0
         return (
           <li key={s}>
-            <Link to={`/requests?status=${s}`} className="group block rounded-md focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]">
+            <Link to={`/app/requests?status=${s}`} className="group block rounded-md focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]">
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="text-fg-2 group-hover:text-fg">{t(`status.request.${s}`)}</span>
                 <span className="font-medium tabular text-fg">{n}</span>
@@ -139,11 +139,11 @@ function WeeklyChart({ trend }: { trend: Dashboard['trend'] }) {
 function GettingStarted({ o }: { o: Dashboard['onboarding'] }) {
   const { t } = useI18n()
   const steps = [
-    { done: o.hasClient, label: t('dashboard.start.client'), to: '/clients?new=1' },
-    { done: o.hasRequest, label: t('dashboard.start.request'), to: '/requests/new' },
-    { done: o.hasSent, label: t('dashboard.start.send'), to: '/requests' },
-    { done: o.hasBranding, label: t('dashboard.start.branding'), to: '/settings/branding' },
-    { done: o.hasSignature, label: t('dashboard.start.signature'), to: '/signatures/new' },
+    { done: o.hasClient, label: t('dashboard.start.client'), to: '/app/clients?new=1' },
+    { done: o.hasRequest, label: t('dashboard.start.request'), to: '/app/requests/new' },
+    { done: o.hasSent, label: t('dashboard.start.send'), to: '/app/requests' },
+    { done: o.hasBranding, label: t('dashboard.start.branding'), to: '/app/settings/branding' },
+    { done: o.hasSignature, label: t('dashboard.start.signature'), to: '/app/signatures/new' },
   ]
   const done = steps.filter((s) => s.done).length
   if (done === steps.length) return null
@@ -185,8 +185,8 @@ export default function DashboardPage() {
         description={t('dashboard.subtitle')}
         actions={can('member') && (
           <>
-            <Button to="/clients?new=1" icon={<UserPlus className="size-4" />}>{t('dashboard.addClient')}</Button>
-            <Button to="/requests/new" variant="primary" icon={<Plus className="size-4" />}>{t('dashboard.newRequest')}</Button>
+            <Button to="/app/clients?new=1" icon={<UserPlus className="size-4" />}>{t('dashboard.addClient')}</Button>
+            <Button to="/app/requests/new" variant="primary" icon={<Plus className="size-4" />}>{t('dashboard.newRequest')}</Button>
           </>
         )}
       />
@@ -198,10 +198,10 @@ export default function DashboardPage() {
           <section aria-label={t('dashboard.kpis')} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {loading || !data ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[106px] rounded-xl" />) : (
               <>
-                <Stat label={t('dashboard.kpi.active')} value={fmt.number(data.kpis.activeRequests)} hint={t('dashboard.kpi.activeHint', { count: data.kpis.drafts })} icon={<ClipboardList />} to="/requests?status=open" />
-                <Stat label={t('dashboard.kpi.review')} value={fmt.number(data.kpis.documentsNeedingReview)} hint={t('dashboard.kpi.reviewHint', { count: data.kpis.requestsNeedingReview })} icon={<Inbox />} tone={data.kpis.documentsNeedingReview ? 'brand' : 'neutral'} to="/requests?status=needs-review" />
-                <Stat label={t('dashboard.kpi.overdue')} value={fmt.number(data.kpis.overdue)} hint={t('dashboard.kpi.awaiting', { count: data.kpis.awaitingClient })} icon={<Clock />} tone={data.kpis.overdue ? 'danger' : 'neutral'} to="/requests?status=overdue" />
-                <Stat label={t('dashboard.kpi.signatures')} value={fmt.number(data.kpis.pendingSignatures)} hint={t('dashboard.kpi.signedMonth', { count: data.kpis.signedThisMonth })} icon={<PenLine />} to="/signatures" />
+                <Stat label={t('dashboard.kpi.active')} value={fmt.number(data.kpis.activeRequests)} hint={t('dashboard.kpi.activeHint', { count: data.kpis.drafts })} icon={<ClipboardList />} to="/app/requests?status=open" />
+                <Stat label={t('dashboard.kpi.review')} value={fmt.number(data.kpis.documentsNeedingReview)} hint={t('dashboard.kpi.reviewHint', { count: data.kpis.requestsNeedingReview })} icon={<Inbox />} tone={data.kpis.documentsNeedingReview ? 'brand' : 'neutral'} to="/app/requests?status=needs-review" />
+                <Stat label={t('dashboard.kpi.overdue')} value={fmt.number(data.kpis.overdue)} hint={t('dashboard.kpi.awaiting', { count: data.kpis.awaitingClient })} icon={<Clock />} tone={data.kpis.overdue ? 'danger' : 'neutral'} to="/app/requests?status=overdue" />
+                <Stat label={t('dashboard.kpi.signatures')} value={fmt.number(data.kpis.pendingSignatures)} hint={t('dashboard.kpi.signedMonth', { count: data.kpis.signedThisMonth })} icon={<PenLine />} to="/app/signatures" />
               </>
             )}
           </section>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
               {loading || !data ? <div className="space-y-3 px-5 pb-5">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-11" />)}</div> : <ActionQueue actions={data.actions} />}
             </Card>
             <Card>
-              <CardHeader title={t('dashboard.pipeline')} action={<Link to="/requests" className="text-sm font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')}</Link>} />
+              <CardHeader title={t('dashboard.pipeline')} action={<Link to="/app/requests" className="text-sm font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')}</Link>} />
               <CardBody>{data ? <Pipeline pipeline={data.pipeline} /> : <Skeleton className="h-40" />}</CardBody>
             </Card>
           </div>
@@ -226,7 +226,7 @@ export default function DashboardPage() {
               <CardBody>{data ? <WeeklyChart trend={data.trend} /> : <Skeleton className="h-44" />}</CardBody>
             </Card>
             <Card>
-              <CardHeader title={t('dashboard.recentActivity')} action={<Link to="/activity" className="text-sm font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')}</Link>} />
+              <CardHeader title={t('dashboard.recentActivity')} action={<Link to="/app/activity" className="text-sm font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')}</Link>} />
               <CardBody>
                 {activity.loading ? <Skeleton className="h-44" /> : activity.data && activity.data.length > 0 ? (
                   <ActivityFeed items={activity.data.slice(0, 7)} compact />

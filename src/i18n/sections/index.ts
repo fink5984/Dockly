@@ -9,6 +9,7 @@ import documents from './documents'
 import templates from './templates'
 import settings from './settings'
 import sign from './sign'
+import billing from './billing'
 
 type Section = { en: Record<string, unknown>; he: Record<string, unknown> }
-export const sections: Record<string, Section> = { onboarding, dashboard, activity, requests, clients, signatures, portal, documents, templates, settings, sign }
+export const sections: Record<string, Section> = { onboarding, dashboard, activity, requests, clients, signatures, portal, documents, templates, settings, sign, billing }

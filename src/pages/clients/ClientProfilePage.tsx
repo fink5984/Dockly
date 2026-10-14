@@ -35,7 +35,7 @@ export default function ClientProfilePage() {
 
   if (error) {
     return error instanceof ApiError && error.status === 404
-      ? <EmptyState icon={<AlertCircle />} title={t('clients.notFound')} action={<Button to="/clients">{t('common.back')}</Button>} />
+      ? <EmptyState icon={<AlertCircle />} title={t('clients.notFound')} action={<Button to="/app/clients">{t('common.back')}</Button>} />
       : <Card><ErrorState onRetry={refetch} /></Card>
   }
   if (loading || !data) return <div className="space-y-6"><Skeleton className="h-20" /><Skeleton className="h-96 rounded-xl" /></div>
@@ -55,12 +55,12 @@ export default function ClientProfilePage() {
   return (
     <>
       <PageHeader
-        breadcrumbs={[{ label: t('nav.clients'), to: '/clients' }, { label: c.name }]}
+        breadcrumbs={[{ label: t('nav.clients'), to: '/app/clients' }, { label: c.name }]}
         title={<span className="flex items-center gap-3"><Avatar name={c.name} size="lg" /><span>{c.name}</span>{archived && <Badge>{t('clients.tabArchived')}</Badge>}</span>}
         actions={can('member') && (
           <>
-            <Button icon={<PenLine className="size-4" />} to={`/signatures/new?clientId=${c.id}`}>{t('clients.requestSignature')}</Button>
-            <Button variant="primary" icon={<Plus className="size-4" />} to={`/requests/new?clientId=${c.id}`}>{t('clients.createRequest')}</Button>
+            <Button icon={<PenLine className="size-4" />} to={`/app/signatures/new?clientId=${c.id}`}>{t('clients.requestSignature')}</Button>
+            <Button variant="primary" icon={<Plus className="size-4" />} to={`/app/requests/new?clientId=${c.id}`}>{t('clients.createRequest')}</Button>
             <Menu items={[
               { label: t('common.edit'), icon: <Pencil />, onSelect: () => setEditOpen(true) },
               archived ? { label: t('clients.restore'), icon: <ArchiveRestore />, onSelect: () => setStatus('active') } : { label: t('clients.archive'), icon: <Archive />, onSelect: () => setStatus('archived') },
@@ -109,11 +109,11 @@ export default function ClientProfilePage() {
             ]} />
           </div>
           <TabPanel id="requests" active={tab === 'requests'}>
-            {data.requests.length === 0 ? <EmptyState compact icon={<ClipboardList />} title={t('clients.noRequests')} action={can('member') && <Button size="sm" variant="primary" to={`/requests/new?clientId=${c.id}`}>{t('clients.createRequest')}</Button>} /> : (
+            {data.requests.length === 0 ? <EmptyState compact icon={<ClipboardList />} title={t('clients.noRequests')} action={can('member') && <Button size="sm" variant="primary" to={`/app/requests/new?clientId=${c.id}`}>{t('clients.createRequest')}</Button>} /> : (
               <ul className="divide-y divide-line">
                 {data.requests.map((r) => (
                   <li key={r.id}>
-                    <Link to={`/requests/${r.id}`} className="flex flex-col gap-2 px-5 py-3.5 hover:bg-surface-2 sm:flex-row sm:items-center sm:gap-4">
+                    <Link to={`/app/requests/${r.id}`} className="flex flex-col gap-2 px-5 py-3.5 hover:bg-surface-2 sm:flex-row sm:items-center sm:gap-4">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.title}</p>
                         <p className="text-xs text-fg-3">{fmt.date(r.createdAt)}{r.deadline ? ` · ${t('requests.detail.due', { date: fmt.date(r.deadline) })}` : ''}</p>
@@ -145,11 +145,11 @@ export default function ClientProfilePage() {
             )}
           </TabPanel>
           <TabPanel id="signatures" active={tab === 'signatures'}>
-            {data.signatures.length === 0 ? <EmptyState compact icon={<PenLine />} title={t('clients.noSignatures')} action={can('member') && <Button size="sm" to={`/signatures/new?clientId=${c.id}`}>{t('clients.requestSignature')}</Button>} /> : (
+            {data.signatures.length === 0 ? <EmptyState compact icon={<PenLine />} title={t('clients.noSignatures')} action={can('member') && <Button size="sm" to={`/app/signatures/new?clientId=${c.id}`}>{t('clients.requestSignature')}</Button>} /> : (
               <ul className="divide-y divide-line">
                 {data.signatures.map((s) => (
                   <li key={s.id}>
-                    <Link to={`/signatures/${s.id}`} className="flex items-center gap-3 px-5 py-3.5 hover:bg-surface-2">
+                    <Link to={`/app/signatures/${s.id}`} className="flex items-center gap-3 px-5 py-3.5 hover:bg-surface-2">
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{s.title}</span>
                         <span className="text-xs text-fg-3">{s.signedAt ? t('signatures.signedOn', { date: fmt.date(s.signedAt) }) : fmt.date(s.createdAt)}</span>
@@ -192,7 +192,7 @@ export default function ClientProfilePage() {
             await clientsApi.remove(c.id)
             invalidate('clients')
             toast({ tone: 'success', title: t('clients.deleted') })
-            navigate('/clients')
+            navigate('/app/clients')
           } catch (err) {
             if (err instanceof ApiError && err.code === 'client_has_records') toast({ tone: 'warning', title: t('clients.cannotDelete'), message: t('clients.cannotDeleteHint') })
             else toastError(err, t('common.error'))

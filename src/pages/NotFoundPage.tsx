@@ -10,7 +10,7 @@ export default function NotFoundPage() {
       icon={<Compass />}
       title={t('errors.notFoundTitle')}
       description={t('errors.notFoundBody')}
-      action={<Button to="/" variant="primary">{t('errors.goHome')}</Button>}
+      action={<Button to="/app" variant="primary">{t('errors.goHome')}</Button>}
     />
   )
 }

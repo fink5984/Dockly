@@ -87,6 +87,12 @@ export const config = Object.freeze({
   },
 
   billing: billingConfig(),
+
+  // Public website details shown on the marketing and legal pages.
+  site: {
+    legalName: env.SITE_LEGAL_NAME || 'Dockly',
+    contactEmail: env.SITE_CONTACT_EMAIL || env.BILLING_SALES_EMAIL || '',
+  },
 })
 
 /**
@@ -137,6 +143,8 @@ export function configWarnings() {
   }
   if (config.whatsapp.mode === 'cloud' && !config.whatsapp.verifyToken) w.push('WHATSAPP_VERIFY_TOKEN not set — webhook verification handshake will fail')
   if (config.storage.driver === 'local' && isProduction) w.push('STORAGE_DRIVER=local in production — files are stored on the container disk')
+  if (isProduction && !config.site.contactEmail) w.push('SITE_CONTACT_EMAIL not set — the privacy policy, terms and accessibility statement show a placeholder contact')
+  if (isProduction && config.billing.provider === 'disabled') w.push('Billing provider is disabled (no Cardcom credentials) — trials work, paid checkout is unavailable')
   return w
 }
 

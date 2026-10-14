@@ -54,7 +54,7 @@ export default function SignaturesPage() {
       <PageHeader
         title={t('signatures.title')}
         description={t('signatures.subtitle')}
-        actions={can('member') && <Button to="/signatures/new" variant="primary" icon={<Plus className="size-4" />}>{t('signatures.new')}</Button>}
+        actions={can('member') && <Button to="/app/signatures/new" variant="primary" icon={<Plus className="size-4" />}>{t('signatures.new')}</Button>}
       />
       <Card className="overflow-hidden">
         <div className="px-4 pt-2 sm:px-5">
@@ -65,14 +65,14 @@ export default function SignaturesPage() {
         </div>
         {error ? <ErrorState onRetry={refetch} /> : loading ? <ListSkeleton /> : rows.length === 0 ? (
           <EmptyState icon={<PenLine />} title={data?.length ? t('signatures.noMatches') : t('signatures.emptyTitle')} description={data?.length ? undefined : t('signatures.emptyHint')}
-            action={!data?.length && can('member') && <Button to="/signatures/new" variant="primary" icon={<Plus className="size-4" />}>{t('signatures.new')}</Button>} />
+            action={!data?.length && can('member') && <Button to="/app/signatures/new" variant="primary" icon={<Plus className="size-4" />}>{t('signatures.new')}</Button>} />
         ) : (
           <DataTable
             caption={t('signatures.title')}
             columns={columns}
             rows={rows}
             rowKey={(s) => s.id}
-            onRowClick={(s) => navigate(`/signatures/${s.id}`)}
+            onRowClick={(s) => navigate(`/app/signatures/${s.id}`)}
             mobileRow={(s) => (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0"><p className="truncate font-medium">{s.title}</p><p className="truncate text-xs text-fg-3">{s.clientName} · {fmt.date(s.createdAt)}</p></div>

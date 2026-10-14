@@ -33,9 +33,10 @@ export function stopLive() {
   connected = false
 }
 
-export function subscribeLive(handler: Handler) {
+/** `connect: false` listens without opening the connection (e.g. while signed out). */
+export function subscribeLive(handler: Handler, { connect = true }: { connect?: boolean } = {}) {
   handlers.add(handler)
-  ensureConnection()
+  if (connect) ensureConnection()
   return () => { handlers.delete(handler) }
 }
 

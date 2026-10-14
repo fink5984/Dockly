@@ -39,13 +39,18 @@ test.describe.serial('business ↔ client journey', () => {
     await expect(page).toHaveURL(/\/onboarding/)
     await page.getByLabel('Business name').fill('Tester & Co')
     await page.getByRole('button', { name: 'Continue' }).click()
+    // What the workspace needs (defaults to both products)
+    await expect(page.getByRole('radio', { name: 'Both' })).toHaveAttribute('aria-checked', 'true')
+    await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: 'Finish setup' }).click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/app')
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Noa')
   })
 
   test('business creates a request with a new client', async () => {
+    // Old dashboard URL (pre-/app) still lands on the right screen.
     await page.goto('/requests/new')
+    await expect(page).toHaveURL('/app/requests/new')
     await page.getByRole('button', { name: 'New client' }).first().click()
     await page.getByLabel('Full name').fill('Dana Client')
     await page.getByLabel('Mobile phone').fill('050-123-4567')

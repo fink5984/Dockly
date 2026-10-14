@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "node --watch server/index.mjs",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && vite build --ssr src/marketing/entry-server.tsx && node scripts/prerender.mjs",
     "preview": "vite preview",
     "start": "node server/index.mjs",
     "db:migrate": "node server/db/migrate.mjs",

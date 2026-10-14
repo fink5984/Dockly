@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, ClipboardList, Users, PenLine, FolderOpen, Activity, LayoutTemplate,
-  Zap, Plug, Settings, PanelLeftClose, PanelLeftOpen, X,
+  Zap, Plug, Settings, PanelLeftClose, PanelLeftOpen, X, CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/contexts/I18nContext'
@@ -11,27 +11,28 @@ import { useApp } from '@/contexts/AppContext'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { Logo } from './Logo'
 
-interface NavItem { key: string; to: string; icon: typeof LayoutDashboard; end?: boolean }
+interface NavItem { key: string; to: string; icon: typeof LayoutDashboard; end?: boolean; admin?: boolean }
 
 const groups: { key: string; items: NavItem[] }[] = [
   {
     key: 'work',
     items: [
-      { key: 'overview', to: '/', icon: LayoutDashboard, end: true },
-      { key: 'requests', to: '/requests', icon: ClipboardList },
-      { key: 'clients', to: '/clients', icon: Users },
-      { key: 'signatures', to: '/signatures', icon: PenLine },
-      { key: 'documents', to: '/documents', icon: FolderOpen },
+      { key: 'overview', to: '/app', icon: LayoutDashboard, end: true },
+      { key: 'requests', to: '/app/requests', icon: ClipboardList },
+      { key: 'clients', to: '/app/clients', icon: Users },
+      { key: 'signatures', to: '/app/signatures', icon: PenLine },
+      { key: 'documents', to: '/app/documents', icon: FolderOpen },
     ],
   },
   {
     key: 'workspace',
     items: [
-      { key: 'activity', to: '/activity', icon: Activity },
-      { key: 'templates', to: '/templates', icon: LayoutTemplate },
-      { key: 'automation', to: '/settings/automation', icon: Zap },
-      { key: 'integrations', to: '/settings/integrations', icon: Plug },
-      { key: 'settings', to: '/settings', icon: Settings, end: true },
+      { key: 'activity', to: '/app/activity', icon: Activity },
+      { key: 'templates', to: '/app/templates', icon: LayoutTemplate },
+      { key: 'automation', to: '/app/settings/automation', icon: Zap },
+      { key: 'integrations', to: '/app/settings/integrations', icon: Plug },
+      { key: 'billing', to: '/app/billing', icon: CreditCard, admin: true },
+      { key: 'settings', to: '/app/settings', icon: Settings, end: true },
     ],
   },
 ]
@@ -39,8 +40,9 @@ const groups: { key: string; items: NavItem[] }[] = [
 function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { t } = useI18n()
   const { pathname } = useLocation()
+  const { can } = useAuth()
   const isActive = (item: NavItem) => {
-    if (item.end) return item.to === '/' ? pathname === '/' : pathname === item.to || (item.to === '/settings' && /^\/settings\/(profile|workspace|branding|team|security)/.test(pathname))
+    if (item.end) return item.to === '/app' ? pathname === '/app' || pathname === '/app/' : pathname === item.to || (item.to === '/app/settings' && /^\/app\/settings\/(profile|workspace|branding|team|security|billing)/.test(pathname))
     return pathname === item.to || pathname.startsWith(item.to + '/')
   }
   return (
@@ -50,7 +52,7 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
           {!collapsed && <p className="mb-1 px-2.5 text-2xs font-semibold uppercase tracking-wider text-fg-4">{t(`nav.group.${g.key}`)}</p>}
           {collapsed && <div className="mx-auto mb-2 h-px w-6 bg-line first:hidden" />}
           <ul className="space-y-0.5">
-            {g.items.map((item) => {
+            {g.items.filter((item) => !item.admin || can('admin')).map((item) => {
               const active = isActive(item)
               const Icon = item.icon
               const link = (

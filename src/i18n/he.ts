@@ -19,7 +19,7 @@ const he = {
   nav: {
     main: 'ניווט ראשי', group: { work: 'עבודה', workspace: 'סביבת עבודה' },
     overview: 'סקירה', requests: 'בקשות', clients: 'לקוחות', signatures: 'חתימות', documents: 'מסמכים',
-    activity: 'פעילות', templates: 'תבניות', automation: 'אוטומציה', integrations: 'חיבורים', settings: 'הגדרות',
+    activity: 'פעילות', templates: 'תבניות', automation: 'אוטומציה', integrations: 'חיבורים', settings: 'הגדרות', billing: 'מסלול וחיובים',
     profile: 'הפרופיל שלי', account: 'תפריט חשבון', collapse: 'כיווץ התפריט', expand: 'הרחבת התפריט', openMenu: 'פתיחת ניווט',
     skipToContent: 'דילוג לתוכן',
   },
@@ -53,7 +53,7 @@ const he = {
     inviteTitle: 'הצטרפות ל-{{workspace}}', inviteSubtitle: 'הוזמנת בתפקיד {{role}}. הגדירו שם וסיסמה כדי להמשיך.', acceptInvite: 'הצטרפות',
     inviteInvalid: 'קישור ההזמנה אינו תקף או שכבר נעשה בו שימוש.', inviteExpired: 'תוקף ההזמנה פג. בקשו הזמנה חדשה.',
     marketing1: 'פורטל ממותג ללקוח שעובד מכל טלפון', marketing2: 'בדיקה, אישור או בקשת מסמך חלופי — במקום אחד', marketing3: 'חתימות אלקטרוניות עם תיעוד מלא',
-    terms: 'ביצירת החשבון אתם מתחייבים לשמור על סודיות נתוני הלקוחות ולהשתמש ב-Dockly כחוק.',
+    agreePrefix: 'ביצירת החשבון אתם מסכימים ל', termsLink: 'תנאי השימוש', privacyLink: 'מדיניות הפרטיות', agreeJoin: ' ול', trialNote: '30 יום ניסיון חינם · בלי כרטיס אשראי',
   },
 }
 

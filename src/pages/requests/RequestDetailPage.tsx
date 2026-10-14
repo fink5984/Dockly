@@ -258,7 +258,7 @@ function AddDocumentDialog({ request, open, onClose, onDone }: { request: DocReq
         <Select label={t('requests.detail.documentType')} value={typeId} onChange={(e) => setTypeId(e.target.value)} options={[{ value: '', label: options.length ? t('requests.detail.chooseType') : t('requests.create.noTypes') }, ...options.map((d) => ({ value: d.id, label: d.name }))]} />
         <Input label={t('requests.create.itemNote')} value={note} onChange={(e) => setNote(e.target.value)} optionalLabel={t('common.optional')} maxLength={500} />
         <Checkbox label={t('common.required')} checked={required} onChange={(e) => setRequired(e.target.checked)} />
-        <p className="text-xs text-fg-3">{t('requests.detail.manageTypes')} <Link to="/templates?tab=types" className="font-medium text-brand-600 hover:underline">{t('nav.templates')}</Link></p>
+        <p className="text-xs text-fg-3">{t('requests.detail.manageTypes')} <Link to="/app/templates?tab=types" className="font-medium text-brand-600 hover:underline">{t('nav.templates')}</Link></p>
       </div>
     </Dialog>
   )
@@ -454,7 +454,7 @@ export default function RequestDetailPage() {
 
   if (error) {
     return error instanceof ApiError && error.status === 404
-      ? <EmptyState icon={<AlertCircle />} title={t('requests.detail.notFound')} action={<Button to="/requests">{t('common.back')}</Button>} />
+      ? <EmptyState icon={<AlertCircle />} title={t('requests.detail.notFound')} action={<Button to="/app/requests">{t('common.back')}</Button>} />
       : <Card><ErrorState onRetry={refetch} /></Card>
   }
   if (loading || !r) {
@@ -502,12 +502,12 @@ export default function RequestDetailPage() {
   return (
     <>
       <PageHeader
-        breadcrumbs={[{ label: t('nav.requests'), to: '/requests' }, { label: r.title }]}
+        breadcrumbs={[{ label: t('nav.requests'), to: '/app/requests' }, { label: r.title }]}
         title={r.title}
         meta={
           <>
             <RequestStatusBadge status={r.status} overdue={r.overdue} size="md" />
-            <Link to={`/clients/${r.clientId}`} className="inline-flex items-center gap-1.5 hover:text-fg-2"><User className="size-3.5" />{r.clientName}</Link>
+            <Link to={`/app/clients/${r.clientId}`} className="inline-flex items-center gap-1.5 hover:text-fg-2"><User className="size-3.5" />{r.clientName}</Link>
             {r.deadline && <span className={cn('inline-flex items-center gap-1.5', r.overdue && 'text-danger-fg')}><CalendarClock className="size-3.5" />{t('requests.detail.due', { date: fmt.date(r.deadline) })}</span>}
             <span>{r.sentAt ? t('requests.detail.sentOn', { date: fmt.date(r.sentAt) }) : t('requests.detail.notSent')}</span>
           </>
@@ -552,7 +552,7 @@ export default function RequestDetailPage() {
                 ...(canWrite ? [{ label: t('requests.detail.edit'), icon: <Pencil />, onSelect: () => setEditOpen(true) }] : []),
                 { label: t('requests.detail.downloadAll'), icon: <Download />, onSelect: () => { window.location.href = requestsApi.downloadAllUrl(r.id) }, disabled: !docs.some((d) => d.hasFile) },
                 ...(canWrite ? [
-                  { label: t('requests.detail.duplicate'), icon: <Files />, onSelect: () => requestsApi.duplicate(r.id).then((d) => { invalidate('requests:'); navigate(`/requests/${d.id}`); toast({ tone: 'success', title: t('requests.detail.duplicated') }) }).catch((e) => toastError(e, t('common.error'))) },
+                  { label: t('requests.detail.duplicate'), icon: <Files />, onSelect: () => requestsApi.duplicate(r.id).then((d) => { invalidate('requests:'); navigate(`/app/requests/${d.id}`); toast({ tone: 'success', title: t('requests.detail.duplicated') }) }).catch((e) => toastError(e, t('common.error'))) },
                   { label: t('requests.detail.saveTemplate'), icon: <LayoutTemplate />, onSelect: () => { setTemplateName(r.title); setTemplateOpen(true) } },
                   'separator' as const,
                   r.status === 'closed'
@@ -621,7 +621,7 @@ export default function RequestDetailPage() {
           <Card>
             <CardHeader title={t('requests.detail.client')} />
             <CardBody>
-              <Link to={`/clients/${r.clientId}`} className="flex items-center gap-3 rounded-lg hover:opacity-80">
+              <Link to={`/app/clients/${r.clientId}`} className="flex items-center gap-3 rounded-lg hover:opacity-80">
                 <Avatar name={r.clientName} size="lg" />
                 <div className="min-w-0">
                   <p className="truncate font-medium">{r.clientName}</p>
@@ -754,7 +754,7 @@ export default function RequestDetailPage() {
         open={confirm === 'delete'}
         onClose={() => setConfirm(null)}
         onConfirm={async () => {
-          try { await requestsApi.remove(r.id); invalidate('requests:'); invalidate('dashboard'); toast({ tone: 'success', title: t('requests.detail.deleted') }); navigate('/requests') } catch (e) { toastError(e, t('common.error')); throw e }
+          try { await requestsApi.remove(r.id); invalidate('requests:'); invalidate('dashboard'); toast({ tone: 'success', title: t('requests.detail.deleted') }); navigate('/app/requests') } catch (e) { toastError(e, t('common.error')); throw e }
         }}
         title={t('requests.detail.deleteTitle')}
         description={t('requests.detail.deleteHint', { count: docs.filter((d) => d.hasFile).length })}

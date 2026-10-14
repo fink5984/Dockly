@@ -23,6 +23,7 @@ import insightRoutes from './routes/insights.mjs'
 import publicRoutes from './routes/public.mjs'
 import { billingRouter, publicBillingRouter } from './routes/billing.mjs'
 import analyticsRoutes from './routes/analytics.mjs'
+import { mountSite } from './site.mjs'
 import { handleVerification, handleIncoming } from './messaging/whatsappBot.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -113,12 +114,16 @@ export function createApp() {
   app.use('/api/signatures', signatureRoutes)
   app.use('/api/support', supportRoutes)
 
+  // Marketing site (prerendered pages, robots.txt, sitemap.xml) + /api/public/site
+  const site = mountSite(app, DIST)
+
   app.use('/api', (_req, _res, next) => next(notFound()))
 
   // Static frontend
   if (existsSync(DIST)) {
     app.use('/assets', express.static(join(DIST, 'assets'), { immutable: true, maxAge: '1y', index: false }))
     app.use(express.static(DIST, { index: false, maxAge: '1h' }))
+    if (site.available) app.use(site.notFound)
     app.get(/^(?!\/api\/).*/, (_req, res) => {
       res.setHeader('Cache-Control', 'no-cache')
       res.sendFile(join(DIST, 'index.html'))

@@ -105,7 +105,7 @@ export default function RequestsPage() {
         actions={
           <>
             <Button icon={<Download className="size-4" />} onClick={() => data && exportCsv(data.items, t)} disabled={!data?.items.length}>{t('requests.export')}</Button>
-            {can('member') && <Button to="/requests/new" variant="primary" icon={<Plus className="size-4" />}>{t('requests.new')}</Button>}
+            {can('member') && <Button to="/app/requests/new" variant="primary" icon={<Plus className="size-4" />}>{t('requests.new')}</Button>}
           </>
         }
       />
@@ -141,7 +141,7 @@ export default function RequestsPage() {
               icon={<ClipboardList />}
               title={t('requests.emptyTitle')}
               description={t('requests.emptyHint')}
-              action={can('member') && <Button to="/requests/new" variant="primary" icon={<Plus className="size-4" />}>{t('requests.new')}</Button>}
+              action={can('member') && <Button to="/app/requests/new" variant="primary" icon={<Plus className="size-4" />}>{t('requests.new')}</Button>}
             />
           )
         ) : (
@@ -151,7 +151,7 @@ export default function RequestsPage() {
               columns={columns}
               rows={data.items}
               rowKey={(r) => r.id}
-              onRowClick={(r) => navigate(`/requests/${r.id}`)}
+              onRowClick={(r) => navigate(`/app/requests/${r.id}`)}
               sort={{ id: sort === 'client' ? 'title' : sort === 'created' ? '' : sort, dir: 'asc' }}
               onSortChange={(s) => update({ sort: s.id === 'title' ? 'title' : s.id })}
               mobileRow={(r) => (

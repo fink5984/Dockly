@@ -8,6 +8,8 @@ import type {
   ActivityEvent, SupportRequest, SignatureRequest, SignatureEvent, Notification, TeamMember, Invite,
   AutomationSettings, ChannelStatus, Dashboard, LibraryItem, SearchResults, Language, Role, TemplateItem,
 } from '@/types'
+import type { BillingState, CheckoutSession, ChangeResult, Invoice, BillingSummary } from '@/types/billing'
+import type { Catalog, Interval, QuoteLine } from '@shared/billing/pricing.mjs'
 
 const qs = (params: Record<string, string | number | undefined | null>) => {
   const s = new URLSearchParams()
@@ -16,12 +18,12 @@ const qs = (params: Record<string, string | number | undefined | null>) => {
   return str ? `?${str}` : ''
 }
 
-export interface Me { user: User | null; workspace: Workspace | null }
+export interface Me { user: User | null; workspace: Workspace | null; billing?: BillingSummary | null }
 
 export const authApi = {
   me: () => api.get<Me>('/api/auth/me'),
   signIn: (email: string, password: string) => api.post<Me>('/api/auth/signin', { email, password }),
-  signUp: (d: { email: string; password: string; name: string; phone?: string; language?: Language }) => api.post<Me>('/api/auth/signup', d),
+  signUp: (d: { email: string; password: string; name: string; phone?: string; language?: Language; attribution?: Record<string, string> }) => api.post<Me>('/api/auth/signup', d),
   signOut: () => api.post<{ ok: boolean }>('/api/auth/signout'),
   signOutAll: () => api.post<{ ok: boolean }>('/api/auth/signout-all'),
   updateProfile: (d: { name?: string; phone?: string }) => api.patch<Me>('/api/auth/me', d),
@@ -166,4 +168,31 @@ export const insightsApi = {
   activity: (p: { caseId?: string; clientId?: string; before?: string; limit?: number; type?: string } = {}) => api.get<ActivityEvent[]>(`/api/activity${qs(p)}`),
   documents: (p: { search?: string; clientId?: string; source?: string; status?: string; type?: string; from?: string; to?: string } = {}) =>
     api.get<{ items: LibraryItem[]; usage: { bytes: number; versions: number } }>(`/api/documents${qs(p)}`),
+}
+
+const newIdempotencyKey = () => (crypto.randomUUID ? crypto.randomUUID() : `k${Date.now()}${Math.random().toString(36).slice(2)}`)
+
+/**
+ * Billing. Money-moving calls carry an Idempotency-Key so a double click or a
+ * retried request returns the same checkout instead of opening a second one.
+ */
+export const billingApi = {
+  state: () => api.get<BillingState>('/api/billing'),
+  catalog: () => api.get<Catalog & { savings: Record<string, number> }>('/api/public/billing/catalog'),
+  checkout: (d: { planCode: string; interval: Interval; addons?: Record<string, number> }, key = newIdempotencyKey()) =>
+    api.post<{ sessionId: string; redirectUrl: string }>('/api/billing/checkout', d, { 'Idempotency-Key': key }),
+  change: (d: { planCode: string; interval: Interval; addons?: Record<string, number> }, key = newIdempotencyKey()) =>
+    api.post<ChangeResult>('/api/billing/change', d, { 'Idempotency-Key': key }),
+  clearPending: () => api.del<{ ok: boolean }>('/api/billing/pending'),
+  buyPack: (packCode: string, key = newIdempotencyKey()) => api.post<ChangeResult>('/api/billing/packs', { packCode }, { 'Idempotency-Key': key }),
+  updatePaymentMethod: (key = newIdempotencyKey()) => api.post<{ sessionId: string; redirectUrl: string }>('/api/billing/payment-method', {}, { 'Idempotency-Key': key }),
+  cancel: (reason?: string) => api.post<{ effectiveAt: string }>('/api/billing/cancel', reason ? { reason } : {}),
+  resume: () => api.post<{ ok: boolean }>('/api/billing/resume'),
+  saveDetails: (d: { name: string; email: string; taxId: string }) => api.put<{ ok: boolean }>('/api/billing/details', d),
+  setInterest: (interest: 'collect' | 'sign' | 'both') => api.patch<{ ok: boolean }>('/api/billing/interest', { interest }),
+  session: (id: string) => api.get<CheckoutSession>(`/api/billing/checkout/${id}`),
+  syncSession: (id: string) => api.post<CheckoutSession>(`/api/billing/checkout/${id}/sync`),
+  invoice: (id: string) => api.get<Invoice & { billedTo: { name: string; taxId: string }; provider: string }>(`/api/billing/invoices/${id}`),
+  sandboxPage: (ref: string) => api.get<{ amount: number; currency: string; operation: string; status: string; kind: string; lines: QuoteLine[]; subtotal: number; vat: number; workspace: string; cards: string[] }>(`/api/public/billing/sandbox/${encodeURIComponent(ref)}`),
+  sandboxComplete: (ref: string, card: string) => api.post<{ returnUrl: string }>(`/api/public/billing/sandbox/${encodeURIComponent(ref)}/complete`, { card }),
 }

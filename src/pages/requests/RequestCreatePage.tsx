@@ -348,7 +348,7 @@ export default function RequestCreatePage() {
       if (res.send && !res.send.ok) toast({ tone: 'warning', title: t('requests.create.createdNotSent'), message: res.send.error })
       else if (res.send?.simulated) toast({ tone: 'info', title: t('requests.create.createdSimulated') })
       else toast({ tone: 'success', title: channel === 'link' ? t('requests.create.createdLink') : t('requests.create.createdSent') })
-      navigate(`/requests/${res.request.id}`, { replace: true })
+      navigate(`/app/requests/${res.request.id}`, { replace: true })
     } catch (err) {
       if (err instanceof ApiError && err.code === 'validation_failed') setErrors(Object.values(err.fields)[0] || err.message)
       toastError(err, t('requests.create.failed'))
@@ -359,7 +359,7 @@ export default function RequestCreatePage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title={t('requests.create.title')} breadcrumbs={[{ label: t('nav.requests'), to: '/requests' }, { label: t('requests.create.title') }]} />
+      <PageHeader title={t('requests.create.title')} breadcrumbs={[{ label: t('nav.requests'), to: '/app/requests' }, { label: t('requests.create.title') }]} />
       <div className="mb-6"><Stepper steps={steps} current={step} onStepClick={setStep} /></div>
       <div className={cn('grid gap-6', step === 3 && 'lg:grid-cols-[minmax(0,1fr)_300px]')}>
         <Card className="p-5 sm:p-6">
@@ -397,7 +397,7 @@ export default function RequestCreatePage() {
           )}
           {errors && <p role="alert" className="mt-4 flex items-center gap-1.5 text-sm text-danger-fg"><AlertCircle className="size-4" />{errors}</p>}
           <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-5">
-            <Button variant="ghost" onClick={() => (step === 0 ? navigate('/requests') : setStep(step - 1))}>{step === 0 ? t('common.cancel') : t('common.back')}</Button>
+            <Button variant="ghost" onClick={() => (step === 0 ? navigate('/app/requests') : setStep(step - 1))}>{step === 0 ? t('common.cancel') : t('common.back')}</Button>
             {step < 3 ? (
               <Button variant="primary" onClick={next}>{t('common.next')}</Button>
             ) : (

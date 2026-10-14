@@ -26,11 +26,18 @@ export function listMigrationFiles() {
     .sort()
     .map((file) => {
       const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8')
+      // Line endings depend on the checkout (CRLF on Windows with autocrlf, LF on
+      // Railway), so the checksum is taken over LF-normalised text.
+      // `legacyChecksums` (raw LF and CRLF forms) keep checksums recorded before
+      // this normalisation valid on either platform.
+      const lf = sql.replace(/\r\n/g, '\n')
+      const hash = (t) => createHash('sha256').update(t).digest('hex')
       return {
         version: file.slice(0, 4),
         file,
         sql,
-        checksum: createHash('sha256').update(sql).digest('hex'),
+        checksum: hash(lf),
+        legacyChecksums: [hash(sql), hash(lf.replace(/\n/g, '\r\n'))],
       }
     })
 }
@@ -55,7 +62,7 @@ export async function runMigrations({ connectionString, ssl, dryRun = false, log
 
     for (const m of files) {
       const prior = appliedMap.get(m.version)
-      if (prior && prior.checksum !== m.checksum) {
+      if (prior && prior.checksum !== m.checksum && !m.legacyChecksums.includes(prior.checksum)) {
         throw new Error(`Migration ${m.file} was modified after being applied (checksum mismatch). Create a new migration instead.`)
       }
     }

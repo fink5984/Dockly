@@ -1,0 +1,281 @@
+/* Dockly design tokens, base styles and shared utilities — imported by the app (index.css) and the marketing site (marketing/marketing.css). */
+/* Class-based dark mode (set on <html> by ThemeContext) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   Dockly design tokens
+   Semantic tokens are CSS variables (themeable); Tailwind utilities
+   map onto them so components never hard-code colors.
+   ============================================================ */
+@theme inline {
+  /* Surfaces */
+  --color-canvas: var(--dk-canvas);
+  --color-surface: var(--dk-surface);
+  --color-surface-2: var(--dk-surface-2);
+  --color-surface-3: var(--dk-surface-3);
+  --color-overlay: var(--dk-overlay);
+
+  /* Text */
+  --color-fg: var(--dk-fg);
+  --color-fg-2: var(--dk-fg-2);
+  --color-fg-3: var(--dk-fg-3);
+  --color-fg-4: var(--dk-fg-4);
+  --color-fg-inverse: var(--dk-fg-inverse);
+
+  /* Lines */
+  --color-line: var(--dk-line);
+  --color-line-2: var(--dk-line-2);
+  --color-ring: var(--dk-ring);
+
+  /* Brand (refined indigo) */
+  --color-brand-50: var(--dk-brand-50);
+  --color-brand-100: var(--dk-brand-100);
+  --color-brand-200: var(--dk-brand-200);
+  --color-brand-300: var(--dk-brand-300);
+  --color-brand-400: var(--dk-brand-400);
+  --color-brand-500: var(--dk-brand-500);
+  --color-brand-600: var(--dk-brand-600);
+  --color-brand-700: var(--dk-brand-700);
+  --color-brand-800: var(--dk-brand-800);
+  --color-brand-900: var(--dk-brand-900);
+  --color-brand-fg: var(--dk-brand-fg);
+  --color-brand-soft: var(--dk-brand-soft);
+
+  /* Status */
+  --color-success: var(--dk-success);
+  --color-success-soft: var(--dk-success-soft);
+  --color-success-fg: var(--dk-success-fg);
+  --color-warning: var(--dk-warning);
+  --color-warning-soft: var(--dk-warning-soft);
+  --color-warning-fg: var(--dk-warning-fg);
+  --color-danger: var(--dk-danger);
+  --color-danger-soft: var(--dk-danger-soft);
+  --color-danger-fg: var(--dk-danger-fg);
+  --color-info: var(--dk-info);
+  --color-info-soft: var(--dk-info-soft);
+  --color-info-fg: var(--dk-info-fg);
+  --color-neutral-soft: var(--dk-neutral-soft);
+  --color-neutral-fg: var(--dk-neutral-fg);
+
+  /* Typography */
+  --font-sans: var(--dk-font);
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.375rem;
+  --text-md: 0.9375rem;
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.375rem;
+
+  /* Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+
+  /* Elevation */
+  --shadow-xs: var(--dk-shadow-xs);
+  --shadow-sm: var(--dk-shadow-sm);
+  --shadow-md: var(--dk-shadow-md);
+  --shadow-lg: var(--dk-shadow-lg);
+  --shadow-xl: var(--dk-shadow-xl);
+  --shadow-focus: 0 0 0 3px var(--dk-ring);
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-fade-in: fade-in 160ms var(--ease-out-soft);
+  --animate-pop-in: pop-in 160ms var(--ease-out-soft);
+  --animate-slide-up: slide-up 200ms var(--ease-out-soft);
+  --animate-shimmer: shimmer 1.4s linear infinite;
+
+  @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes pop-in { from { opacity: 0; transform: translateY(4px) scale(0.98) } to { opacity: 1; transform: none } }
+  @keyframes slide-up { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+  @keyframes shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+}
+
+/* Breakpoints: sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536 (Tailwind defaults) */
+
+@layer base {
+  :root {
+    --dk-font: 'Inter Variable', 'Heebo Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+    --dk-canvas: #f6f7f9;
+    --dk-surface: #ffffff;
+    --dk-surface-2: #f9fafb;
+    --dk-surface-3: #f2f4f7;
+    --dk-overlay: rgb(16 24 40 / 0.45);
+
+    --dk-fg: #101828;
+    --dk-fg-2: #344054;
+    --dk-fg-3: #667085;
+    --dk-fg-4: #98a2b3;
+    --dk-fg-inverse: #ffffff;
+
+    --dk-line: #eaecf0;
+    --dk-line-2: #d0d5dd;
+    --dk-ring: rgb(75 74 207 / 0.24);
+
+    --dk-brand-50: #f0f1fe;
+    --dk-brand-100: #e2e3fd;
+    --dk-brand-200: #c9cbfb;
+    --dk-brand-300: #a6a8f6;
+    --dk-brand-400: #8384ee;
+    --dk-brand-500: #6563e3;
+    --dk-brand-600: #4b4acf;
+    --dk-brand-700: #3d3bb0;
+    --dk-brand-800: #33328e;
+    --dk-brand-900: #2c2c70;
+    --dk-brand-fg: #ffffff;
+    --dk-brand-soft: #f0f1fe;
+
+    --dk-success: #079455;
+    --dk-success-soft: #ecfdf3;
+    --dk-success-fg: #067647;
+    --dk-warning: #dc6803;
+    --dk-warning-soft: #fffaeb;
+    --dk-warning-fg: #b54708;
+    --dk-danger: #d92d20;
+    --dk-danger-soft: #fef3f2;
+    --dk-danger-fg: #b42318;
+    --dk-info: #1570ef;
+    --dk-info-soft: #eff8ff;
+    --dk-info-fg: #175cd3;
+    --dk-neutral-soft: #f2f4f7;
+    --dk-neutral-fg: #475467;
+
+    --dk-shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
+    --dk-shadow-sm: 0 1px 3px rgb(16 24 40 / 0.08), 0 1px 2px rgb(16 24 40 / 0.04);
+    --dk-shadow-md: 0 4px 8px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
+    --dk-shadow-lg: 0 12px 16px -4px rgb(16 24 40 / 0.08), 0 4px 6px -2px rgb(16 24 40 / 0.03);
+    --dk-shadow-xl: 0 20px 24px -4px rgb(16 24 40 / 0.1), 0 8px 8px -4px rgb(16 24 40 / 0.04);
+
+    color-scheme: light;
+  }
+
+  :root[lang='he'] {
+    /* Heebo first in Hebrew so Latin, digits and Hebrew share one design. */
+    --dk-font: 'Heebo Variable', 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  .dark {
+    --dk-canvas: #0b0d12;
+    --dk-surface: #12151c;
+    --dk-surface-2: #161a22;
+    --dk-surface-3: #1d222c;
+    --dk-overlay: rgb(0 0 0 / 0.6);
+
+    --dk-fg: #f2f4f7;
+    --dk-fg-2: #cfd4dc;
+    --dk-fg-3: #98a2b3;
+    --dk-fg-4: #6b7385;
+    --dk-fg-inverse: #0b0d12;
+
+    --dk-line: #232835;
+    --dk-line-2: #323949;
+    --dk-ring: rgb(131 132 238 / 0.35);
+
+    --dk-brand-50: #1a1b3a;
+    --dk-brand-100: #222452;
+    --dk-brand-200: #2e3070;
+    --dk-brand-300: #3d3f93;
+    --dk-brand-400: #5658c4;
+    --dk-brand-500: #6d6fe0;
+    --dk-brand-600: #8384ee;
+    --dk-brand-700: #a3a5f5;
+    --dk-brand-800: #c4c5fa;
+    --dk-brand-900: #e0e1fd;
+    --dk-brand-fg: #0b0d12;
+    --dk-brand-soft: rgb(131 132 238 / 0.12);
+
+    --dk-success: #32d583;
+    --dk-success-soft: rgb(50 213 131 / 0.12);
+    --dk-success-fg: #6ce9a6;
+    --dk-warning: #fdb022;
+    --dk-warning-soft: rgb(253 176 34 / 0.12);
+    --dk-warning-fg: #fec84b;
+    --dk-danger: #f97066;
+    --dk-danger-soft: rgb(249 112 102 / 0.12);
+    --dk-danger-fg: #fda29b;
+    --dk-info: #53b1fd;
+    --dk-info-soft: rgb(83 177 253 / 0.12);
+    --dk-info-fg: #84caff;
+    --dk-neutral-soft: rgb(152 162 179 / 0.12);
+    --dk-neutral-fg: #cfd4dc;
+
+    --dk-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+    --dk-shadow-sm: 0 1px 3px rgb(0 0 0 / 0.5);
+    --dk-shadow-md: 0 4px 10px -2px rgb(0 0 0 / 0.55);
+    --dk-shadow-lg: 0 12px 24px -6px rgb(0 0 0 / 0.6);
+    --dk-shadow-xl: 0 24px 40px -8px rgb(0 0 0 / 0.65);
+
+    color-scheme: dark;
+  }
+
+  * { border-color: var(--dk-line); }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background-color: var(--dk-canvas);
+    color: var(--dk-fg);
+    font-family: var(--dk-font);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: var(--dk-brand-200); color: var(--dk-fg); }
+
+  :focus-visible { outline: 2px solid var(--dk-brand-500); outline-offset: 2px; }
+  :focus:not(:focus-visible) { outline: none; }
+
+  /* Numbers stay left-to-right and aligned in tables/metrics */
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* Native date input icon follows theme */
+  .dark input[type='date']::-webkit-calendar-picker-indicator { filter: invert(0.8); }
+
+  /* Respect reduced motion everywhere */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .skeleton {
+    background: linear-gradient(90deg, var(--dk-surface-3) 25%, var(--dk-line) 37%, var(--dk-surface-3) 63%);
+    background-size: 400% 100%;
+    animation: var(--animate-shimmer);
+    border-radius: var(--radius-sm);
+  }
+
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--dk-line-2) transparent; }
+  .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: var(--dk-line-2); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+}
+
+/* Mirror directional icons (arrows/chevrons) in RTL */
+[dir='rtl'] .rtl-flip { transform: scaleX(-1); }

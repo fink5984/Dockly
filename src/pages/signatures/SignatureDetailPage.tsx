@@ -32,7 +32,7 @@ export default function SignatureDetailPage() {
 
   if (error) {
     return error instanceof ApiError && error.status === 404
-      ? <EmptyState icon={<AlertCircle />} title={t('signatures.notFound')} action={<Button to="/signatures">{t('common.back')}</Button>} />
+      ? <EmptyState icon={<AlertCircle />} title={t('signatures.notFound')} action={<Button to="/app/signatures">{t('common.back')}</Button>} />
       : <Card><ErrorState onRetry={refetch} /></Card>
   }
   if (loading || !s) return <div className="space-y-6"><Skeleton className="h-10 w-72" /><Skeleton className="h-80 rounded-xl" /></div>
@@ -59,12 +59,12 @@ export default function SignatureDetailPage() {
   return (
     <>
       <PageHeader
-        breadcrumbs={[{ label: t('nav.signatures'), to: '/signatures' }, { label: s.title }]}
+        breadcrumbs={[{ label: t('nav.signatures'), to: '/app/signatures' }, { label: s.title }]}
         title={s.title}
         meta={
           <>
             <SignatureStatusBadge status={s.status} size="md" />
-            <Link to={`/clients/${s.clientId}`} className="inline-flex items-center gap-1.5 hover:text-fg-2"><User className="size-3.5" />{s.clientName}</Link>
+            <Link to={`/app/clients/${s.clientId}`} className="inline-flex items-center gap-1.5 hover:text-fg-2"><User className="size-3.5" />{s.clientName}</Link>
             <span>{t('signatures.detail.created', { date: fmt.date(s.createdAt) })}</span>
             {s.expiresAt && awaiting && <span>{t('signatures.expiresOn', { date: fmt.date(s.expiresAt) })}</span>}
           </>
@@ -190,7 +190,7 @@ export default function SignatureDetailPage() {
       <ConfirmDialog open={confirm === 'cancel'} onClose={() => setConfirm(null)} title={t('signatures.detail.cancelTitle')} description={t('signatures.detail.cancelHint')} confirmLabel={t('signatures.detail.cancel')}
         onConfirm={async () => { try { mutate(await signaturesApi.cancel(s.id)); invalidate('signatures'); events.refetch() } catch (e) { toastError(e, t('common.error')); throw e } }} />
       <ConfirmDialog open={confirm === 'archive'} onClose={() => setConfirm(null)} title={t('signatures.detail.archiveTitle')} description={t('signatures.detail.archiveHint')} confirmLabel={t('signatures.detail.archive')}
-        onConfirm={async () => { try { await signaturesApi.archive(s.id); invalidate('signatures'); navigate('/signatures') } catch (e) { toastError(e, t('common.error')); throw e } }} />
+        onConfirm={async () => { try { await signaturesApi.archive(s.id); invalidate('signatures'); navigate('/app/signatures') } catch (e) { toastError(e, t('common.error')); throw e } }} />
     </>
   )
 }

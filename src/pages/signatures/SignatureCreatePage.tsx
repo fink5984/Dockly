@@ -115,7 +115,7 @@ export default function SignatureCreatePage() {
       invalidate('dashboard')
       if (res.send && !res.send.ok) toast({ tone: 'warning', title: t('signatures.create.createdNotSent'), message: res.send.error })
       else toast({ tone: 'success', title: channel === 'link' ? t('signatures.create.createdLink') : t('signatures.create.createdSent') })
-      navigate(`/signatures/${res.request.id}`, { replace: true })
+      navigate(`/app/signatures/${res.request.id}`, { replace: true })
     } catch (err) {
       toastError(err, t('signatures.create.failed'))
     } finally {
@@ -125,7 +125,7 @@ export default function SignatureCreatePage() {
 
   return (
     <div className={cn('mx-auto', step === 2 ? 'max-w-[1400px]' : 'max-w-3xl')}>
-      <PageHeader title={t('signatures.create.title')} breadcrumbs={[{ label: t('nav.signatures'), to: '/signatures' }, { label: t('signatures.create.title') }]} />
+      <PageHeader title={t('signatures.create.title')} breadcrumbs={[{ label: t('nav.signatures'), to: '/app/signatures' }, { label: t('signatures.create.title') }]} />
       <div className="mb-6"><Stepper steps={steps} current={step} onStepClick={setStep} /></div>
 
       {step === 2 ? (
@@ -148,7 +148,7 @@ export default function SignatureCreatePage() {
             <div className="space-y-4">
               <Select label={t('signatures.create.client')} value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} required
                 options={[{ value: '', label: clients.data ? t('signatures.create.chooseClient') : t('common.loading') }, ...(clients.data || []).filter((c) => c.status !== 'archived').map((c) => ({ value: c.id, label: c.name }))]}
-                hint={<>{t('signatures.create.noClient')} <a href="/clients?new=1" className="font-medium text-brand-600 hover:underline">{t('clients.new')}</a></>} />
+                hint={<>{t('signatures.create.noClient')} <a href="/app/clients?new=1" className="font-medium text-brand-600 hover:underline">{t('clients.new')}</a></>} />
               <Input label={t('signatures.create.docTitle')} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder={t('signatures.create.docTitlePlaceholder')} />
               <Textarea label={t('signatures.create.message')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} optionalLabel={t('common.optional')} hint={t('signatures.create.messageHint')} />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -207,7 +207,7 @@ export default function SignatureCreatePage() {
           )}
           {error && <p role="alert" className="mt-4 flex items-center gap-1.5 text-sm text-danger-fg"><AlertCircle className="size-4" />{error}</p>}
           <div className="mt-6 flex justify-between gap-3 border-t border-line pt-5">
-            <Button variant="ghost" onClick={() => (step === 0 ? navigate('/signatures') : setStep(step - 1))}>{step === 0 ? t('common.cancel') : t('common.back')}</Button>
+            <Button variant="ghost" onClick={() => (step === 0 ? navigate('/app/signatures') : setStep(step - 1))}>{step === 0 ? t('common.cancel') : t('common.back')}</Button>
             {step < 3 ? <Button variant="primary" onClick={next}>{t('common.next')}</Button> : (
               <Button variant="primary" loading={busy} onClick={submit} icon={<Send className="size-4 rtl-flip" />}>{channel === 'link' ? t('signatures.create.create') : t('signatures.create.createAndSend')}</Button>
             )}

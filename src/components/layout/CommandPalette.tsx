@@ -54,21 +54,21 @@ export function CommandPalette() {
   const items: Item[] = useMemo(() => {
     if (!results) {
       return [
-        { id: 'a1', group: t('search.actions'), label: t('quickCreate.request'), icon: <Plus />, to: '/requests/new' },
-        { id: 'a2', group: t('search.actions'), label: t('quickCreate.client'), icon: <Plus />, to: '/clients?new=1' },
-        { id: 'a3', group: t('search.actions'), label: t('quickCreate.signature'), icon: <Plus />, to: '/signatures/new' },
-        { id: 'n1', group: t('search.goTo'), label: t('nav.overview'), icon: <LayoutDashboard />, to: '/' },
-        { id: 'n2', group: t('search.goTo'), label: t('nav.requests'), icon: <ClipboardList />, to: '/requests' },
-        { id: 'n3', group: t('search.goTo'), label: t('nav.clients'), icon: <Users />, to: '/clients' },
-        { id: 'n4', group: t('search.goTo'), label: t('nav.signatures'), icon: <PenLine />, to: '/signatures' },
-        { id: 'n5', group: t('search.goTo'), label: t('nav.documents'), icon: <FolderOpen />, to: '/documents' },
-        { id: 'n6', group: t('search.goTo'), label: t('nav.settings'), icon: <Settings />, to: '/settings' },
+        { id: 'a1', group: t('search.actions'), label: t('quickCreate.request'), icon: <Plus />, to: '/app/requests/new' },
+        { id: 'a2', group: t('search.actions'), label: t('quickCreate.client'), icon: <Plus />, to: '/app/clients?new=1' },
+        { id: 'a3', group: t('search.actions'), label: t('quickCreate.signature'), icon: <Plus />, to: '/app/signatures/new' },
+        { id: 'n1', group: t('search.goTo'), label: t('nav.overview'), icon: <LayoutDashboard />, to: '/app' },
+        { id: 'n2', group: t('search.goTo'), label: t('nav.requests'), icon: <ClipboardList />, to: '/app/requests' },
+        { id: 'n3', group: t('search.goTo'), label: t('nav.clients'), icon: <Users />, to: '/app/clients' },
+        { id: 'n4', group: t('search.goTo'), label: t('nav.signatures'), icon: <PenLine />, to: '/app/signatures' },
+        { id: 'n5', group: t('search.goTo'), label: t('nav.documents'), icon: <FolderOpen />, to: '/app/documents' },
+        { id: 'n6', group: t('search.goTo'), label: t('nav.settings'), icon: <Settings />, to: '/app/settings' },
       ].filter((i) => !q || i.label.toLowerCase().includes(q.toLowerCase()))
     }
     return [
-      ...results.clients.map((c) => ({ id: `c${c.id}`, group: t('nav.clients'), label: c.name, sub: c.email || c.phone, icon: <Users />, to: `/clients/${c.id}` })),
-      ...results.requests.map((r) => ({ id: `r${r.id}`, group: t('nav.requests'), label: r.title, sub: r.clientName, icon: <ClipboardList />, to: `/requests/${r.id}` })),
-      ...results.signatures.map((s) => ({ id: `s${s.id}`, group: t('nav.signatures'), label: s.title, sub: s.clientName, icon: <PenLine />, to: `/signatures/${s.id}` })),
+      ...results.clients.map((c) => ({ id: `c${c.id}`, group: t('nav.clients'), label: c.name, sub: c.email || c.phone, icon: <Users />, to: `/app/clients/${c.id}` })),
+      ...results.requests.map((r) => ({ id: `r${r.id}`, group: t('nav.requests'), label: r.title, sub: r.clientName, icon: <ClipboardList />, to: `/app/requests/${r.id}` })),
+      ...results.signatures.map((s) => ({ id: `s${s.id}`, group: t('nav.signatures'), label: s.title, sub: s.clientName, icon: <PenLine />, to: `/app/signatures/${s.id}` })),
     ]
   }, [results, q, t])
 

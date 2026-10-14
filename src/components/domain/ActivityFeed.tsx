@@ -87,7 +87,7 @@ export function ActivityFeed({ items, showClient = true, compact, className }: {
                 {showClient && a.clientName && (
                   <>
                     <span aria-hidden>·</span>
-                    {a.caseId ? <Link to={`/requests/${a.caseId}`} className="hover:text-fg-2 hover:underline">{a.clientName}</Link> : <span>{a.clientName}</span>}
+                    {a.caseId ? <Link to={`/app/requests/${a.caseId}`} className="hover:text-fg-2 hover:underline">{a.clientName}</Link> : <span>{a.clientName}</span>}
                   </>
                 )}
               </p>

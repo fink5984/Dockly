@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -11,6 +11,19 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, './shared'),
     },
   },
+  build: isSsrBuild
+    // `vite build --ssr src/marketing/entry-server.tsx`: renders the marketing pages at build time.
+    ? { outDir: 'dist-ssr', emptyOutDir: true }
+    : {
+      rollupOptions: {
+        input: {
+          // The app (dashboard, auth, client portal, signing)
+          main: path.resolve(__dirname, 'index.html'),
+          // Template for the prerendered marketing pages (scripts/prerender.mjs)
+          marketing: path.resolve(__dirname, 'marketing.html'),
+        },
+      },
+    },
   server: {
     proxy: {
       '/api': {
@@ -20,4 +33,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

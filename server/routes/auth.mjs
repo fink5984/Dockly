@@ -89,7 +89,7 @@ router.post('/signup', rateLimit({ name: 'signup', limit: 5, windowMs: 60 * 60 *
     )
     // The insert trigger started a trial; its length comes from the catalog.
     await tx.query(
-      `UPDATE workspace_subscriptions SET trial_ends_at = trial_started_at + make_interval(days => $2) WHERE workspace_id = $1 AND status = 'trialing'`,
+      `UPDATE workspace_subscriptions SET trial_ends_at = trial_started_at + make_interval(hours => $2 * 24) WHERE workspace_id = $1 AND status = 'trialing'`,
       [ws.id, catalog.trial.days],
     )
     return tx.queryOne(

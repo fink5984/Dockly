@@ -67,7 +67,8 @@ CREATE OR REPLACE FUNCTION public.start_workspace_trial()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.workspace_subscriptions (workspace_id, status, trial_started_at, trial_ends_at)
-  VALUES (NEW.id, 'trialing', now(), now() + interval '30 days')
+  -- Exact 24-hour days: calendar-day arithmetic would shift by an hour across DST changes.
+  VALUES (NEW.id, 'trialing', now(), now() + interval '720 hours')
   ON CONFLICT (workspace_id) DO NOTHING;
   RETURN NEW;
 END;

@@ -24,7 +24,7 @@ export default function SignInPage() {
     try {
       await signIn(email.trim(), password)
       const from = (location.state as { from?: string } | null)?.from
-      navigate(from && from.startsWith('/') && !from.startsWith('//') ? from : '/', { replace: true })
+      navigate(from && from.startsWith('/') && !from.startsWith('//') ? from : '/app', { replace: true })
     } catch (err) {
       const code = err instanceof ApiError ? err.code : ''
       setError(code === 'account_locked' || code === 'rate_limited' ? t('auth.locked') : code === 'invalid_credentials' ? t('auth.invalidCredentials') : t('common.loadFailedHint'))

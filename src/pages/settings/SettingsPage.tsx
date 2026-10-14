@@ -440,7 +440,7 @@ export default function SettingsPage() {
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav aria-label={t('nav.settings')} className="flex gap-1 overflow-x-auto lg:flex-col">
           {visible.map((s) => (
-            <NavLink key={s.id} to={`/settings/${s.id}`} className={() => cn('flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium', current === s.id ? 'bg-surface text-fg shadow-xs ring-1 ring-line' : 'text-fg-3 hover:bg-surface-3 hover:text-fg-2')}>
+            <NavLink key={s.id} to={`/app/settings/${s.id}`} className={() => cn('flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium', current === s.id ? 'bg-surface text-fg shadow-xs ring-1 ring-line' : 'text-fg-3 hover:bg-surface-3 hover:text-fg-2')}>
               <s.icon className="size-4" />{t(`settings.nav.${s.id}`)}
             </NavLink>
           ))}

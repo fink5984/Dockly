@@ -105,7 +105,7 @@ export default function ClientsPage() {
             columns={columns}
             rows={rows}
             rowKey={(c) => c.id}
-            onRowClick={(c) => navigate(`/clients/${c.id}`)}
+            onRowClick={(c) => navigate(`/app/clients/${c.id}`)}
             sort={sort}
             onSortChange={setSort}
             mobileRow={(c) => (
@@ -126,7 +126,7 @@ export default function ClientsPage() {
         onClose={() => setFormOpen(false)}
         onSaved={(c) => {
           invalidate('clients')
-          toast({ tone: 'success', title: t('clients.created', { name: c.name }), action: { label: t('clients.createRequest'), onClick: () => navigate(`/requests/new?clientId=${c.id}`) } })
+          toast({ tone: 'success', title: t('clients.created', { name: c.name }), action: { label: t('clients.createRequest'), onClick: () => navigate(`/app/requests/new?clientId=${c.id}`) } })
         }}
       />
     </>
