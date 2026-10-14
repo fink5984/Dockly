@@ -48,7 +48,7 @@ export function PlanPicker({ interval, onIntervalChange, tier, onTierChange, rec
           <Badge tone="success">{t('billing.yearlySave')}</Badge>
         </div>
       </div>
-      <ul className="grid gap-4 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {FAMILIES.map((family) => {
           const plan = planFor(family, tier)
           const Icon = ICONS[family]

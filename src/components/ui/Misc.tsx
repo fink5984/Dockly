@@ -129,19 +129,22 @@ export function Stepper({ steps, current, onStepClick }: { steps: Step[]; curren
 }
 
 /** Metric tile for dashboards. */
-export function Stat({ label, value, hint, icon, tone = 'neutral', to }: { label: string; value: ReactNode; hint?: ReactNode; icon?: ReactNode; tone?: 'neutral' | 'warning' | 'danger' | 'success' | 'brand'; to?: string }) {
+export function Stat({ label, value, hint, icon, tone = 'neutral', to, className }: { label: string; value: ReactNode; hint?: ReactNode; icon?: ReactNode; tone?: 'neutral' | 'warning' | 'danger' | 'success' | 'brand'; to?: string; className?: string }) {
   const toneCls = { neutral: 'text-fg-3 bg-surface-3', warning: 'text-warning bg-warning-soft', danger: 'text-danger bg-danger-soft', success: 'text-success bg-success-soft', brand: 'text-brand-600 bg-brand-soft' }[tone]
   const inner = (
     <>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-fg-3">{label}</p>
-        {icon && <span className={cn('flex size-7 items-center justify-center rounded-md [&>svg]:size-4', toneCls)}>{icon}</span>}
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-sm font-medium leading-snug text-fg-3">{label}</p>
+        {icon && <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-md [&>svg]:size-4', toneCls)}>{icon}</span>}
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular tracking-tight text-fg">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-fg-3">{hint}</p>}
+      {/* Pinned to the bottom when the tile is taller than its content (square tiles on phones). */}
+      <div className="mt-auto pt-2">
+        <p className="text-2xl font-semibold tabular tracking-tight text-fg">{value}</p>
+        {hint && <p className="mt-0.5 text-xs text-fg-3">{hint}</p>}
+      </div>
     </>
   )
-  const cls = 'block rounded-xl border border-line bg-surface p-4 shadow-xs'
+  const cls = cn('flex flex-col rounded-xl border border-line bg-surface p-4 shadow-xs', className)
   return to ? (
     <Link to={to} className={cn(cls, 'transition-[border-color,box-shadow] hover:border-line-2 hover:shadow-sm focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]')}>{inner}</Link>
   ) : <div className={cls}>{inner}</div>

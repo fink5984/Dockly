@@ -45,7 +45,7 @@ function ClientStep({ draft, setDraft, clients }: { draft: Draft; setDraft: (d: 
           <Button variant="ghost" size="sm" onClick={() => { setCreating(false); setDraft({ ...draft, newClient: undefined }) }}>{t('requests.create.pickExisting')}</Button>
         </div>
         <Input label={t('clients.name')} value={nc.name} onChange={(e) => setDraft({ ...draft, clientId: undefined, newClient: { ...nc, name: e.target.value } })} required autoFocus />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label={t('clients.phone')} type="tel" dir="ltr" value={nc.phone} onChange={(e) => setDraft({ ...draft, newClient: { ...nc, phone: e.target.value } })} hint={t('requests.create.phoneHint')} />
           <Input label={t('clients.email')} type="email" dir="ltr" value={nc.email} onChange={(e) => setDraft({ ...draft, newClient: { ...nc, email: e.target.value } })} optionalLabel={t('common.optional')} />
         </div>
@@ -144,7 +144,7 @@ function DocumentsStep({ draft, setDraft, types, onTypeCreated }: { draft: Draft
           />
         </div>
       )}
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold">{t('requests.create.library')}</h3>
@@ -193,7 +193,7 @@ function DocumentsStep({ draft, setDraft, types, onTypeCreated }: { draft: Draft
                       placeholder={t('requests.create.itemNote')}
                       aria-label={`${t('requests.create.itemNote')} — ${d?.name}`}
                       maxLength={500}
-                      className="mt-2 h-8 w-full rounded-md border border-line bg-surface-2 px-2.5 text-sm placeholder:text-fg-4 focus:border-brand-500 focus:outline-none"
+                      className="mt-2 h-8 w-full rounded-full border border-line bg-surface-2 px-3.5 text-sm placeholder:text-fg-4 focus:border-brand-500 focus:outline-none"
                     />
                   </li>
                 )
@@ -223,7 +223,7 @@ function DetailsStep({ draft, setDraft }: { draft: Draft; setDraft: (d: Draft) =
   return (
     <div className="space-y-5">
       <Textarea label={t('requests.create.instructions')} value={draft.instructions} onChange={(e) => setDraft({ ...draft, instructions: e.target.value })} rows={4} placeholder={t('requests.create.instructionsPlaceholder')} hint={t('requests.create.instructionsHint')} optionalLabel={t('common.optional')} maxLength={4000} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input label={t('requests.create.deadline')} type="date" value={draft.deadline} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setDraft({ ...draft, deadline: e.target.value })} leading={<CalendarDays className="size-4" />} optionalLabel={t('common.optional')} />
         <Select label={t('requests.create.language')} value={draft.language} onChange={(e) => setDraft({ ...draft, language: e.target.value as Language | '' })} options={[{ value: '', label: t('requests.create.languageDefault') }, { value: 'he', label: 'עברית' }, { value: 'en', label: 'English' }]} />
       </div>
@@ -368,7 +368,7 @@ export default function RequestCreatePage() {
           {step === 2 && <DetailsStep draft={draft} setDraft={setDraft} />}
           {step === 3 && (
             <div className="space-y-6">
-              <dl className="grid gap-4 sm:grid-cols-2">
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div><dt className="text-xs text-fg-3">{t('requests.col.client')}</dt><dd className="mt-0.5 font-medium">{clientName}{draft.newClient && <Badge tone="brand" className="ms-2">{t('requests.create.newBadge')}</Badge>}</dd></div>
                 <div><dt className="text-xs text-fg-3">{t('requests.col.request')}</dt><dd className="mt-0.5 font-medium">{draft.title}</dd></div>
                 <div><dt className="text-xs text-fg-3">{t('requests.create.documentsLabel')}</dt><dd className="mt-0.5">{t('requests.create.docSummary', { count: draft.items.length, required: draft.items.filter((i) => i.required).length })}</dd></div>
@@ -376,7 +376,7 @@ export default function RequestCreatePage() {
               </dl>
               <fieldset>
                 <legend className="mb-2 text-sm font-semibold">{t('requests.create.howToSend')}</legend>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   {([
                     { id: 'whatsapp', icon: MessageCircle, ok: phoneOk, hint: phoneOk ? phone : t('requests.create.noPhone') },
                     { id: 'email', icon: Mail, ok: emailOk, hint: !channels.data?.email.configured ? t('requests.create.emailOff') : email || t('requests.create.noEmail') },

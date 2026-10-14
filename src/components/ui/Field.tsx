@@ -2,8 +2,9 @@ import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type Selec
 import { ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+// Single-line fields are pill-shaped like every button; multi-line ones use the largest radius.
 const control =
-  'w-full rounded-md border border-line-2 bg-surface text-fg shadow-xs placeholder:text-fg-4 ' +
+  'w-full border border-line-2 bg-surface text-fg shadow-xs placeholder:text-fg-4 ' +
   'transition-[border-color,box-shadow] duration-150 ' +
   'hover:border-fg-4/60 focus:outline-none focus:border-brand-500 focus:shadow-[var(--shadow-focus)] ' +
   'disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-3 ' +
@@ -67,17 +68,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <Field label={label} hint={hint} error={error} required={required} optionalLabel={optionalLabel} className={wrapperClassName}>
       {({ id, describedBy, invalid }) => (
         <div className="relative">
-          {leading && <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-fg-4">{leading}</span>}
+          {leading && <span className="pointer-events-none absolute inset-y-0 start-3.5 flex items-center text-fg-4">{leading}</span>}
           <input
             ref={ref}
             id={props.id || id}
             required={required}
             aria-invalid={invalid || undefined}
             aria-describedby={describedBy}
-            className={cn(control, h, 'px-3', leading && 'ps-9', trailing && 'pe-9', className)}
+            className={cn(control, h, 'rounded-full px-4', leading && 'ps-10', trailing && 'pe-10', className)}
             {...props}
           />
-          {trailing && <span className="absolute inset-y-0 end-2 flex items-center">{trailing}</span>}
+          {trailing && <span className="absolute inset-y-0 end-2.5 flex items-center">{trailing}</span>}
         </div>
       )}
     </Field>
@@ -106,7 +107,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
           required={required}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
-          className={cn(control, 'px-3 py-2 text-sm leading-relaxed resize-y min-h-[72px]', className)}
+          className={cn(control, 'rounded-2xl px-4 py-2.5 text-sm leading-relaxed resize-y min-h-[72px]', className)}
           {...props}
         />
       )}
@@ -137,12 +138,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
             required={required}
             aria-invalid={invalid || undefined}
             aria-describedby={describedBy}
-            className={cn(control, selectSize === 'sm' ? 'h-8' : 'h-9', 'appearance-none ps-3 pe-9 text-sm', className)}
+            className={cn(control, selectSize === 'sm' ? 'h-8' : 'h-9', 'appearance-none rounded-full ps-4 pe-10 text-sm', className)}
             {...props}
           >
             {options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
           </select>
-          <ChevronDown className="pointer-events-none absolute end-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-4" aria-hidden />
+          <ChevronDown className="pointer-events-none absolute end-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-4" aria-hidden />
         </div>
       )}
     </Field>
@@ -159,19 +160,19 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, '
 export function SearchInput({ value, onChange, onClear, clearLabel = 'Clear', className, ...props }: SearchInputProps) {
   return (
     <div className={cn('relative', className)}>
-      <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-4" aria-hidden />
+      <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-4" aria-hidden />
       <input
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={cn(control, 'h-9 ps-8 pe-8 text-sm [&::-webkit-search-cancel-button]:hidden')}
+        className={cn(control, 'h-9 rounded-full ps-9 pe-9 text-sm [&::-webkit-search-cancel-button]:hidden')}
         {...props}
       />
       {value && (
         <button
           type="button"
           onClick={() => { onChange(''); onClear?.() }}
-          className="absolute end-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-fg-4 hover:bg-surface-3 hover:text-fg-2"
+          className="absolute end-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-fg-4 hover:bg-surface-3 hover:text-fg-2"
           aria-label={clearLabel}
         >
           <X className="size-3.5" />
@@ -257,7 +258,7 @@ interface SegmentedProps<T extends string> {
 /** Compact single-choice control (radio group semantics). */
 export function Segmented<T extends string>({ value, onChange, options, label, size = 'md', className }: SegmentedProps<T>) {
   return (
-    <div role="radiogroup" aria-label={label} className={cn('inline-flex rounded-md border border-line-2 bg-surface-3 p-0.5', className)}>
+    <div role="radiogroup" aria-label={label} className={cn('inline-flex max-w-full overflow-x-auto scroll-thin rounded-full border border-line-2 bg-surface-3 p-0.5', className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -266,7 +267,7 @@ export function Segmented<T extends string>({ value, onChange, options, label, s
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-[5px] font-medium transition-colors',
+            'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full font-medium transition-colors',
             size === 'sm' ? 'h-6 px-2 text-xs' : 'h-7 px-2.5 text-sm',
             value === o.value ? 'bg-surface text-fg shadow-xs' : 'text-fg-3 hover:text-fg-2',
           )}

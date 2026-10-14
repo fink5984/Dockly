@@ -91,7 +91,7 @@ export default function BillingPage() {
         )}
         {!owner && <Notice icon={<ShieldCheck className="size-4" />} tone="neutral">{t('billing.ownerOnly')}</Notice>}
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
           <CurrentPlan state={data} onClearPending={owner ? () => after(() => billingApi.clearPending()) : undefined} />
           <Usage state={data} owner={owner && canPay} onBuy={(code) => after(async () => {
             const r = await billingApi.buyPack(code)
@@ -124,7 +124,7 @@ export default function BillingPage() {
           else if (r.action === 'applied') toast({ tone: 'success', title: t('billing.action.applied') })
         })} />}
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <PaymentMethod state={data} owner={owner && canPay} />
           <BillingDetails state={data} owner={owner} onSave={(d) => after(() => billingApi.saveDetails(d), t('billing.details.saved'))} />
         </div>

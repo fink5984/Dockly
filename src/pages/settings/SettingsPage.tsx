@@ -65,7 +65,7 @@ function ProfileSection() {
         <CardHeader title={t('settings.profile.title')} description={t('settings.profile.hint')} />
         <CardBody className="space-y-4">
           <div className="flex items-center gap-3"><Avatar name={f.name || user?.email || ''} size="lg" /><div><p className="font-medium">{user?.email}</p><Badge tone="brand">{t(`roles.${user?.role}`)}</Badge></div></div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label={t('auth.name')} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
             <Input label={t('auth.phone')} value={f.phone} dir="ltr" onChange={(e) => setF({ ...f, phone: e.target.value })} />
           </div>
@@ -74,7 +74,7 @@ function ProfileSection() {
       </Card>
       <Card>
         <CardHeader title={t('settings.password.title')} description={t('settings.password.hint')} />
-        <CardBody className="grid gap-4 sm:grid-cols-2">
+        <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label={t('settings.password.current')} type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} />
           <Input label={t('settings.password.new')} type="password" autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} hint={t('auth.passwordHint')} error={pwError} />
           <div className="sm:col-span-2"><Button onClick={changePw} loading={pwBusy} disabled={!pw.current || !pw.next}>{t('settings.password.change')}</Button></div>
@@ -102,7 +102,7 @@ function WorkspaceSection() {
       <CardHeader title={t('settings.workspace.title')} description={t('settings.workspace.hint')} />
       <CardBody className="space-y-4">
         <Input label={t('onboarding.businessName')} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label={t('onboarding.phone')} dir="ltr" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} hint={t('onboarding.contactHint')} />
           <Input label={t('onboarding.email')} dir="ltr" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
           <Select label={t('onboarding.clientLanguage')} value={f.defaultLanguage} onChange={(e) => setF({ ...f, defaultLanguage: e.target.value as Language })} options={[{ value: 'he', label: 'עברית' }, { value: 'en', label: 'English' }]} />
@@ -135,7 +135,7 @@ function BrandingSection() {
     try { setWorkspace(await workspaceApi.uploadLogo(f)); toast({ tone: 'success', title: t('settings.branding.logoSaved') }) } catch (e) { toastError(e, t('settings.branding.logoFailed')) } finally { setLogoBusy(false) }
   }
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
       <Card>
         <CardHeader title={t('settings.branding.title')} description={t('settings.branding.hint')} />
         <CardBody className="space-y-6">
@@ -246,7 +246,7 @@ function TeamSection() {
       <Card>
         <CardHeader title={t('settings.team.rolesTitle')} />
         <CardBody>
-          <dl className="grid gap-3 sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(['owner', 'admin', 'member', 'viewer'] as Role[]).map((r) => (
               <div key={r} className="rounded-lg border border-line p-3"><dt className="text-sm font-medium">{t(`roles.${r}`)}</dt><dd className="mt-0.5 text-xs text-fg-3">{t(`settings.team.roleHelp.${r}`)}</dd></div>
             ))}
@@ -313,7 +313,7 @@ function AutomationSection() {
           <section className="space-y-3">
             <Switch checked={s.requestReminders.enabled} onChange={(v) => set('requestReminders', { ...s.requestReminders, enabled: v })} label={t('settings.automation.requestReminders')} description={t('settings.automation.requestRemindersHint')} />
             {s.requestReminders.enabled && (
-              <div className="grid gap-3 rounded-lg border border-line bg-surface-2 p-3 sm:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 rounded-lg border border-line bg-surface-2 p-3 sm:grid-cols-4">
                 <NumberField label={t('settings.automation.firstAfter')} value={s.requestReminders.firstAfterDays} suffix={days} onChange={(n) => set('requestReminders', { ...s.requestReminders, firstAfterDays: n })} />
                 <NumberField label={t('settings.automation.repeatEvery')} value={s.requestReminders.repeatEveryDays} suffix={days} onChange={(n) => set('requestReminders', { ...s.requestReminders, repeatEveryDays: n })} />
                 <NumberField label={t('settings.automation.max')} value={s.requestReminders.maxReminders} max={10} onChange={(n) => set('requestReminders', { ...s.requestReminders, maxReminders: n })} />
@@ -329,7 +329,7 @@ function AutomationSection() {
           <section className="space-y-3 border-t border-line pt-5">
             <Switch checked={s.signatureReminders.enabled} onChange={(v) => set('signatureReminders', { ...s.signatureReminders, enabled: v })} label={t('settings.automation.signatureReminders')} description={t('settings.automation.signatureRemindersHint')} />
             {s.signatureReminders.enabled && (
-              <div className="grid gap-3 rounded-lg border border-line bg-surface-2 p-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 rounded-lg border border-line bg-surface-2 p-3 sm:grid-cols-3">
                 <NumberField label={t('settings.automation.firstAfter')} value={s.signatureReminders.firstAfterDays} suffix={days} onChange={(n) => set('signatureReminders', { ...s.signatureReminders, firstAfterDays: n })} />
                 <NumberField label={t('settings.automation.repeatEvery')} value={s.signatureReminders.repeatEveryDays} suffix={days} onChange={(n) => set('signatureReminders', { ...s.signatureReminders, repeatEveryDays: n })} />
                 <NumberField label={t('settings.automation.max')} value={s.signatureReminders.maxReminders} max={10} onChange={(n) => set('signatureReminders', { ...s.signatureReminders, maxReminders: n })} />
@@ -437,7 +437,7 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title={t('nav.settings')} description={t('settings.subtitle')} />
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav aria-label={t('nav.settings')} className="flex gap-1 overflow-x-auto lg:flex-col">
           {visible.map((s) => (
             <NavLink key={s.id} to={`/app/settings/${s.id}`} className={() => cn('flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium', current === s.id ? 'bg-surface text-fg shadow-xs ring-1 ring-line' : 'text-fg-3 hover:bg-surface-3 hover:text-fg-2')}>

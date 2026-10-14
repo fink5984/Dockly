@@ -166,7 +166,7 @@ export function SignaturePad({ onChange, labels, initialName = '', compact = fal
             onChange={(e) => setTyped(e.target.value)}
             placeholder={labels.typePlaceholder}
             aria-label={labels.typePlaceholder}
-            className="h-11 w-full rounded-md border border-line-2 bg-surface px-3 text-md focus:border-brand-500 focus:outline-none"
+            className="h-11 w-full rounded-full border border-line-2 bg-surface px-4 text-md focus:border-brand-500 focus:outline-none"
             maxLength={60}
             autoFocus
           />

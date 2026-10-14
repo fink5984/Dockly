@@ -167,7 +167,7 @@ function SupportDrawer({ request, open, onClose }: { request: DocRequest; open: 
             rows={2}
             placeholder={t('requests.support.placeholder')}
             aria-label={t('requests.support.placeholder')}
-            className="min-h-[44px] flex-1 resize-none rounded-md border border-line-2 bg-surface px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+            className="min-h-[44px] flex-1 resize-none rounded-[22px] border border-line-2 bg-surface px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none"
           />
           <Button type="submit" variant="primary" loading={busy} disabled={!text.trim()} icon={<Send className="size-4 rtl-flip" />}>{t('requests.support.send')}</Button>
         </form>
@@ -220,7 +220,7 @@ function EditDialog({ request, open, onClose, onSaved }: { request: DocRequest; 
       <div className="space-y-4">
         <Input label={t('requests.create.titleLabel')} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} required />
         <Textarea label={t('requests.create.instructions')} value={f.instructions} onChange={(e) => setF({ ...f, instructions: e.target.value })} rows={4} hint={t('requests.create.instructionsHint')} />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label={t('requests.create.deadline')} type="date" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} />
           <Select label={t('requests.create.language')} value={f.language} onChange={(e) => setF({ ...f, language: e.target.value as Language | '' })} options={[{ value: '', label: t('requests.create.languageDefault') }, { value: 'he', label: 'עברית' }, { value: 'en', label: 'English' }]} />
         </div>
@@ -411,7 +411,7 @@ function NoteComposer({ requestId, onAdded }: { requestId: string; onAdded: () =
   return (
     <form onSubmit={(e) => { e.preventDefault(); add() }} className="mb-5">
       <label htmlFor="note" className="sr-only">{t('requests.detail.addNote')}</label>
-      <textarea id="note" value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder={t('requests.detail.notePlaceholder')} className="w-full resize-y rounded-md border border-line-2 bg-surface px-3 py-2 text-sm placeholder:text-fg-4 focus:border-brand-500 focus:outline-none" maxLength={4000} />
+      <textarea id="note" value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder={t('requests.detail.notePlaceholder')} className="w-full resize-y rounded-2xl border border-line-2 bg-surface px-4 py-2.5 text-sm placeholder:text-fg-4 focus:border-brand-500 focus:outline-none" maxLength={4000} />
       <div className="mt-2 flex items-center justify-between">
         <p className="text-xs text-fg-4">{t('requests.detail.noteVisibility')}</p>
         <Button size="sm" type="submit" loading={busy} disabled={!text.trim()} icon={<StickyNote className="size-3.5" />}>{t('requests.detail.addNote')}</Button>
@@ -461,7 +461,7 @@ export default function RequestDetailPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-72" />
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]"><Skeleton className="h-96 rounded-xl" /><Skeleton className="h-96 rounded-xl" /></div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]"><Skeleton className="h-96 rounded-xl" /><Skeleton className="h-96 rounded-xl" /></div>
       </div>
     )
   }
@@ -566,7 +566,7 @@ export default function RequestDetailPage() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
           {r.status === 'new' && canWrite && (
             <div className="flex flex-col gap-3 rounded-xl border border-brand-200 bg-brand-soft p-4 sm:flex-row sm:items-center">

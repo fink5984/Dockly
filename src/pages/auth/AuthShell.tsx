@@ -7,7 +7,7 @@ import { Input, type InputProps } from '@/components/ui/Field'
 export function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle?: string; children: ReactNode; footer?: ReactNode }) {
   const { t, language, setLanguage } = useI18n()
   return (
-    <div className="grid min-h-dvh bg-canvas lg:grid-cols-[1fr_minmax(420px,520px)]">
+    <div className="grid grid-cols-1 min-h-dvh bg-canvas lg:grid-cols-[1fr_minmax(420px,520px)]">
       <div className="flex flex-col px-5 py-6 sm:px-10">
         <div className="flex items-center justify-between">
           <Logo className="h-10" />

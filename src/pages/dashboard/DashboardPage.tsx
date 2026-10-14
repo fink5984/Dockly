@@ -156,7 +156,7 @@ function GettingStarted({ o }: { o: Dashboard['onboarding'] }) {
           <p className="text-sm text-fg-3">{t('dashboard.start.progress', { done, total: steps.length })}</p>
         </div>
       </div>
-      <ol className="grid border-t border-line sm:grid-cols-5">
+      <ol className="grid grid-cols-1 border-t border-line sm:grid-cols-5">
         {steps.map((s, i) => (
           <li key={i} className="border-b border-line sm:border-b-0 sm:border-e last:border-0">
             <Link to={s.to} className={cn('flex h-full items-center gap-2.5 px-4 py-3 text-sm hover:bg-surface-2', s.done ? 'text-fg-3' : 'font-medium text-fg')}>
@@ -169,6 +169,9 @@ function GettingStarted({ o }: { o: Dashboard['onboarding'] }) {
     </Card>
   )
 }
+
+/** KPI tiles are squares on phones (2×2), regular cards from `sm` up. */
+const TILE = 'aspect-square p-3.5 sm:aspect-auto sm:p-4'
 
 const INSIGHTS_KEY = 'dockly-dashboard-insights'
 
@@ -203,18 +206,18 @@ export default function DashboardPage() {
         <div className="space-y-6">
           {data && <GettingStarted o={data.onboarding} />}
 
-          <section aria-label={t('dashboard.kpis')} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {loading || !data ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[106px] rounded-xl" />) : (
+          <section aria-label={t('dashboard.kpis')} className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            {loading || !data ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="aspect-square rounded-xl sm:aspect-auto sm:h-[106px]" />) : (
               <>
-                <Stat label={t('dashboard.kpi.active')} value={fmt.number(data.kpis.activeRequests)} hint={t('dashboard.kpi.activeHint', { count: data.kpis.drafts })} icon={<ClipboardList />} to="/app/requests?status=open" />
-                <Stat label={t('dashboard.kpi.review')} value={fmt.number(data.kpis.documentsNeedingReview)} hint={t('dashboard.kpi.reviewHint', { count: data.kpis.requestsNeedingReview })} icon={<Inbox />} tone={data.kpis.documentsNeedingReview ? 'brand' : 'neutral'} to="/app/requests?status=needs-review" />
-                <Stat label={t('dashboard.kpi.overdue')} value={fmt.number(data.kpis.overdue)} hint={t('dashboard.kpi.awaiting', { count: data.kpis.awaitingClient })} icon={<Clock />} tone={data.kpis.overdue ? 'danger' : 'neutral'} to="/app/requests?status=overdue" />
-                <Stat label={t('dashboard.kpi.signatures')} value={fmt.number(data.kpis.pendingSignatures)} hint={t('dashboard.kpi.signedMonth', { count: data.kpis.signedThisMonth })} icon={<PenLine />} to="/app/signatures" />
+                <Stat label={t('dashboard.kpi.active')} value={fmt.number(data.kpis.activeRequests)} hint={t('dashboard.kpi.activeHint', { count: data.kpis.drafts })} icon={<ClipboardList />} to="/app/requests?status=open" className={TILE} />
+                <Stat label={t('dashboard.kpi.review')} value={fmt.number(data.kpis.documentsNeedingReview)} hint={t('dashboard.kpi.reviewHint', { count: data.kpis.requestsNeedingReview })} icon={<Inbox />} tone={data.kpis.documentsNeedingReview ? 'brand' : 'neutral'} to="/app/requests?status=needs-review" className={TILE} />
+                <Stat label={t('dashboard.kpi.overdue')} value={fmt.number(data.kpis.overdue)} hint={t('dashboard.kpi.awaiting', { count: data.kpis.awaitingClient })} icon={<Clock />} tone={data.kpis.overdue ? 'danger' : 'neutral'} to="/app/requests?status=overdue" className={TILE} />
+                <Stat label={t('dashboard.kpi.signatures')} value={fmt.number(data.kpis.pendingSignatures)} hint={t('dashboard.kpi.signedMonth', { count: data.kpis.signedThisMonth })} icon={<PenLine />} to="/app/signatures" className={TILE} />
               </>
             )}
           </section>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <Card className="overflow-hidden">
               <CardHeader title={t('dashboard.actionRequired')} description={t('dashboard.actionRequiredHint')} />
               {loading || !data ? <div className="space-y-3 px-5 pb-5">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-11" />)}</div> : <ActionQueue actions={data.actions} />}
@@ -250,7 +253,7 @@ function Insights({ data }: { data: Dashboard | undefined }) {
   const { t, fmt } = useI18n()
   const activity = useApi('activity:recent', () => insightsApi.activity({ limit: 12 }), { topics: ['activity'] })
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <Card>
         <CardHeader
           title={t('dashboard.trendTitle')}

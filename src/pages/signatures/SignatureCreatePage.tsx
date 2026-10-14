@@ -151,7 +151,7 @@ export default function SignatureCreatePage() {
                 hint={<>{t('signatures.create.noClient')} <a href="/app/clients?new=1" className="font-medium text-brand-600 hover:underline">{t('clients.new')}</a></>} />
               <Input label={t('signatures.create.docTitle')} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder={t('signatures.create.docTitlePlaceholder')} />
               <Textarea label={t('signatures.create.message')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} optionalLabel={t('common.optional')} hint={t('signatures.create.messageHint')} />
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Select label={t('signatures.create.expires')} value={form.expiresIn} onChange={(e) => setForm({ ...form, expiresIn: e.target.value })}
                   options={[{ value: '7', label: t('signatures.create.days', { count: 7 }) }, { value: '14', label: t('signatures.create.days', { count: 14 }) }, { value: '30', label: t('signatures.create.days', { count: 30 }) }, { value: '', label: t('signatures.create.noExpiry') }]} />
                 <Select label={t('requests.create.language')} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value as Language | '' })} options={[{ value: '', label: t('requests.create.languageDefault') }, { value: 'he', label: 'עברית' }, { value: 'en', label: 'English' }]} />
@@ -181,14 +181,14 @@ export default function SignatureCreatePage() {
           )}
           {step === 3 && (
             <div className="space-y-5">
-              <dl className="grid gap-4 sm:grid-cols-3">
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div><dt className="text-xs text-fg-3">{t('signatures.create.client')}</dt><dd className="font-medium">{client?.name}</dd></div>
                 <div><dt className="text-xs text-fg-3">{t('signatures.create.documents')}</dt><dd className="font-medium">{ready.length}</dd></div>
                 <div><dt className="text-xs text-fg-3">{t('signatures.create.fields')}</dt><dd className="font-medium">{t('signatures.create.fieldSummary', { count: fields.length, required: fields.filter((f) => f.required).length })}</dd></div>
               </dl>
               <fieldset>
                 <legend className="mb-2 text-sm font-semibold">{t('requests.create.howToSend')}</legend>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   {([
                     { id: 'email', icon: Mail, ok: emailOk, hint: !channels.data?.email.configured ? t('requests.create.emailOff') : client?.email || t('requests.create.noEmail') },
                     { id: 'whatsapp', icon: MessageCircle, ok: false, hint: t('signatures.create.waTemplateHint') },

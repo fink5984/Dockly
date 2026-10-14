@@ -139,7 +139,7 @@ export function Topbar() {
       <button
         type="button"
         onClick={() => setCommandOpen(true)}
-        className="group flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line-2 bg-surface-2 px-3 text-sm text-fg-4 transition-colors hover:border-fg-4/50 sm:max-w-sm focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]"
+        className="group flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-line-2 bg-surface-2 px-3.5 text-sm text-fg-4 transition-colors hover:border-fg-4/50 sm:max-w-sm focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]"
         aria-label={t('search.open')}
       >
         <Search className="size-4 shrink-0" />

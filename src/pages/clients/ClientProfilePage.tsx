@@ -70,7 +70,7 @@ export default function ClientProfilePage() {
         )}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
         <aside className="space-y-6">
           <Card>
             <CardHeader title={t('clients.details')} />

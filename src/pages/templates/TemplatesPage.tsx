@@ -47,7 +47,7 @@ function TemplateDialog({ open, onClose, template, types }: { open: boolean; onC
     <Dialog open={open} onClose={onClose} title={template ? t('templates.edit') : t('templates.new')} size="lg"
       footer={<><Button onClick={onClose}>{t('common.cancel')}</Button><Button variant="primary" loading={busy} disabled={!f.name.trim() || !items.length} onClick={save}>{t('common.save')}</Button></>}>
       <div className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label={t('templates.name')} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required autoFocus />
           <Input label={t('templates.defaultTitle')} value={f.defaultTitle} onChange={(e) => setF({ ...f, defaultTitle: e.target.value })} hint={t('templates.defaultTitleHint')} />
         </div>
@@ -156,7 +156,7 @@ export default function TemplatesPage() {
             {templates.data!.length === 0 ? (
               <Card><EmptyState icon={<LayoutTemplate />} title={t('templates.emptyTitle')} description={t('templates.emptyHint')} /></Card>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {templates.data!.map((tpl) => (
                   <Card key={tpl.id} className="flex flex-col p-5">
                     <div className="flex items-start gap-3">
@@ -182,7 +182,7 @@ export default function TemplatesPage() {
             {canWrite && freshStarters.length > 0 && (
               <section>
                 <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg-2"><Sparkles className="size-4 text-brand-600" />{t('templates.starters')}</h2>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {freshStarters.map((s) => (
                     <div key={s.key} className="flex items-center gap-3 rounded-xl border border-dashed border-line-2 bg-surface p-4">
                       <div className="min-w-0 flex-1">

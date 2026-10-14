@@ -59,7 +59,7 @@ export default function DocumentsPage() {
         meta={data && <span className="inline-flex items-center gap-1.5"><HardDrive className="size-3.5" />{t('documents.usage', { size: fmt.bytes(data.usage.bytes), count: data.usage.versions })}</span>}
       />
       <Card className="overflow-hidden">
-        <div className="grid gap-3 border-b border-line p-4 sm:grid-cols-2 lg:grid-cols-6 sm:px-5">
+        <div className="grid grid-cols-1 gap-3 border-b border-line p-4 sm:grid-cols-2 lg:grid-cols-6 sm:px-5">
           <SearchInput value={search} onChange={setSearch} placeholder={t('documents.search')} aria-label={t('documents.search')} className="lg:col-span-2" clearLabel={t('common.clear')} />
           <Select selectSize="sm" aria-label={t('documents.col.client')} value={filters.clientId} onChange={(e) => set('clientId')(e.target.value)} options={[{ value: '', label: t('documents.allClients') }, ...(clients.data || []).map((c) => ({ value: c.id, label: c.name }))]} />
           <Select selectSize="sm" aria-label={t('documents.col.source')} value={filters.source} onChange={(e) => set('source')(e.target.value)} options={[{ value: '', label: t('documents.allSources') }, { value: 'requests', label: t('documents.source.requests') }, { value: 'signatures', label: t('documents.source.signatures') }]} />

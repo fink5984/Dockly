@@ -75,7 +75,7 @@ export default function OnboardingPage() {
             </div>
             <Input label={t('onboarding.businessName')} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setError('') }} error={error} required autoFocus inputSize="lg" hint={t('onboarding.businessNameHint')} />
             <Select label={t('onboarding.businessType')} value={form.businessType} onChange={(e) => setForm({ ...form, businessType: e.target.value })} options={BUSINESS_TYPES.map((b) => ({ value: b, label: t(`onboarding.types.${b}`) }))} />
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input label={t('onboarding.phone')} type="tel" dir="ltr" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} hint={t('onboarding.contactHint')} />
               <Input label={t('onboarding.email')} type="email" dir="ltr" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
@@ -111,7 +111,7 @@ export default function OnboardingPage() {
               <h1 className="text-2xl font-semibold tracking-tight">{t('onboarding.templatesTitle')}</h1>
               <p className="mt-1 text-sm text-fg-3">{t('onboarding.templatesSubtitle')}</p>
             </div>
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {starters.map((s) => {
                 const on = chosen.has(s.key)
                 return (

@@ -60,7 +60,7 @@ export function ClientFormDialog({ open, onClose, client, onSaved }: { open: boo
     >
       <form onSubmit={save} className="space-y-4" noValidate>
         <Input label={t('clients.name')} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} error={errors.name} required autoFocus />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label={t('clients.phone')} type="tel" dir="ltr" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} error={errors.phone} hint={t('clients.phoneHint')} />
           <Input label={t('clients.email')} type="email" dir="ltr" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} error={errors.email} optionalLabel={t('common.optional')} />
         </div>
