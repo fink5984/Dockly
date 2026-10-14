@@ -9,7 +9,7 @@ import { Card, CardBody, DetailRow } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ErrorState, ListSkeleton } from '@/components/ui/States'
-import { Logo } from '@/components/layout/Logo'
+import { Logo } from '@/components/brand/Logo'
 
 const LINE_NAMES: Record<string, string> = { proration: 'billing.invoices.kind.proration' }
 
@@ -40,7 +40,7 @@ export default function InvoicePage() {
         {error ? <ErrorState onRetry={refetch} /> : !data ? <ListSkeleton rows={6} /> : (
           <CardBody className="space-y-6 pt-6">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-2.5"><Logo className="size-8" /><span className="font-semibold">Dockly</span></div>
+              <Logo className="h-8" />
               <div className="text-end text-sm">
                 <p className="font-semibold tabular" dir="ltr">{data.number}</p>
                 <p className="text-fg-3">{fmt.date(data.paidAt || data.createdAt)}</p>

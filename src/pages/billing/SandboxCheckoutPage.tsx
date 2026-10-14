@@ -6,7 +6,7 @@ import { useApi } from '@/hooks/useApi'
 import { billingApi } from '@/services'
 import { money } from '@/lib/billing'
 import { cn } from '@/lib/utils'
-import { Logo } from '@/components/layout/Logo'
+import { Logo } from '@/components/brand/Logo'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { DetailRow } from '@/components/ui/Card'
@@ -39,7 +39,7 @@ export default function SandboxCheckoutPage() {
         <FlaskConical className="me-1.5 inline size-4 align-[-3px]" aria-hidden />{t('billing.sandbox.badge')} — {t('billing.sandbox.hint')}
       </div>
       <main className="mx-auto max-w-md px-4 py-10">
-        <div className="mb-6 flex items-center gap-2.5"><Logo className="size-8" /><span className="font-semibold">Dockly</span></div>
+        <Logo className="mb-6 h-8" />
         <Card className="p-6">
           {error ? <EmptyState compact title={t('billing.sandbox.notFound')} /> : !data ? <ListSkeleton rows={4} /> : data.status !== 'pending' ? <EmptyState compact title={t('billing.sandbox.notFound')} /> : (
             <>

@@ -4,12 +4,12 @@
  * server-side equivalents.
  */
 const NAMES = {
-  collect_starter: ['Dockly Document Collection — Starter', 'Dockly איסוף מסמכים — Starter'],
-  collect_pro: ['Dockly Document Collection — Pro', 'Dockly איסוף מסמכים — Pro'],
-  sign_starter: ['Dockly E-Signatures — Starter', 'Dockly חתימות דיגיטליות — Starter'],
-  sign_pro: ['Dockly E-Signatures — Pro', 'Dockly חתימות דיגיטליות — Pro'],
-  suite_starter: ['Dockly Suite (Collection + Signatures) — Starter', 'Dockly חבילה משולבת (איסוף + חתימות) — Starter'],
-  suite_pro: ['Dockly Suite (Collection + Signatures) — Pro', 'Dockly חבילה משולבת (איסוף + חתימות) — Pro'],
+  collect_starter: ['Sadir Document Collection — Starter', 'Sadir איסוף מסמכים — Starter'],
+  collect_pro: ['Sadir Document Collection — Pro', 'Sadir איסוף מסמכים — Pro'],
+  sign_starter: ['Sadir E-Signatures — Starter', 'Sadir חתימות דיגיטליות — Starter'],
+  sign_pro: ['Sadir E-Signatures — Pro', 'Sadir חתימות דיגיטליות — Pro'],
+  suite_starter: ['Sadir Suite (Collection + Signatures) — Starter', 'Sadir חבילה משולבת (איסוף + חתימות) — Starter'],
+  suite_pro: ['Sadir Suite (Collection + Signatures) — Pro', 'Sadir חבילה משולבת (איסוף + חתימות) — Pro'],
   storage_10gb: ['Extra storage, 10 GB', 'נפח אחסון נוסף, 10GB'],
   extra_seat: ['Extra team seat', 'משתמש נוסף בצוות'],
   requests_25: ['Request pack, 25 document requests', 'חבילת 25 בקשות מסמכים'],

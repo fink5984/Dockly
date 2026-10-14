@@ -1,5 +1,5 @@
 /**
- * HTTP client for the Dockly API. Cookies carry the session; every
+ * HTTP client for the Sadir API. Cookies carry the session; every
  * state-changing request sends the CSRF header the server requires.
  */
 

@@ -5,6 +5,7 @@
  * so one build serves any domain.
  */
 import { catalog } from '@shared/billing/pricing.mjs'
+import { BRAND } from '@shared/brand.mjs'
 import { COPY } from './Page'
 import { marketingPath, type MarketingLang, type MarketingPageKey } from './routes'
 
@@ -16,7 +17,7 @@ export function headFor(page: MarketingPageKey, lang: MarketingLang) {
   const tags: string[] = [
     `<title>${esc(meta.title)}</title>`,
     `<meta name="description" content="${esc(meta.description)}">`,
-    '<meta name="theme-color" content="#4b4acf">',
+    `<meta name="theme-color" content="${BRAND.colors.primary}">`,
   ]
   if (page === 'notFound') {
     tags.push('<meta name="robots" content="noindex">')
@@ -29,7 +30,7 @@ export function headFor(page: MarketingPageKey, lang: MarketingLang) {
     `<link rel="alternate" hreflang="en" href="${url('en')}">`,
     `<link rel="alternate" hreflang="x-default" href="${url('he')}">`,
     '<meta property="og:type" content="website">',
-    '<meta property="og:site_name" content="Dockly">',
+    `<meta property="og:site_name" content="${BRAND.name}">`,
     `<meta property="og:title" content="${esc(meta.title)}">`,
     `<meta property="og:description" content="${esc(meta.description)}">`,
     `<meta property="og:url" content="${url(lang)}">`,
@@ -47,11 +48,11 @@ export function headFor(page: MarketingPageKey, lang: MarketingLang) {
 function jsonLd(lang: MarketingLang) {
   const copy = COPY[lang]
   const data = [
-    { '@context': 'https://schema.org', '@type': 'Organization', name: 'Dockly', url: '%%SITE_URL%%/', logo: '%%SITE_URL%%/favicon.svg' },
+    { '@context': 'https://schema.org', '@type': 'Organization', name: BRAND.name, url: '%%SITE_URL%%/', logo: `%%SITE_URL%%${BRAND.assets.icon}` },
     {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
-      name: 'Dockly',
+      name: BRAND.name,
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       inLanguage: ['he', 'en'],

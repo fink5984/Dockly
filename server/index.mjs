@@ -1,5 +1,5 @@
 /**
- * Dockly server entry point.
+ * Sadir server entry point.
  *   - serves the built SPA
  *   - the authenticated JSON API (/api/*)
  *   - public token endpoints for client portal & signing (/api/public/*)

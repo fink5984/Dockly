@@ -5,28 +5,28 @@ const UPDATED = '14 October 2026'
 const en: MarketingCopy = {
   meta: {
     home: {
-      title: 'Dockly — Collect client documents and e-signatures without chasing',
+      title: 'Sadir — Collect client documents and e-signatures without chasing',
       description: 'Send clients a branded link, get every document and signature back from their phone, and review it all in one place. Hebrew and English. Free 30-day trial, no credit card.',
     },
-    pricing: { title: 'Pricing — Dockly', description: 'Buy Document Collection, E-Signatures, or both at a discount. Clear monthly limits, no surprises. 30-day free trial, no credit card.' },
-    privacy: { title: 'Privacy policy — Dockly', description: 'What Dockly collects, why, where it is stored, who processes it, and your rights.' },
-    terms: { title: 'Terms of service — Dockly', description: 'The terms for using Dockly, including trials, subscriptions, billing and cancellation.' },
-    accessibility: { title: 'Accessibility statement — Dockly', description: 'How Dockly approaches accessibility, what we support, known limitations and how to contact us.' },
-    notFound: { title: 'Page not found — Dockly', description: 'The page you were looking for does not exist.' },
+    pricing: { title: 'Pricing — Sadir', description: 'Buy Document Collection, E-Signatures, or both at a discount. Clear monthly limits, no surprises. 30-day free trial, no credit card.' },
+    privacy: { title: 'Privacy policy — Sadir', description: 'What Sadir collects, why, where it is stored, who processes it, and your rights.' },
+    terms: { title: 'Terms of service — Sadir', description: 'The terms for using Sadir, including trials, subscriptions, billing and cancellation.' },
+    accessibility: { title: 'Accessibility statement — Sadir', description: 'How Sadir approaches accessibility, what we support, known limitations and how to contact us.' },
+    notFound: { title: 'Page not found — Sadir', description: 'The page you were looking for does not exist.' },
   },
   nav: {
     product: 'Product', how: 'How it works', pricing: 'Pricing', faq: 'FAQ', security: 'Security', signIn: 'Sign in', cta: 'Start free trial',
-    menu: 'Open menu', close: 'Close menu', otherLanguage: 'עברית', otherLanguageLabel: 'Hebrew version', skip: 'Skip to content', home: 'Dockly home',
+    menu: 'Open menu', close: 'Close menu', otherLanguage: 'עברית', otherLanguageLabel: 'Hebrew version', skip: 'Skip to content', home: 'Sadir home',
   },
   hero: {
     eyebrow: 'Document collection + e-signatures for client-facing firms',
     title: 'Every client document and signature.',
     titleAccent: 'Without the chasing.',
-    subtitle: 'Send a branded link by WhatsApp or email. Clients upload from their phone or sign in a few taps — no app, no account. You review everything in one place while Dockly sends the reminders.',
+    subtitle: 'Send a branded link by WhatsApp or email. Clients upload from their phone or sign in a few taps — no app, no account. You review everything in one place while Sadir sends the reminders.',
     primary: 'Start your free 30-day trial', secondary: 'See how it works',
     points: ['No credit card needed', 'Hebrew and English, right-to-left done right', 'Cancel anytime'],
-    screenshotAlt: 'The Dockly dashboard: open requests, documents waiting for review, overdue items and signatures in progress.',
-    phoneAlt: 'A client uploading documents from a phone through a branded Dockly portal.',
+    screenshotAlt: 'The Sadir dashboard: open requests, documents waiting for review, overdue items and signatures in progress.',
+    phoneAlt: 'A client uploading documents from a phone through a branded Sadir portal.',
   },
   audience: { title: 'Built for teams that depend on client paperwork', items: ['Accounting & bookkeeping', 'Law firms', 'Mortgage advisors', 'Insurance agencies', 'Real estate', 'Financial services'] },
   problems: {
@@ -43,7 +43,7 @@ const en: MarketingCopy = {
     subtitle: 'From request to a complete, reviewed file — usually in a fraction of the time.',
     steps: [
       { title: 'Create a request', body: 'Pick a template or choose the documents you need. Add instructions and a deadline.' },
-      { title: 'Send one link', body: 'Dockly sends a branded link by WhatsApp or email — or copy it anywhere you like.' },
+      { title: 'Send one link', body: 'Sadir sends a branded link by WhatsApp or email — or copy it anywhere you like.' },
       { title: 'Clients upload or sign', body: 'From any phone, in Hebrew or English. Photos are combined into a PDF on the device. No app, no password.' },
       { title: 'Review and finish', body: 'Approve, or ask for a replacement with a reason the client sees. Reminders go out automatically until it’s done.' },
     ],
@@ -63,19 +63,19 @@ const en: MarketingCopy = {
         key: 'review', eyebrow: 'Review', title: 'Review in one place, with full history',
         body: 'See every submission next to the request. Approve it, or reject it with a reason and notify the client in one step. Every version is kept.',
         bullets: ['Approve, reject with a reason, undo', 'Every file version with a SHA-256 fingerprint', 'Download everything as one ZIP'],
-        alt: 'A document request in Dockly with uploaded files, review buttons and an activity timeline.',
+        alt: 'A document request in Sadir with uploaded files, review buttons and an activity timeline.',
       },
       {
         key: 'sign', eyebrow: 'E-signatures', title: 'Send a PDF for signature in minutes',
         body: 'Drop signature, date, name and text fields onto any PDF. Signers draw or type their signature on their phone, and you get the signed PDF plus a signing certificate.',
         bullets: ['Signed PDF generated on the server, never in the browser', 'Tamper-evident audit trail and certificate', 'Hebrew names and dates rendered correctly'],
-        alt: 'A signed agreement in Dockly with its verified audit trail and downloadable signing certificate.',
+        alt: 'A signed agreement in Sadir with its verified audit trail and downloadable signing certificate.',
       },
       {
         key: 'automation', eyebrow: 'Automation', title: 'Reminders that respect your clients',
-        body: 'Turn on reminders for missing documents, deadlines and unsigned envelopes. Dockly skips quiet hours and weekend days, in your time zone.',
+        body: 'Turn on reminders for missing documents, deadlines and unsigned envelopes. Sadir skips quiet hours and weekend days, in your time zone.',
         bullets: ['Opt-in per workspace and per request', 'Quiet hours and non-sending days', 'Delivery status for every message'],
-        alt: 'Dockly automation settings with reminder schedules and quiet hours.',
+        alt: 'Sadir automation settings with reminder schedules and quiet hours.',
       },
     ],
   },
@@ -93,7 +93,7 @@ const en: MarketingCopy = {
   },
   security: {
     title: 'Built for sensitive documents',
-    subtitle: 'Client paperwork includes IDs, payslips and bank statements. We designed Dockly around that.',
+    subtitle: 'Client paperwork includes IDs, payslips and bank statements. We designed Sadir around that.',
     items: [
       { title: 'Files stored in Israel', body: 'Documents are kept in a private, encrypted storage bucket in AWS’s Israel (Tel Aviv) region and opened only through short-lived links.' },
       { title: 'Access control on the server', body: 'Every request is checked against your workspace and role. Passwords are hashed with scrypt; sessions can be revoked.' },
@@ -109,7 +109,7 @@ const en: MarketingCopy = {
       { q: 'Do my clients need to install an app or create an account?', a: 'No. Clients open a secure link on any phone or computer and upload or sign right away. The link only gives access to that one request.' },
       { q: 'How does the free trial work?', a: 'You get 30 days with both products and no credit card. The trial includes up to 25 document requests, 10 signature envelopes, 2 GB of storage and 3 team seats. When it ends, your workspace becomes read-only until you choose a plan. Nothing is deleted, and links already sent to clients keep working.' },
       { q: 'Can I buy only e-signatures, or only document collection?', a: 'Yes. Each product is sold on its own, and the combined plan costs less than buying both. You can switch at any time.' },
-      { q: 'Are Dockly e-signatures legally valid?', a: 'Dockly provides electronic signatures with a detailed, tamper-evident audit trail and a signing certificate. Under Israel’s Electronic Signature Law, 5761-2001, electronic signatures can be used for most business documents. Some transactions require a certified signature or a handwritten one. If you’re unsure about a specific document, check with your legal advisor.' },
+      { q: 'Are Sadir e-signatures legally valid?', a: 'Sadir provides electronic signatures with a detailed, tamper-evident audit trail and a signing certificate. Under Israel’s Electronic Signature Law, 5761-2001, electronic signatures can be used for most business documents. Some transactions require a certified signature or a handwritten one. If you’re unsure about a specific document, check with your legal advisor.' },
       { q: 'What happens if we reach our monthly limit?', a: 'We let you know before you get there. You can upgrade, or add a one-time pack of requests or envelopes for the rest of the period. We never charge for extra usage automatically.' },
       { q: 'Where is our data stored?', a: 'Uploaded documents are stored encrypted in a private storage bucket in AWS’s Israel (Tel Aviv) region. Our privacy policy lists every service provider we use.' },
       { q: 'Do you issue tax invoices?', a: 'Yes. Payments are processed by Cardcom, an Israeli payment provider, which issues a tax invoice and receipt (חשבונית מס/קבלה) for every charge. Prices are shown before VAT.' },
@@ -161,11 +161,11 @@ const en: MarketingCopy = {
     privacy: {
       title: 'Privacy policy',
       updated: `Last updated: ${UPDATED}`,
-      intro: 'This policy explains what personal information %%LEGAL_NAME%% (“Dockly”, “we”) collects when you use the Dockly website and service, how we use it, and the choices you have. It is written to meet Israel’s Protection of Privacy Law, 5741-1981, and its regulations, and for visitors from the European Economic Area, the GDPR.',
+      intro: 'This policy explains what personal information %%LEGAL_NAME%% (“Sadir”, “we”) collects when you use the Sadir website and service, how we use it, and the choices you have. It is written to meet Israel’s Protection of Privacy Law, 5741-1981, and its regulations, and for visitors from the European Economic Area, the GDPR.',
       sections: [
         { heading: 'Our role', paragraphs: [
-          'For account, billing and website data, Dockly is the controller (the “database owner” under Israeli law).',
-          'For the documents, names, phone numbers and other details that our business customers collect from their own clients through Dockly, the business customer is the controller, and Dockly processes that information on its behalf and on its instructions. If you are a client of a business that uses Dockly, please contact that business about your information.',
+          'For account, billing and website data, Sadir is the controller (the “database owner” under Israeli law).',
+          'For the documents, names, phone numbers and other details that our business customers collect from their own clients through Sadir, the business customer is the controller, and Sadir processes that information on its behalf and on its instructions. If you are a client of a business that uses Sadir, please contact that business about your information.',
         ] },
         { heading: 'What we collect', bullets: [
           'Account information: your name, email address, phone number (optional) and a hash of your password. We never store passwords in readable form.',
@@ -184,7 +184,7 @@ const en: MarketingCopy = {
           'To meet legal obligations, such as tax and bookkeeping rules.',
         ], paragraphs: ['We do not sell personal information, show advertising, or use your clients’ documents to train models or for any purpose other than providing the service to you.'] },
         { heading: 'Legal bases (EEA visitors)', paragraphs: ['We process information to perform our contract with you, to comply with legal obligations, and for our legitimate interests in operating a secure and reliable service. Where we rely on consent, you can withdraw it at any time.'] },
-        { heading: 'Service providers', paragraphs: ['We use carefully selected providers to run Dockly. They process information only on our instructions:'], bullets: [
+        { heading: 'Service providers', paragraphs: ['We use carefully selected providers to run Sadir. They process information only on our instructions:'], bullets: [
           'Railway — application hosting.',
           'Supabase — managed PostgreSQL database.',
           'Amazon Web Services — encrypted file storage in the Israel (Tel Aviv) region.',
@@ -206,16 +206,16 @@ const en: MarketingCopy = {
           'To make a request, email us at %%CONTACT_EMAIL%%. We may need to verify your identity first. You may also complain to Israel’s Privacy Protection Authority or, in the EEA, to your local data protection authority.',
         ] },
         { heading: 'Cookies and local storage', paragraphs: ['We use one essential cookie, which keeps you signed in. It can’t be read by scripts and isn’t used for tracking. We store your language and theme preferences in your browser. We don’t use third-party advertising or tracking cookies.'] },
-        { heading: 'Children', paragraphs: ['Dockly is a business service and isn’t intended for anyone under 18.'] },
+        { heading: 'Children', paragraphs: ['Sadir is a business service and isn’t intended for anyone under 18.'] },
         { heading: 'Changes and contact', paragraphs: ['If we make material changes to this policy, we’ll notify account owners before they take effect. Questions are welcome at %%CONTACT_EMAIL%%.'] },
       ],
     },
     terms: {
       title: 'Terms of service',
       updated: `Last updated: ${UPDATED}`,
-      intro: 'These terms are an agreement between you, or the business you represent (“you”), and %%LEGAL_NAME%% (“Dockly”, “we”), for the use of the Dockly service. By creating an account or using the service, you agree to them.',
+      intro: 'These terms are an agreement between you, or the business you represent (“you”), and %%LEGAL_NAME%% (“Sadir”, “we”), for the use of the Sadir service. By creating an account or using the service, you agree to them.',
       sections: [
-        { heading: '1. The service', paragraphs: ['Dockly lets businesses request and receive documents from their clients, review them, and send documents for electronic signature. Features depend on your plan, as described on our pricing page.'] },
+        { heading: '1. The service', paragraphs: ['Sadir lets businesses request and receive documents from their clients, review them, and send documents for electronic signature. Features depend on your plan, as described on our pricing page.'] },
         { heading: '2. Accounts', bullets: [
           'You must provide accurate information and keep your password confidential. You are responsible for activity in your workspace.',
           'The person who creates a workspace is its owner, and controls its billing and team.',
@@ -240,11 +240,11 @@ const en: MarketingCopy = {
           'For your clients’ personal information, you are the controller and we act as your processor, as described in our privacy policy. You are responsible for having a lawful basis to collect it, for telling your clients how it is used, and for the instructions you give through the service.',
           'You can export your documents at any time. After your account is closed, we delete your content as described in the privacy policy.',
         ] },
-        { heading: '7. Acceptable use', paragraphs: ['You may not use Dockly to break the law, to send unsolicited messages, to collect information without authorization, to upload malicious files, to interfere with the service or other customers, or to attempt to access data that isn’t yours.'] },
-        { heading: '8. Electronic signatures', paragraphs: ['Dockly provides electronic signatures with an audit trail. It does not provide certified (“מאושרת”) electronic signatures under the Electronic Signature Law, 5761-2001. You are responsible for deciding whether an electronic signature is appropriate for a particular document or transaction.'] },
+        { heading: '7. Acceptable use', paragraphs: ['You may not use Sadir to break the law, to send unsolicited messages, to collect information without authorization, to upload malicious files, to interfere with the service or other customers, or to attempt to access data that isn’t yours.'] },
+        { heading: '8. Electronic signatures', paragraphs: ['Sadir provides electronic signatures with an audit trail. It does not provide certified (“מאושרת”) electronic signatures under the Electronic Signature Law, 5761-2001. You are responsible for deciding whether an electronic signature is appropriate for a particular document or transaction.'] },
         { heading: '9. Messaging', paragraphs: ['Messages sent through WhatsApp or email are subject to those providers’ rules. You must only message clients who expect to hear from you, and comply with the law on electronic messages, including section 30A of the Communications (Telecommunications and Broadcasting) Law.'] },
-        { heading: '10. Availability and changes', paragraphs: ['We work to keep Dockly available and secure, but we don’t guarantee uninterrupted service. We may improve or change features. If a change materially reduces the service you pay for, we’ll notify you in advance.'] },
-        { heading: '11. Liability', paragraphs: ['To the extent permitted by law, the service is provided “as is”. Dockly is not liable for indirect or consequential damages. Our total liability for any claim is limited to the amounts you paid us in the 12 months before the claim. Nothing in these terms limits liability that cannot be limited by law.'] },
+        { heading: '10. Availability and changes', paragraphs: ['We work to keep Sadir available and secure, but we don’t guarantee uninterrupted service. We may improve or change features. If a change materially reduces the service you pay for, we’ll notify you in advance.'] },
+        { heading: '11. Liability', paragraphs: ['To the extent permitted by law, the service is provided “as is”. Sadir is not liable for indirect or consequential damages. Our total liability for any claim is limited to the amounts you paid us in the 12 months before the claim. Nothing in these terms limits liability that cannot be limited by law.'] },
         { heading: '12. Suspension and termination', paragraphs: ['We may suspend or close an account that seriously breaches these terms or puts the service or others at risk, with notice where possible. You may close your account at any time.'] },
         { heading: '13. Governing law', paragraphs: ['These terms are governed by the laws of the State of Israel. The competent courts in Tel Aviv-Jaffa have exclusive jurisdiction.'] },
         { heading: '14. Changes to these terms and contact', paragraphs: ['We’ll notify account owners of material changes at least 30 days before they take effect. Questions: %%CONTACT_EMAIL%%.'] },
@@ -253,7 +253,7 @@ const en: MarketingCopy = {
     accessibility: {
       title: 'Accessibility statement',
       updated: `Last reviewed: ${UPDATED}`,
-      intro: 'We want everyone to be able to use Dockly: the businesses that run it, and the clients who upload documents and sign through it. We design and test the website and the service to meet the Israeli Standard IS 5568 (based on WCAG 2.0, level AA), as required by the Equal Rights for Persons with Disabilities (Service Accessibility Adjustments) Regulations, 5773-2013. We aim to follow WCAG 2.1 level AA.',
+      intro: 'We want everyone to be able to use Sadir: the businesses that run it, and the clients who upload documents and sign through it. We design and test the website and the service to meet the Israeli Standard IS 5568 (based on WCAG 2.0, level AA), as required by the Equal Rights for Persons with Disabilities (Service Accessibility Adjustments) Regulations, 5773-2013. We aim to follow WCAG 2.1 level AA.',
       sections: [
         { heading: 'What we’ve done', bullets: [
           'Full keyboard operation, a visible focus indicator, and a “skip to content” link on every page.',

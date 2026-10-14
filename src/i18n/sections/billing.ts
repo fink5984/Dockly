@@ -53,7 +53,7 @@ export default {
     action: {
       current: 'Current plan', choose: 'Choose', upgrade: 'Upgrade', switchAtRenewal: 'Switch at renewal', subscribe: 'Subscribe',
       confirmTitle: 'Confirm your plan', confirmSubscribe: 'Continue to secure payment', confirmUpgrade: 'Pay {{amount}} and upgrade', confirmSchedule: 'Schedule change',
-      subscribeHint: 'You’ll be taken to our payment provider’s secure page. Card details never reach Dockly.',
+      subscribeHint: 'You’ll be taken to our payment provider’s secure page. Card details never reach Sadir.',
       trialCarryOver: 'Your remaining {{count}} trial days are added to your first period.',
       upgradeHint: 'You pay the difference for the rest of this period now. Your plan changes immediately.',
       scheduleHint: 'Your current plan stays until {{date}}, then switches. No charge today.',
@@ -65,7 +65,7 @@ export default {
     packs: { requests_25: '25 document requests', envelopes_25: '25 signature envelopes', bought: 'Pack added to this period' },
     payment: {
       title: 'Payment method', none: 'No card on file', card: '{{brand}} ending {{last4}}', expires: 'Expires {{month}}/{{year}}',
-      update: 'Update card', add: 'Add card', secure: 'Cards are stored by our payment provider. Dockly never sees card numbers.',
+      update: 'Update card', add: 'Add card', secure: 'Cards are stored by our payment provider. Sadir never sees card numbers.',
     },
     details: { title: 'Invoice details', name: 'Name on invoice', email: 'Invoice email', taxId: 'Business ID (ח.פ / ע.מ)', taxIdHint: 'Digits only. Leave empty for a private customer.', saved: 'Invoice details saved' },
     invoices: {
@@ -108,7 +108,7 @@ export default {
       pay: 'Pay {{amount}}', save: 'Save card', cancel: 'Cancel and return', for: 'For {{workspace}}', notFound: 'This test payment session doesn’t exist or has finished.',
     },
     onboarding: {
-      stepNeeds: 'What you need', title: 'What will you use Dockly for?', subtitle: 'We’ll set up your workspace around it. Your trial includes both products either way.',
+      stepNeeds: 'What you need', title: 'What will you use Sadir for?', subtitle: 'We’ll set up your workspace around it. Your trial includes both products either way.',
       collect: 'Collecting documents from clients', sign: 'Getting documents signed', both: 'Both',
       trialStarted: 'Your 30-day free trial has started — no credit card needed.',
     },
@@ -167,7 +167,7 @@ export default {
     action: {
       current: 'המסלול הנוכחי', choose: 'בחירה', upgrade: 'שדרוג', switchAtRenewal: 'מעבר בחידוש', subscribe: 'הצטרפות',
       confirmTitle: 'אישור המסלול', confirmSubscribe: 'המשך לתשלום מאובטח', confirmUpgrade: 'תשלום {{amount}} ושדרוג', confirmSchedule: 'תזמון השינוי',
-      subscribeHint: 'תועברו לדף המאובטח של חברת הסליקה. פרטי הכרטיס לא מגיעים ל-Dockly.',
+      subscribeHint: 'תועברו לדף המאובטח של חברת הסליקה. פרטי הכרטיס לא מגיעים ל-Sadir.',
       trialCarryOver: '{{count}} ימי הניסיון שנותרו מתווספים לתקופה הראשונה.',
       upgradeHint: 'משלמים עכשיו את ההפרש עד סוף התקופה. המסלול משתנה מיד.',
       scheduleHint: 'המסלול הנוכחי נשאר עד {{date}} ואז מתחלף. אין חיוב היום.',
@@ -179,7 +179,7 @@ export default {
     packs: { requests_25: '25 בקשות מסמכים', envelopes_25: '25 בקשות חתימה', bought: 'החבילה נוספה לתקופה הנוכחית' },
     payment: {
       title: 'אמצעי תשלום', none: 'אין כרטיס שמור', card: '{{brand}} המסתיים ב-{{last4}}', expires: 'תוקף {{month}}/{{year}}',
-      update: 'עדכון כרטיס', add: 'הוספת כרטיס', secure: 'הכרטיס נשמר אצל חברת הסליקה. Dockly לא רואה את מספר הכרטיס.',
+      update: 'עדכון כרטיס', add: 'הוספת כרטיס', secure: 'הכרטיס נשמר אצל חברת הסליקה. Sadir לא רואה את מספר הכרטיס.',
     },
     details: { title: 'פרטים לחשבונית', name: 'שם בחשבונית', email: 'דוא״ל לחשבוניות', taxId: 'מספר עוסק / ח.פ', taxIdHint: 'ספרות בלבד. השאירו ריק עבור לקוח פרטי.', saved: 'פרטי החשבונית נשמרו' },
     invoices: {
@@ -222,7 +222,7 @@ export default {
       pay: 'תשלום {{amount}}', save: 'שמירת כרטיס', cancel: 'ביטול וחזרה', for: 'עבור {{workspace}}', notFound: 'סשן התשלום הזה לא קיים או שהסתיים.',
     },
     onboarding: {
-      stepNeeds: 'מה אתם צריכים', title: 'לשם מה תשתמשו ב-Dockly?', subtitle: 'נתאים את סביבת העבודה בהתאם. תקופת הניסיון כוללת את שני המוצרים בכל מקרה.',
+      stepNeeds: 'מה אתם צריכים', title: 'לשם מה תשתמשו ב-Sadir?', subtitle: 'נתאים את סביבת העבודה בהתאם. תקופת הניסיון כוללת את שני המוצרים בכל מקרה.',
       collect: 'איסוף מסמכים מלקוחות', sign: 'החתמה על מסמכים', both: 'גם וגם',
       trialStarted: 'תקופת הניסיון של 30 יום התחילה — בלי כרטיס אשראי.',
     },

@@ -5,6 +5,7 @@
  */
 import { config } from '../config.mjs'
 import { logger } from '../lib/logger.mjs'
+import { BRAND } from '../../shared/brand.mjs'
 
 export function emailStatus() {
   return { configured: Boolean(config.email.resendApiKey && config.email.from), provider: 'resend' }
@@ -32,7 +33,7 @@ export async function sendEmail({ to, subject, html, text }) {
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
 /** Simple, accessible, RTL-aware transactional email layout. */
-export function renderEmail({ language = 'en', brandName, brandColor = '#4338ca', heading, paragraphs = [], ctaLabel, ctaUrl, footer }) {
+export function renderEmail({ language = 'en', brandName, brandColor = BRAND.colors.primary, heading, paragraphs = [], ctaLabel, ctaUrl, footer }) {
   const dir = language === 'he' ? 'rtl' : 'ltr'
   const align = dir === 'rtl' ? 'right' : 'left'
   const body = paragraphs.map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#334155">${esc(p)}</p>`).join('')

@@ -1,5 +1,5 @@
 /**
- * In-memory fixed-window rate limiter. Dockly runs as a single Railway
+ * In-memory fixed-window rate limiter. Sadir runs as a single Railway
  * instance; if it is ever scaled horizontally this must move to a shared
  * store (documented in SECURITY_REVIEW.md).
  */

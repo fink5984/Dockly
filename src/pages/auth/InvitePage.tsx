@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Field'
 import { Spinner } from '@/components/ui/States'
 import { AuthShell, PasswordInput } from './AuthShell'
 import type { Role } from '@/types'
+import { BRAND } from '@shared/brand.mjs'
 
 export default function InvitePage() {
   const { token = '' } = useParams()
@@ -46,7 +47,7 @@ export default function InvitePage() {
   if (state === 'loading') return <AuthShell title="…"><Spinner /></AuthShell>
   if (state !== 'ready' || !invite) {
     return (
-      <AuthShell title={t('auth.inviteTitle', { workspace: 'Dockly' })} subtitle={state === 'expired' ? t('auth.inviteExpired') : t('auth.inviteInvalid')}>
+      <AuthShell title={t('auth.inviteTitle', { workspace: BRAND.name })} subtitle={state === 'expired' ? t('auth.inviteExpired') : t('auth.inviteInvalid')}>
         <Button to="/auth/signin" variant="secondary" fullWidth>{t('auth.backToSignIn')}</Button>
       </AuthShell>
     )

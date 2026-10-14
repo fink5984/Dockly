@@ -1,4 +1,5 @@
 import { Skeleton } from '@/components/ui/States'
+import { LogoMark } from '@/components/brand/Logo'
 
 export function PageLoader() {
   return (
@@ -17,8 +18,9 @@ export function PageLoader() {
 
 export function FullPageLoader() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-canvas">
-      <span className="size-6 animate-spin rounded-full border-2 border-line-2 border-t-brand-600" role="status" aria-label="Loading" />
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-canvas">
+      <LogoMark className="size-11" decorative />
+      <span className="size-5 animate-spin rounded-full border-2 border-line-2 border-t-brand-600" role="status" aria-label="Loading" />
     </div>
   )
 }

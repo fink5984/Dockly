@@ -14,7 +14,7 @@ async function samplePdf(title) {
   const font = await pdf.embedFont(StandardFonts.Helvetica)
   const page = pdf.addPage([595.28, 841.89])
   page.drawText(title, { x: 60, y: 760, size: 20, font })
-  page.drawText('Sample document generated for the Dockly demo workspace.', { x: 60, y: 730, size: 11, font })
+  page.drawText('Sample document generated for the Sadir demo workspace.', { x: 60, y: 730, size: 11, font })
   return Buffer.from(await pdf.save())
 }
 
@@ -27,7 +27,7 @@ export async function seedDemo() {
   }
   const ws = await queryOne(
     `INSERT INTO workspaces (name, business_type, contact_person, phone, email, default_language, timezone, brand_color)
-     VALUES ('משרד כהן ושות׳', 'accounting', 'נועה כהן', '03-555-0100', 'office@example.test', 'he', 'Asia/Jerusalem', '#4B4ACF') RETURNING id`,
+     VALUES ('משרד כהן ושות׳', 'accounting', 'נועה כהן', '03-555-0100', 'office@example.test', 'he', 'Asia/Jerusalem', '#5B4DFF') RETURNING id`,
   )
   await query(
     `INSERT INTO profiles (workspace_id, email, name, role, password_hash) VALUES ($1, 'demo@dockly.local', 'נועה כהן', 'owner', $2)`,

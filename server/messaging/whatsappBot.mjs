@@ -259,11 +259,11 @@ async function handleText(phone, text, messageId) {
     else msg += '\n🎉 כל המסמכים הועלו!'
     return reply(phone, msg, state)
   }
-  if (!state) return reply(phone, 'שלום! 👋\nאני הבוט של Dockly.\nאין כרגע תיק פעיל. בקש מהמשרד לשלוח לך הודעה חדשה.')
+  if (!state) return reply(phone, 'שלום! 👋\nאני הבוט של Sadir.\nאין כרגע תיק פעיל. בקש מהמשרד לשלוח לך הודעה חדשה.')
   if (state.awaiting_document_id) {
     return reply(phone, `📎 אני מחכה שתשלח את הקובץ עבור *${state.awaiting_document_name}*.\nשלח תמונה 📷 או מסמך PDF 📄.\n\n💡 כתוב *תפריט* לרשימת המסמכים\n💡 כתוב *תמיכה* לפנייה לצוות`, state)
   }
-  return replyButtons(phone, '👋 שלום! אני הבוט של Dockly.\n\n💡 לחץ על הכפתור כדי לראות את המסמכים.\n📞 כתוב *תמיכה* לשיחה עם הצוות.', [
+  return replyButtons(phone, '👋 שלום! אני הבוט של Sadir.\n\n💡 לחץ על הכפתור כדי לראות את המסמכים.\n📞 כתוב *תמיכה* לשיחה עם הצוות.', [
     { type: 'reply', reply: { id: `show_docs_${state.case_id}`, title: '📄 הצג מסמכים' } },
     { type: 'reply', reply: { id: `support_${state.case_id}`, title: '💬 תמיכה' } },
   ], state)

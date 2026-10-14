@@ -10,7 +10,7 @@ const he = {
     clear: 'ניקוי', clearFilters: 'ניקוי סינון', showing: 'מוצגים {{count}} מתוך {{total}}', previous: 'הקודם',
     page: 'עמוד {{page}}', viewAll: 'לכל הרשימה', learnMore: 'מידע נוסף', language: 'שפה', english: 'אנגלית', hebrew: 'עברית',
     today: 'היום', never: 'אף פעם', you: 'את/ה', system: 'מערכת', client: 'לקוח', or: 'או', undo: 'ביטול פעולה', and: 'ו',
-    readOnly: 'יש לך הרשאת צפייה בלבד', poweredBy: 'מופעל על ידי Dockly',
+    readOnly: 'יש לך הרשאת צפייה בלבד', poweredBy: 'מופעל על ידי Sadir',
   },
   errors: {
     crashTitle: 'אירעה תקלה בעמוד', crashBody: 'רעננו כדי לנסות שוב. הנתונים השמורים שלכם בטוחים.', reload: 'רענון העמוד',
@@ -53,11 +53,11 @@ const he = {
   roles: { owner: 'בעלים', admin: 'מנהל/ת', member: 'חבר/ת צוות', viewer: 'צפייה בלבד' },
   auth: {
     signIn: 'כניסה', signUp: 'יצירת חשבון', signOut: 'יציאה', email: 'דוא"ל', password: 'סיסמה', name: 'שם מלא', phone: 'טלפון',
-    welcomeBack: 'שמחים לראות אותך שוב', signInSubtitle: 'כניסה לסביבת העבודה שלך ב-Dockly', noAccount: 'חדשים ב-Dockly?', haveAccount: 'כבר יש לך חשבון?',
+    welcomeBack: 'שמחים לראות אותך שוב', signInSubtitle: 'כניסה לסביבת העבודה שלך ב-Sadir', noAccount: 'חדשים ב-Sadir?', haveAccount: 'כבר יש לך חשבון?',
     forgot: 'שכחת סיסמה?', createTitle: 'פתיחת סביבת עבודה', createSubtitle: 'איסוף מסמכים וחתימות מלקוחות — תוך דקות.',
     passwordHint: 'לפחות 8 תווים', showPassword: 'הצגת הסיסמה', hidePassword: 'הסתרת הסיסמה',
     invalidCredentials: 'דוא"ל או סיסמה שגויים', locked: 'יותר מדי ניסיונות. נסו שוב בעוד כמה דקות.', emailTaken: 'כבר קיים חשבון עם כתובת זו',
-    forgotTitle: 'איפוס סיסמה', forgotBody: 'מטעמי אבטחה, איפוס סיסמה מתבצע על ידי הבעלים או המנהל של סביבת העבודה. בקשו מהם לשלוח לכם הזמנה חדשה, או פנו לתמיכה של Dockly מהדוא"ל הרשום.', backToSignIn: 'חזרה לכניסה',
+    forgotTitle: 'איפוס סיסמה', forgotBody: 'מטעמי אבטחה, איפוס סיסמה מתבצע על ידי הבעלים או המנהל של סביבת העבודה. בקשו מהם לשלוח לכם הזמנה חדשה, או פנו לתמיכה של Sadir מהדוא"ל הרשום.', backToSignIn: 'חזרה לכניסה',
     inviteTitle: 'הצטרפות ל-{{workspace}}', inviteSubtitle: 'הוזמנת בתפקיד {{role}}. הגדירו שם וסיסמה כדי להמשיך.', acceptInvite: 'הצטרפות',
     inviteInvalid: 'קישור ההזמנה אינו תקף או שכבר נעשה בו שימוש.', inviteExpired: 'תוקף ההזמנה פג. בקשו הזמנה חדשה.',
     marketing1: 'פורטל ממותג ללקוח שעובד מכל טלפון', marketing2: 'בדיקה, אישור או בקשת מסמך חלופי — במקום אחד', marketing3: 'חתימות אלקטרוניות עם תיעוד מלא',

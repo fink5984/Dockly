@@ -73,7 +73,7 @@ async function seed(request: APIRequestContext, lang: Lang) {
   const d = DATA[lang]
   const email = `capture_${lang}_${Date.now()}@example.test`
   expect((await request.post('/api/auth/signup', { data: { email, password: 'correct horse battery', name: d.owner, language: lang }, headers: H })).status()).toBe(201)
-  await request.patch('/api/workspace', { data: { name: d.workspace, brandColor: '#4B4ACF', defaultLanguage: lang, portalMessage: lang === 'he' ? 'לשאלות אפשר לפנות אלינו בכל עת.' : 'Questions? We’re happy to help.' }, headers: H })
+  await request.patch('/api/workspace', { data: { name: d.workspace, brandColor: '#5B4DFF', defaultLanguage: lang, portalMessage: lang === 'he' ? 'לשאלות אפשר לפנות אלינו בכל עת.' : 'Questions? We’re happy to help.' }, headers: H })
   const types: string[] = []
   for (const name of d.types) types.push((await (await request.post('/api/document-types', { data: { name, allowedFormats: ['pdf', 'jpg', 'png'] }, headers: H })).json()).id)
   const pdf = await samplePdf('Sample document')
@@ -162,18 +162,18 @@ async function capture(browser: Browser, request: APIRequestContext, lang: Lang)
 async function ogImage(browser: Browser, lang: Lang) {
   const ctx = await browser.newContext({ viewport: { width: 1200, height: 630 } })
   const page = await ctx.newPage()
-  const logo = readFileSync('public/favicon.svg', 'utf8')
+  const logo = readFileSync('public/brand/sadir-logo-light.svg', 'utf8')
   const shot = readFileSync(`${OUT}/screens/${lang}/dashboard.jpg`).toString('base64')
   const title = lang === 'he' ? 'כל המסמכים והחתימות מהלקוחות.<br><span>בלי לרדוף אחריהם.</span>' : 'Every client document and signature.<br><span>Without the chasing.</span>'
   const sub = lang === 'he' ? 'איסוף מסמכים וחתימות דיגיטליות · 30 יום חינם' : 'Document collection + e-signatures · 30 days free'
   // Text on the reading-start side, screenshot bleeding off the other edge.
   const textSide = lang === 'he' ? 'right' : 'left'
   const imgSide = lang === 'he' ? 'left' : 'right'
-  await page.setContent(`<!doctype html><html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}"><body style="margin:0"><div style="width:1200px;height:630px;overflow:hidden;font-family:Heebo,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#2c2c70,#4b4acf);color:#fff;position:relative">
+  await page.setContent(`<!doctype html><html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}"><body style="margin:0"><div style="width:1200px;height:630px;overflow:hidden;font-family:Heebo,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#141364 0%,#2a22a8 55%,#5b4dff 100%);color:#fff;position:relative">
     <div style="position:absolute;${textSide}:64px;top:64px;width:540px">
-      <div style="display:flex;align-items:center;gap:14px;font-size:30px;font-weight:700"><span style="width:48px;height:48px;display:inline-block">${logo.replace('<svg', '<svg width="48" height="48"')}</span>Dockly</div>
-      <h1 style="font-size:46px;line-height:1.2;margin:44px 0 0;font-weight:700">${title.replace('<span>', '<span style="color:#c9cbfb">')}</h1>
-      <p style="font-size:24px;margin-top:28px;color:#e2e3fd">${sub}</p>
+      <div style="height:52px;display:flex">${logo.replace('<svg', '<svg height="52"')}</div>
+      <h1 style="font-size:46px;line-height:1.2;margin:44px 0 0;font-weight:700">${title.replace('<span>', '<span style="color:#cac3ff">')}</h1>
+      <p style="font-size:24px;margin-top:28px;color:#e7e3ff">${sub}</p>
     </div>
     <img src="data:image/jpeg;base64,${shot}" style="position:absolute;top:150px;${imgSide}:-120px;width:640px;border-radius:14px;box-shadow:0 30px 60px rgba(0,0,0,.35)">
   </div></body></html>`)

@@ -1,5 +1,5 @@
 /**
- * Billing operations for Dockly staff. Uses DATABASE_URL (and payment
+ * Billing operations for Sadir staff. Uses DATABASE_URL (and payment
  * provider settings) from the environment. Every write needs --yes and is
  * recorded in billing_events with actor 'operator'.
  *

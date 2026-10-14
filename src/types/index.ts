@@ -1,4 +1,4 @@
-/* Types mirror the JSON returned by the Dockly API (server/routes/*). */
+/* Types mirror the JSON returned by the Sadir API (server/routes/*). */
 
 export type Language = 'en' | 'he'
 export type Direction = 'ltr' | 'rtl'

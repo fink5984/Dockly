@@ -10,7 +10,7 @@ const en = {
     clear: 'Clear', clearFilters: 'Clear filters', showing: 'Showing {{count}} of {{total}}', previous: 'Previous',
     page: 'Page {{page}}', viewAll: 'View all', learnMore: 'Learn more', language: 'Language', english: 'English', hebrew: 'Hebrew',
     today: 'Today', never: 'Never', you: 'You', system: 'System', client: 'Client', or: 'or', undo: 'Undo', and: 'and',
-    readOnly: 'You have view-only access', poweredBy: 'Powered by Dockly',
+    readOnly: 'You have view-only access', poweredBy: 'Powered by Sadir',
   },
   errors: {
     crashTitle: 'This page hit a problem', crashBody: 'Reload to try again. Your saved data is safe.', reload: 'Reload page',
@@ -53,11 +53,11 @@ const en = {
   roles: { owner: 'Owner', admin: 'Admin', member: 'Member', viewer: 'Read-only' },
   auth: {
     signIn: 'Sign in', signUp: 'Create account', signOut: 'Sign out', email: 'Work email', password: 'Password', name: 'Full name', phone: 'Phone',
-    welcomeBack: 'Welcome back', signInSubtitle: 'Sign in to your Dockly workspace', noAccount: 'New to Dockly?', haveAccount: 'Already have an account?',
+    welcomeBack: 'Welcome back', signInSubtitle: 'Sign in to your Sadir workspace', noAccount: 'New to Sadir?', haveAccount: 'Already have an account?',
     forgot: 'Forgot password?', createTitle: 'Create your workspace', createSubtitle: 'Collect documents and signatures from clients — in minutes.',
     passwordHint: 'At least 8 characters', showPassword: 'Show password', hidePassword: 'Hide password',
     invalidCredentials: 'Incorrect email or password', locked: 'Too many attempts. Try again in a few minutes.', emailTaken: 'An account with this email already exists',
-    forgotTitle: 'Reset your password', forgotBody: 'For security, password resets are handled by your workspace owner or admin. Ask them to send you a new invitation, or contact Dockly support from your registered email.', backToSignIn: 'Back to sign in',
+    forgotTitle: 'Reset your password', forgotBody: 'For security, password resets are handled by your workspace owner or admin. Ask them to send you a new invitation, or contact Sadir support from your registered email.', backToSignIn: 'Back to sign in',
     inviteTitle: 'Join {{workspace}}', inviteSubtitle: 'You were invited as {{role}}. Set your name and password to continue.', acceptInvite: 'Join workspace',
     inviteInvalid: 'This invitation link is invalid or has already been used.', inviteExpired: 'This invitation has expired. Ask for a new one.',
     marketing1: 'Branded client portal that works on any phone', marketing2: 'Review, approve or request replacements in one place', marketing3: 'Electronic signatures with a full audit trail',

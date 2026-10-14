@@ -68,7 +68,7 @@ const COPY = {
     signSubject: (ws) => `${ws} sent you a document to sign`,
     signBody: (ws, title) => `${ws} asked you to review and sign "${title}".`,
     signCta: 'Review and sign',
-    footer: 'Sent with Dockly. If you weren\'t expecting this, you can ignore it.',
+    footer: 'Sent with Sadir. If you weren\'t expecting this, you can ignore it.',
   },
   he: {
     initialSubject: (ws) => `${ws} מבקשים ממך מספר מסמכים`,
@@ -82,7 +82,7 @@ const COPY = {
     signSubject: (ws) => `${ws} שלחו לך מסמך לחתימה`,
     signBody: (ws, title) => `${ws} ביקשו ממך לעיין ולחתום על "${title}".`,
     signCta: 'לעיון וחתימה',
-    footer: 'נשלח באמצעות Dockly. אם לא ציפית להודעה זו, ניתן להתעלם ממנה.',
+    footer: 'נשלח באמצעות Sadir. אם לא ציפית להודעה זו, ניתן להתעלם ממנה.',
   },
 }
 

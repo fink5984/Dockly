@@ -36,7 +36,7 @@ try {
     ['trial → paid', await reached('trial_to_paid')],
   ]
   const pct = (a, b) => (b ? `${((a / b) * 100).toFixed(1)}%` : '—')
-  console.log(`Dockly funnel — last ${days} days (signup cohort since ${since.toISOString().slice(0, 10)})\n`)
+  console.log(`Sadir funnel — last ${days} days (signup cohort since ${since.toISOString().slice(0, 10)})\n`)
   for (const [label, n] of steps) {
     const base = label.startsWith('landing') || label.startsWith('pricing') ? visits : label.startsWith('signups') ? visits : ids.length
     console.log(`${label.padEnd(58)} ${String(n).padStart(6)}   ${label === 'landing visits (sessions)' ? '' : pct(n, base)}`)

@@ -1,5 +1,5 @@
 {
-  "$comment": "Dockly subscription catalog. PROVISIONAL pricing until validated with pilot customers. Amounts are in agorot (ILS minor units), excluding VAT. Bump `version` whenever prices or quotas change; subscriptions keep the price snapshot they were bought at.",
+  "$comment": "Sadir subscription catalog. PROVISIONAL pricing until validated with pilot customers. Amounts are in agorot (ILS minor units), excluding VAT. Bump `version` whenever prices or quotas change; subscriptions keep the price snapshot they were bought at.",
   "version": "2026-10-provisional-1",
   "provisional": true,
   "currency": "ILS",

@@ -25,6 +25,7 @@ import { notifyWorkspace } from '../lib/activity.mjs'
 import { recordMilestone } from '../lib/funnel.mjs'
 import { safeEqual, sha256Hex } from '../lib/crypto.mjs'
 import { sendEmail, renderEmail } from '../messaging/email.mjs'
+import { BRAND } from '../../shared/brand.mjs'
 import {
   catalog, quoteSubscription, quotePack, prorate, addInterval, findPack, findPlan, normalizeAddons, vatOf, PricingError,
 } from '../../shared/billing/pricing.mjs'
@@ -652,9 +653,9 @@ async function notifyOwners(workspaceId, { type = 'warning', en, he, actionUrl =
   await notifyWorkspace({ workspaceId, type, title: copy.title, message: copy.body, actionUrl, template: 'localized', params: { en, he } })
   const owners = await query(`SELECT email FROM profiles WHERE workspace_id = $1 AND role = 'owner' AND is_active`, [workspaceId])
   const { html, text } = renderEmail({
-    language: lang, brandName: 'Dockly', heading: copy.title, paragraphs: [copy.body],
+    language: lang, brandName: BRAND.name, heading: copy.title, paragraphs: [copy.body],
     ctaLabel: lang === 'en' ? 'Open billing' : 'למסך החיוב', ctaUrl: `${config.appBaseUrl}${actionUrl}`,
-    footer: lang === 'en' ? 'You receive this because you own this Dockly workspace.' : 'קיבלת הודעה זו כבעלים של סביבת העבודה ב-Dockly.',
+    footer: lang === 'en' ? 'You receive this because you own this Sadir workspace.' : 'קיבלת הודעה זו כבעלים של סביבת העבודה ב-Sadir.',
   })
   for (const o of owners) await sendEmail({ to: o.email, subject: copy.title, html, text })
 }
@@ -667,8 +668,8 @@ async function expireTrials(now, stats) {
   for (const r of rows) {
     await recordBillingEvent({ query }, r.workspace_id, 'trial_expired', 'system')
     await notifyOwners(r.workspace_id, {
-      en: { title: 'Your Dockly trial has ended', body: 'Your workspace is now read-only. Your data and client links are safe — choose a plan to continue sending requests.' },
-      he: { title: 'תקופת הניסיון ב-Dockly הסתיימה', body: 'סביבת העבודה עברה למצב צפייה בלבד. הנתונים והקישורים שנשלחו ללקוחות שמורים — בחרו מסלול כדי להמשיך לשלוח בקשות.' },
+      en: { title: 'Your Sadir trial has ended', body: 'Your workspace is now read-only. Your data and client links are safe — choose a plan to continue sending requests.' },
+      he: { title: 'תקופת הניסיון ב-Sadir הסתיימה', body: 'סביבת העבודה עברה למצב צפייה בלבד. הנתונים והקישורים שנשלחו ללקוחות שמורים — בחרו מסלול כדי להמשיך לשלוח בקשות.' },
     })
     publish(r.workspace_id, 'billing')
     stats.trialsExpired++
@@ -695,8 +696,8 @@ async function trialReminders(now, stats) {
     if (!claimed) continue
     await notifyOwners(r.workspace_id, {
       type: 'info',
-      en: { title: daysLeft <= 1 ? 'Your Dockly trial ends tomorrow' : `Your Dockly trial ends in ${daysLeft} days`, body: 'Choose a plan to keep sending requests and signatures without interruption. No charge happens until you choose.' },
-      he: { title: daysLeft <= 1 ? 'תקופת הניסיון ב-Dockly מסתיימת מחר' : `תקופת הניסיון ב-Dockly מסתיימת בעוד ${daysLeft} ימים`, body: 'בחרו מסלול כדי להמשיך לשלוח בקשות וחתימות ללא הפסקה. שום חיוב לא יתבצע עד שתבחרו.' },
+      en: { title: daysLeft <= 1 ? 'Your Sadir trial ends tomorrow' : `Your Sadir trial ends in ${daysLeft} days`, body: 'Choose a plan to keep sending requests and signatures without interruption. No charge happens until you choose.' },
+      he: { title: daysLeft <= 1 ? 'תקופת הניסיון ב-Sadir מסתיימת מחר' : `תקופת הניסיון ב-Sadir מסתיימת בעוד ${daysLeft} ימים`, body: 'בחרו מסלול כדי להמשיך לשלוח בקשות וחתימות ללא הפסקה. שום חיוב לא יתבצע עד שתבחרו.' },
     })
     stats.trialReminders++
   }
@@ -757,8 +758,8 @@ async function scheduleRetry(workspaceId, now) {
   if (firstFailure) {
     await recordBillingEvent({ query }, workspaceId, 'payment_failed', 'system', { graceDays: catalog.grace.pastDueDays })
     await notifyOwners(workspaceId, {
-      en: { title: 'We couldn’t renew your Dockly subscription', body: `Your card was declined. Everything keeps working for ${catalog.grace.pastDueDays} days while we retry — update your payment method to avoid interruption.` },
-      he: { title: 'לא הצלחנו לחדש את המנוי ב-Dockly', body: `החיוב בכרטיס נדחה. הכול ממשיך לעבוד ${catalog.grace.pastDueDays} ימים בזמן שננסה שוב — עדכנו את אמצעי התשלום כדי למנוע הפסקה.` },
+      en: { title: 'We couldn’t renew your Sadir subscription', body: `Your card was declined. Everything keeps working for ${catalog.grace.pastDueDays} days while we retry — update your payment method to avoid interruption.` },
+      he: { title: 'לא הצלחנו לחדש את המנוי ב-Sadir', body: `החיוב בכרטיס נדחה. הכול ממשיך לעבוד ${catalog.grace.pastDueDays} ימים בזמן שננסה שוב — עדכנו את אמצעי התשלום כדי למנוע הפסקה.` },
     })
   }
   publish(workspaceId, 'billing')
@@ -805,8 +806,8 @@ async function suspendAfterGrace(now, stats) {
   for (const r of rows) {
     await recordBillingEvent({ query }, r.workspace_id, 'subscription_suspended', 'system')
     await notifyOwners(r.workspace_id, {
-      en: { title: 'Your Dockly workspace is paused', body: 'We couldn’t collect payment, so the workspace is read-only. Update your payment method to restore it immediately — nothing was deleted.' },
-      he: { title: 'סביבת העבודה ב-Dockly הושהתה', body: 'לא הצלחנו לגבות תשלום ולכן סביבת העבודה במצב צפייה בלבד. עדכנו אמצעי תשלום כדי לשחזר אותה מיד — שום דבר לא נמחק.' },
+      en: { title: 'Your Sadir workspace is paused', body: 'We couldn’t collect payment, so the workspace is read-only. Update your payment method to restore it immediately — nothing was deleted.' },
+      he: { title: 'סביבת העבודה ב-Sadir הושהתה', body: 'לא הצלחנו לגבות תשלום ולכן סביבת העבודה במצב צפייה בלבד. עדכנו אמצעי תשלום כדי לשחזר אותה מיד — שום דבר לא נמחק.' },
     })
     publish(r.workspace_id, 'billing')
     stats.suspended++

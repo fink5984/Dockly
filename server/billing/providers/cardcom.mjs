@@ -7,7 +7,7 @@
  *   Reconcile:     POST Transactions/GetTransactionByExternalUniqTran, Transactions/ListTransactions
  *
  * Field names follow Cardcom's published OpenAPI (secure.cardcom.solutions/swagger/v11).
- * Card numbers never pass through Dockly: the card is entered on Cardcom's page
+ * Card numbers never pass through Sadir: the card is entered on Cardcom's page
  * and we only receive a token plus display data (last 4 digits, expiry, brand).
  *
  * STATUS: implemented against the published spec and unit-tested with recorded

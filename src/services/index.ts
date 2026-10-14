@@ -1,5 +1,5 @@
 /**
- * Typed wrappers around the Dockly API. Pages call these; they never build
+ * Typed wrappers around the Sadir API. Pages call these; they never build
  * URLs themselves.
  */
 import { api, uploadFile } from '@/lib/api'

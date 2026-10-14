@@ -194,7 +194,7 @@ router.post('/team/invites', requireRole('admin'), async (req, res) => {
     role: roleSchema.exclude(['owner']),
   }), req.body)
   if (await queryOne('SELECT 1 FROM profiles WHERE lower(email) = $1', [b.email])) {
-    throw conflict('email_taken', 'This email already has a Dockly account')
+    throw conflict('email_taken', 'This email already has a Sadir account')
   }
   await assertSeatAvailable(req.user.workspaceId)
   const token = randomToken(32)
@@ -208,7 +208,7 @@ router.post('/team/invites', requireRole('admin'), async (req, res) => {
   const lang = ws.default_language === 'he' ? 'he' : 'en'
   const { html, text } = renderEmail({
     language: lang, brandName: ws.name, brandColor: ws.brand_color || undefined,
-    heading: lang === 'he' ? `הוזמנת להצטרף ל-${ws.name} ב-Dockly` : `You're invited to join ${ws.name} on Dockly`,
+    heading: lang === 'he' ? `הוזמנת להצטרף ל-${ws.name} ב-Sadir` : `You're invited to join ${ws.name} on Sadir`,
     paragraphs: [lang === 'he' ? `${req.user.name} הזמין/ה אותך להצטרף לצוות.` : `${req.user.name} invited you to join the team.`],
     ctaLabel: lang === 'he' ? 'קבלת ההזמנה' : 'Accept invitation', ctaUrl: link,
     footer: lang === 'he' ? 'ההזמנה בתוקף ל-7 ימים.' : 'This invitation expires in 7 days.',

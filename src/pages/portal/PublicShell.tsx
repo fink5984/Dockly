@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Languages, Lock, Phone, Mail } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
-import { Logo } from '@/components/layout/Logo'
+import { Logo } from '@/components/brand/Logo'
 
 const PUBLIC_LANG_KEY = 'dockly-public-lang'
 /** Language explicitly chosen by the client on a public page (this tab only). */
@@ -55,8 +55,8 @@ export function PublicShell({ workspace, children, showContact = true }: Props) 
             <img src={workspace.logo} alt="" className="size-9 rounded-lg border border-line bg-white object-contain" />
           ) : workspace ? (
             <span className="flex size-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-semibold text-brand-fg" aria-hidden>{workspace.name.slice(0, 1)}</span>
-          ) : <Logo className="size-9" />}
-          <span className="min-w-0 flex-1 truncate font-semibold">{workspace?.name || 'Dockly'}</span>
+          ) : <Logo className="h-8" />}
+          {workspace ? <span className="min-w-0 flex-1 truncate font-semibold">{workspace.name}</span> : <span className="flex-1" />}
           <button type="button" onClick={() => { const l = language === 'he' ? 'en' : 'he'; setLanguage(l); rememberPublicLanguage(l) }} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-fg-3 hover:bg-surface-3 hover:text-fg-2" aria-label={t('common.language')}>
             <Languages className="size-4" /> {language === 'he' ? 'English' : 'עברית'}
           </button>

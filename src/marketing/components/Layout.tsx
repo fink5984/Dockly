@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Languages, Menu } from 'lucide-react'
-import { Logo } from '@/components/layout/Logo'
+import { Logo } from '@/components/brand/Logo'
 import type { MarketingCopy } from '../copy/types'
 import { marketingPath, type MarketingLang, type MarketingPageKey } from '../routes'
 
@@ -34,9 +34,8 @@ export function Layout({ copy, lang, page, children }: PageProps & { page: Marke
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:shadow-lg">{copy.nav.skip}</a>
       <header className="sticky top-0 z-40 border-b border-line/70 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/70">
         <Container className="flex h-16 items-center gap-6">
-          <a href={home} className="flex items-center gap-2 rounded-md" aria-label={copy.nav.home}>
-            <Logo className="size-8" />
-            <span className="text-lg font-semibold tracking-tight">Dockly</span>
+          <a href={home} className="flex shrink-0 items-center rounded-md" aria-label={copy.nav.home}>
+            <Logo className="h-8" decorative />
           </a>
           <nav aria-label={copy.nav.product} className="hidden flex-1 items-center gap-1 lg:flex">
             {links.map((l) => (
@@ -81,7 +80,7 @@ function Footer({ copy, lang, page }: PageProps & { page: MarketingPageKey }) {
     <footer className="border-t border-line bg-surface-2">
       <Container className="grid gap-10 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
-          <a href={home} className="flex items-center gap-2"><Logo className="size-7" /><span className="font-semibold">Dockly</span></a>
+          <a href={home} className="inline-flex rounded-md" aria-label={copy.nav.home}><Logo className="h-7" decorative /></a>
           <p className="mt-3 max-w-xs text-sm text-fg-3">{copy.footer.tagline}</p>
         </div>
         {cols.map((c) => (

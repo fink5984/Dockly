@@ -148,7 +148,7 @@ export async function completeSigning(token, { signerName, consent, language, va
   const values = validateFieldValues(fields, submitted)
   const extras = await loadExtraDocs(r.id)
   const lang = language === 'he' ? 'he' : 'en'
-  const reference = `Dockly · ${r.id} · ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`
+  const reference = `Sadir · ${r.id} · ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`
 
   // Generate every signed file before touching request state.
   const outputs = []

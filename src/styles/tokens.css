@@ -1,9 +1,9 @@
-/* Dockly design tokens, base styles and shared utilities — imported by the app (index.css) and the marketing site (marketing/marketing.css). */
+/* Sadir design tokens, base styles and shared utilities — imported by the app (index.css) and the marketing site (marketing/marketing.css). */
 /* Class-based dark mode (set on <html> by ThemeContext) */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================================
-   Dockly design tokens
+   Sadir design tokens
    Semantic tokens are CSS variables (themeable); Tailwind utilities
    map onto them so components never hard-code colors.
    ============================================================ */
@@ -27,7 +27,7 @@
   --color-line-2: var(--dk-line-2);
   --color-ring: var(--dk-ring);
 
-  /* Brand (refined indigo) */
+  /* Brand (Sadir violet; brand constants in shared/brand.mjs) */
   --color-brand-50: var(--dk-brand-50);
   --color-brand-100: var(--dk-brand-100);
   --color-brand-200: var(--dk-brand-200);
@@ -40,6 +40,7 @@
   --color-brand-900: var(--dk-brand-900);
   --color-brand-fg: var(--dk-brand-fg);
   --color-brand-soft: var(--dk-brand-soft);
+  --color-brand-ink: var(--dk-brand-ink);
 
   /* Status */
   --color-success: var(--dk-success);
@@ -128,20 +129,23 @@
 
     --dk-line: #eaecf0;
     --dk-line-2: #d0d5dd;
-    --dk-ring: rgb(75 74 207 / 0.24);
+    --dk-ring: rgb(91 77 255 / 0.24);
 
-    --dk-brand-50: #f0f1fe;
-    --dk-brand-100: #e2e3fd;
-    --dk-brand-200: #c9cbfb;
-    --dk-brand-300: #a6a8f6;
-    --dk-brand-400: #8384ee;
-    --dk-brand-500: #6563e3;
-    --dk-brand-600: #4b4acf;
-    --dk-brand-700: #3d3bb0;
-    --dk-brand-800: #33328e;
-    --dk-brand-900: #2c2c70;
+    --dk-brand-50: #f6f4ff;
+    --dk-brand-100: #edeaff;
+    --dk-brand-200: #dcd6ff;
+    --dk-brand-300: #bdb3ff;
+    --dk-brand-400: #9a8dff;
+    --dk-brand-500: #7b6cff;
+    --dk-brand-600: #5b4dff;
+    --dk-brand-700: #4a3be6;
+    --dk-brand-800: #3a2db8;
+    --dk-brand-900: #221c78;
     --dk-brand-fg: #ffffff;
-    --dk-brand-soft: #f0f1fe;
+    --dk-brand-soft: #f6f4ff;
+    /* Logo: wordmark navy and the ribbon's fold shadow (lifted in dark mode). */
+    --dk-brand-ink: #11103c;
+    --dk-mark-deep: #141364;
 
     --dk-success: #079455;
     --dk-success-soft: #ecfdf3;
@@ -187,20 +191,22 @@
 
     --dk-line: #232835;
     --dk-line-2: #323949;
-    --dk-ring: rgb(131 132 238 / 0.35);
+    --dk-ring: rgb(138 127 255 / 0.38);
 
-    --dk-brand-50: #1a1b3a;
-    --dk-brand-100: #222452;
-    --dk-brand-200: #2e3070;
-    --dk-brand-300: #3d3f93;
-    --dk-brand-400: #5658c4;
-    --dk-brand-500: #6d6fe0;
-    --dk-brand-600: #8384ee;
-    --dk-brand-700: #a3a5f5;
-    --dk-brand-800: #c4c5fa;
-    --dk-brand-900: #e0e1fd;
+    --dk-brand-50: #16143a;
+    --dk-brand-100: #1e1b52;
+    --dk-brand-200: #2a2573;
+    --dk-brand-300: #3b34a0;
+    --dk-brand-400: #574cd6;
+    --dk-brand-500: #6f62f2;
+    --dk-brand-600: #8a7fff;
+    --dk-brand-700: #a99fff;
+    --dk-brand-800: #cac3ff;
+    --dk-brand-900: #e7e3ff;
     --dk-brand-fg: #0b0d12;
-    --dk-brand-soft: rgb(131 132 238 / 0.12);
+    --dk-brand-soft: rgb(138 127 255 / 0.14);
+    --dk-brand-ink: #f4f3ff;
+    --dk-mark-deep: #4338d0;
 
     --dk-success: #32d583;
     --dk-success-soft: rgb(50 213 131 / 0.12);

@@ -1,7 +1,7 @@
 /**
  * Normalize a phone number to WhatsApp's expected format: international
  * digits without '+'. Israeli local mobiles (05X-XXXXXXX) are converted to
- * 9725X… since that's the dominant local format among Dockly customers.
+ * 9725X… since that's the dominant local format among Sadir customers.
  * @returns {string|null} digits, or null if it can't be a valid number
  */
 export function normalizePhone(input, defaultCountry = '972') {

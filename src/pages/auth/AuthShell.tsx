@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { CheckCircle2, Eye, EyeOff, Languages } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
-import { Logo } from '@/components/layout/Logo'
+import { Logo } from '@/components/brand/Logo'
 import { Input, type InputProps } from '@/components/ui/Field'
 
 export function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle?: string; children: ReactNode; footer?: ReactNode }) {
@@ -10,7 +10,7 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
     <div className="grid min-h-dvh bg-canvas lg:grid-cols-[1fr_minmax(420px,520px)]">
       <div className="flex flex-col px-5 py-6 sm:px-10">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5"><Logo className="size-8" /><span className="text-lg font-semibold tracking-tight">Dockly</span></div>
+          <Logo className="h-10" />
           <button type="button" onClick={() => setLanguage(language === 'he' ? 'en' : 'he')} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-fg-3 hover:bg-surface-3 hover:text-fg-2">
             <Languages className="size-4" /> {language === 'he' ? 'English' : 'עברית'}
           </button>

@@ -21,7 +21,7 @@ export default {
       roleHelp: { owner: 'Everything, including team and ownership.', admin: 'Manage settings, branding, team and deletions.', member: 'Work with clients, requests, reviews and signatures.', viewer: 'View everything, change nothing.' },
     },
     automation: {
-      title: 'Automation', hint: 'Dockly can follow up with clients for you. Reminders only go to requests that are still missing documents.',
+      title: 'Automation', hint: 'Sadir can follow up with clients for you. Reminders only go to requests that are still missing documents.',
       schedulerOff: 'The reminder scheduler is turned off on this server, so no automatic messages will be sent.', locale: 'en-GB', daysUnit: 'days',
       requestReminders: 'Remind clients about missing documents', requestRemindersHint: 'Sent after the request goes out, then repeated until everything arrives or the limit is reached.',
       firstAfter: 'First reminder after', repeatEvery: 'Then every', max: 'Max reminders', channel: 'Channel', channelOff: 'This channel isn’t connected — reminders will fail until it is.',
@@ -30,14 +30,14 @@ export default {
       quiet: 'Quiet hours', quietHint: 'No automatic messages during these hours (workspace time zone).', from: 'From', until: 'Until', noSendDays: 'Don’t send on',
     },
     integrations: {
-      title: 'Integrations', hint: 'Channels Dockly uses to reach your clients.', connected: 'Connected', notConnected: 'Not connected', simulation: 'Simulation mode',
+      title: 'Integrations', hint: 'Channels Sadir uses to reach your clients.', connected: 'Connected', notConnected: 'Not connected', simulation: 'Simulation mode',
       waConnected: 'Messages are sent through Meta’s official WhatsApp Cloud API with your approved templates.',
       waOff: 'WhatsApp isn’t connected on this server. Messages are recorded but not delivered. An administrator sets the WhatsApp credentials in the server environment.',
       waNoSecret: 'Webhook signature secret is missing — incoming messages are rejected until it’s configured.', webhookUrl: 'Webhook URL',
       email: 'Email (Resend)', emailOn: 'Requests, reminders and signing links can be sent by email.', emailOff: 'Email isn’t set up. Add a Resend API key and sender address in the server environment to enable it.',
     },
     security: {
-      title: 'Security', hint: 'How Dockly protects your workspace.', point1: 'Passwords are hashed; sessions use secure, http-only cookies.',
+      title: 'Security', hint: 'How Sadir protects your workspace.', point1: 'Passwords are hashed; sessions use secure, http-only cookies.',
       point2: 'Every request is checked on the server — workspaces can never see each other’s data.', point3: 'Files are private and opened through short-lived links only.',
       point4: 'Signatures have a tamper-evident audit trail and document hashes.', sessions: 'Sessions', sessionsHint: 'Sign out on every device, including this one.',
       signOutAll: 'Sign out everywhere', signOutAllTitle: 'Sign out on all devices?', signOutAllHint: 'You’ll need to sign in again on every device.',
@@ -65,7 +65,7 @@ export default {
       roleHelp: { owner: 'הכול, כולל ניהול הצוות והבעלות.', admin: 'ניהול הגדרות, מיתוג, צוות ומחיקות.', member: 'עבודה עם לקוחות, בקשות, בדיקות וחתימות.', viewer: 'צפייה בהכול, ללא שינויים.' },
     },
     automation: {
-      title: 'אוטומציה', hint: 'Dockly יכול לעקוב אחרי הלקוחות בשבילכם. תזכורות נשלחות רק לבקשות שעדיין חסרים בהן מסמכים.',
+      title: 'אוטומציה', hint: 'Sadir יכול לעקוב אחרי הלקוחות בשבילכם. תזכורות נשלחות רק לבקשות שעדיין חסרים בהן מסמכים.',
       schedulerOff: 'מתזמן התזכורות כבוי בשרת זה, ולכן לא יישלחו הודעות אוטומטיות.', locale: 'he-IL', daysUnit: 'ימים',
       requestReminders: 'תזכורת ללקוחות על מסמכים חסרים', requestRemindersHint: 'נשלחת אחרי שליחת הבקשה, וחוזרת עד שהכול מגיע או עד שמגיעים למגבלה.',
       firstAfter: 'תזכורת ראשונה אחרי', repeatEvery: 'ולאחר מכן כל', max: 'מקסימום תזכורות', channel: 'ערוץ', channelOff: 'הערוץ הזה לא מחובר — התזכורות ייכשלו עד שיחובר.',
@@ -74,14 +74,14 @@ export default {
       quiet: 'שעות שקטות', quietHint: 'לא יישלחו הודעות אוטומטיות בשעות אלה (לפי אזור הזמן של סביבת העבודה).', from: 'משעה', until: 'עד שעה', noSendDays: 'לא לשלוח בימים',
     },
     integrations: {
-      title: 'חיבורים', hint: 'הערוצים שבהם Dockly פונה ללקוחות שלכם.', connected: 'מחובר', notConnected: 'לא מחובר', simulation: 'מצב סימולציה',
+      title: 'חיבורים', hint: 'הערוצים שבהם Sadir פונה ללקוחות שלכם.', connected: 'מחובר', notConnected: 'לא מחובר', simulation: 'מצב סימולציה',
       waConnected: 'ההודעות נשלחות דרך WhatsApp Cloud API הרשמי של Meta, עם התבניות המאושרות שלכם.',
       waOff: 'וואטסאפ לא מחובר בשרת זה. ההודעות מתועדות אך לא נשלחות. מנהל המערכת מגדיר את פרטי הוואטסאפ בסביבת השרת.',
       waNoSecret: 'חסר סוד לאימות חתימת ה-Webhook — הודעות נכנסות נדחות עד שיוגדר.', webhookUrl: 'כתובת Webhook',
       email: 'דוא"ל (Resend)', emailOn: 'ניתן לשלוח בקשות, תזכורות וקישורי חתימה בדוא"ל.', emailOff: 'דוא"ל לא הוגדר. הוסיפו מפתח API של Resend וכתובת שולח בסביבת השרת כדי להפעיל.',
     },
     security: {
-      title: 'אבטחה', hint: 'כך Dockly מגן על סביבת העבודה שלכם.', point1: 'הסיסמאות מוצפנות (hash), וההתחברות משתמשת בעוגיות מאובטחות.',
+      title: 'אבטחה', hint: 'כך Sadir מגן על סביבת העבודה שלכם.', point1: 'הסיסמאות מוצפנות (hash), וההתחברות משתמשת בעוגיות מאובטחות.',
       point2: 'כל בקשה נבדקת בשרת — סביבות עבודה לעולם לא רואות זו את הנתונים של זו.', point3: 'הקבצים פרטיים ונפתחים רק דרך קישורים קצרי-תוקף.',
       point4: 'לחתימות יש מסלול ביקורת עמיד לשינויים וערכי Hash של המסמכים.', sessions: 'חיבורים פעילים', sessionsHint: 'ניתוק מכל המכשירים, כולל המכשיר הזה.',
       signOutAll: 'ניתוק מכל המכשירים', signOutAllTitle: 'להתנתק מכל המכשירים?', signOutAllHint: 'יהיה צורך להתחבר מחדש בכל מכשיר.',

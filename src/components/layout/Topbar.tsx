@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Menu as MenuIcon, Search, Plus, Bell, Sun, Moon, Monitor, Languages, LogOut, User, ClipboardList, UserPlus, PenLine, CheckCheck, Settings } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -14,6 +14,7 @@ import { Menu } from '@/components/ui/Menu'
 import { Button, IconButton } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Misc'
 import { Kbd } from '@/components/ui/States'
+import { LogoMark } from '@/components/brand/Logo'
 
 const NOTIFICATION_TEMPLATES = new Set(['document_uploaded', 'request_completed', 'signature_signed', 'signature_declined', 'support_message'])
 
@@ -133,6 +134,7 @@ export function Topbar() {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-surface/90 px-3 backdrop-blur supports-[backdrop-filter]:bg-surface/75 sm:px-5">
       <IconButton className="lg:hidden" label={t('nav.openMenu')} icon={<MenuIcon className="size-5" />} onClick={() => setMobileNavOpen(true)} tooltip={false} />
+      <Link to="/app" className="me-1 flex shrink-0 rounded-md lg:hidden"><LogoMark className="size-7" /></Link>
 
       <button
         type="button"

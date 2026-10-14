@@ -1,7 +1,7 @@
 /**
  * Automated reminders.
  *
- * Runs on an interval inside the web process (Dockly is a single Railway
+ * Runs on an interval inside the web process (Sadir is a single Railway
  * service; a dedicated worker isn't justified yet). Guarantees:
  *  - single runner: a Postgres advisory lock means two instances can't both tick
  *  - idempotent: each reminder has a unique delivery key

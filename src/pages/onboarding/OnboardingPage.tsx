@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/Field'
 import { Stepper } from '@/components/ui/Misc'
-import { Logo } from '@/components/layout/Logo'
+import { Logo } from '@/components/brand/Logo'
 import type { Language } from '@/types'
 
 const BUSINESS_TYPES = ['accounting', 'legal', 'mortgage', 'insurance', 'finance', 'consulting', 'realEstate', 'other']
@@ -62,7 +62,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-dvh bg-canvas">
       <header className="flex h-16 items-center gap-2.5 border-b border-line bg-surface px-6">
-        <Logo className="size-8" /><span className="font-semibold">Dockly</span>
+        <Logo className="h-8" />
       </header>
       <main className="mx-auto max-w-xl px-5 py-10">
         <Stepper steps={[{ id: 'details', label: t('onboarding.stepDetails') }, { id: 'needs', label: t('billing.onboarding.stepNeeds') }, { id: 'templates', label: t('onboarding.stepTemplates') }]} current={step} onStepClick={setStep} />

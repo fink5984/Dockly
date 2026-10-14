@@ -90,7 +90,7 @@ export const config = Object.freeze({
 
   // Public website details shown on the marketing and legal pages.
   site: {
-    legalName: env.SITE_LEGAL_NAME || 'Dockly',
+    legalName: env.SITE_LEGAL_NAME || 'Sadir',
     contactEmail: env.SITE_CONTACT_EMAIL || env.BILLING_SALES_EMAIL || '',
   },
 })

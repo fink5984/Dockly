@@ -1,5 +1,5 @@
 /**
- * Starts an isolated Dockly server for Playwright: fresh database on the
+ * Starts an isolated Sadir server for Playwright: fresh database on the
  * local dev Postgres (.data/pg, port 54330), local file storage, WhatsApp in
  * log mode. Never touches production.
  */

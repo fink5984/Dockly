@@ -114,18 +114,18 @@ function WorkspaceSection() {
   )
 }
 
-const SWATCHES = ['#4B4ACF', '#2563EB', '#0E7490', '#047857', '#B45309', '#BE123C', '#7C3AED', '#111827']
+const SWATCHES = ['#5B4DFF', '#2563EB', '#0E7490', '#047857', '#B45309', '#BE123C', '#7C3AED', '#111827']
 
 function BrandingSection() {
   const { t } = useI18n()
   const { workspace, setWorkspace } = useAuth()
   const { toast, toastError } = useApp()
-  const [color, setColor] = useState(workspace?.brandColor || '#4B4ACF')
+  const [color, setColor] = useState(workspace?.brandColor || '#5B4DFF')
   const [message, setMessage] = useState(workspace?.portalMessage || '')
   const [busy, setBusy] = useState(false)
   const [logoBusy, setLogoBusy] = useState(false)
   const file = useRef<HTMLInputElement>(null)
-  const dirty = color !== (workspace?.brandColor || '#4B4ACF') || message !== (workspace?.portalMessage || '')
+  const dirty = color !== (workspace?.brandColor || '#5B4DFF') || message !== (workspace?.portalMessage || '')
   const save = async () => {
     setBusy(true)
     try { setWorkspace(await workspaceApi.update({ brandColor: color, portalMessage: message })); toast({ tone: 'success', title: t('common.saved') }) } catch (e) { toastError(e, t('settings.saveFailed')) } finally { setBusy(false) }
@@ -165,7 +165,7 @@ function BrandingSection() {
           </div>
           <Textarea label={t('settings.branding.message')} value={message} onChange={(e) => setMessage(e.target.value)} rows={3} maxLength={1000} hint={t('settings.branding.messageHint')} />
         </CardBody>
-        <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={() => { setColor(workspace?.brandColor || '#4B4ACF'); setMessage(workspace?.portalMessage || '') }} />
+        <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={() => { setColor(workspace?.brandColor || '#5B4DFF'); setMessage(workspace?.portalMessage || '') }} />
       </Card>
       <div>
         <p className="mb-2 text-sm font-medium text-fg-3">{t('settings.branding.preview')}</p>

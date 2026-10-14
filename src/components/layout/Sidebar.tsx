@@ -9,7 +9,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { Logo } from './Logo'
+import { Logo, LogoMark } from '@/components/brand/Logo'
 
 interface NavItem { key: string; to: string; icon: typeof LayoutDashboard; end?: boolean; admin?: boolean }
 
@@ -81,19 +81,32 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
   )
 }
 
-function WorkspaceHeader({ collapsed }: { collapsed: boolean }) {
-  const { workspace } = useAuth()
+function BrandHeader({ collapsed }: { collapsed: boolean }) {
   return (
-    <div className={cn('flex h-14 shrink-0 items-center gap-2.5 border-b border-line', collapsed ? 'justify-center px-2' : 'px-4')}>
-      {workspace?.logo ? (
-        <img src={workspace.logo} alt="" className="size-7 rounded-md object-contain bg-surface border border-line" />
-      ) : <Logo className="size-7" />}
-      {!collapsed && (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-fg">{workspace?.name || 'Dockly'}</p>
-          <p className="truncate text-2xs text-fg-4">Dockly</p>
-        </div>
+    <div className={cn('flex h-14 shrink-0 items-center', collapsed ? 'justify-center px-2' : 'px-4')}>
+      <NavLink to="/app" className="flex rounded-md focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]">
+        {collapsed ? <LogoMark className="size-8" /> : <Logo className="h-7" />}
+      </NavLink>
+    </div>
+  )
+}
+
+/** The customer's own workspace identity, shown under the Sadir brand. */
+function WorkspaceChip() {
+  const { t } = useI18n()
+  const { workspace } = useAuth()
+  if (!workspace?.name) return null
+  return (
+    <div className="mx-3 mt-1 flex items-center gap-2.5 rounded-lg border border-line bg-surface-2 px-2.5 py-2">
+      {workspace.logo ? (
+        <img src={workspace.logo} alt="" className="size-7 shrink-0 rounded-md border border-line bg-surface object-contain" />
+      ) : (
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand-soft text-xs font-semibold text-brand-700" aria-hidden>{workspace.name.slice(0, 1)}</span>
       )}
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-fg">{workspace.name}</p>
+        <p className="truncate text-2xs text-fg-4">{t('nav.group.workspace')}</p>
+      </div>
     </div>
   )
 }
@@ -120,7 +133,8 @@ export function Sidebar() {
           sidebarCollapsed ? 'w-[68px]' : 'w-60',
         )}
       >
-        <WorkspaceHeader collapsed={sidebarCollapsed} />
+        <BrandHeader collapsed={sidebarCollapsed} />
+        {!sidebarCollapsed && <WorkspaceChip />}
         <NavList collapsed={sidebarCollapsed} />
         <div className={cn('border-t border-line p-2', sidebarCollapsed && 'flex justify-center')}>
           <Tooltip content={sidebarCollapsed ? t('nav.expand') : t('nav.collapse')} side="end">
@@ -143,11 +157,12 @@ export function Sidebar() {
           <div className="absolute inset-0 bg-overlay animate-fade-in" onClick={() => setMobileNavOpen(false)} aria-hidden />
           <aside role="dialog" aria-modal="true" aria-label={t('nav.main')} className="absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col bg-surface shadow-xl animate-fade-in">
             <div className="flex items-center justify-between pe-2">
-              <div className="min-w-0 flex-1"><WorkspaceHeader collapsed={false} /></div>
+              <div className="min-w-0 flex-1"><BrandHeader collapsed={false} /></div>
               <button type="button" onClick={() => setMobileNavOpen(false)} className="rounded-md p-2 text-fg-3 hover:bg-surface-3" aria-label={t('common.close')}>
                 <X className="size-5" />
               </button>
             </div>
+            <WorkspaceChip />
             <NavList collapsed={false} onNavigate={() => setMobileNavOpen(false)} />
           </aside>
         </div>
