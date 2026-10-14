@@ -140,6 +140,8 @@ CREATE INDEX IF NOT EXISTS idx_invoices_ws ON public.billing_invoices(workspace_
 CREATE UNIQUE INDEX IF NOT EXISTS uq_invoices_provider_tx ON public.billing_invoices(provider, provider_transaction_id) WHERE provider_transaction_id IS NOT NULL;
 -- One renewal invoice per workspace per period → renewals are idempotent.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_invoices_renewal_period ON public.billing_invoices(workspace_id, period_start) WHERE kind = 'renewal';
+-- At most one on-demand charge (upgrade proration / pack) in flight per workspace → no double charges from parallel clicks.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_invoices_one_pending_ondemand ON public.billing_invoices(workspace_id) WHERE status = 'pending' AND kind IN ('proration', 'pack');
 
 -- ── Provider callbacks: replay protection + audit (sanitised summary only) ──
 CREATE TABLE IF NOT EXISTS public.payment_events (

@@ -58,7 +58,10 @@ _Branch `feature/commercial-launch`, stacked on `feature/premium-saas-upgrade` (
 - Product milestones are recorded **server-side** at the moment they happen, once per workspace (unique index). Landing and pricing views are sent with `sendBeacon` and carry only a per-tab random session id (sessionStorage, no cookie), the page language, coarse device class and UTM parameters.
 - Nothing is collected when Do Not Track or Global Privacy Control is on. No IP addresses, user agents, emails, names, document data or file names are stored. `scripts/funnel-report.mjs` prints conversion.
 
-## 3. Stages
+## 3. Stages — status
+
+_All five stages are implemented on this branch (see `BILLING.md` and the addendum in `VERIFICATION_REPORT.md`). What remains is listed in §4._
+
 
 1. Audit and this plan.
 2. Routing split, marketing site (landing, pricing, legal, accessibility), SEO, and trial onboarding.

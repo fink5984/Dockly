@@ -409,6 +409,19 @@ describe.skipIf(skipIntegration())('billing', () => {
       expect((await c.post('/api/billing/packs', { packCode: 'envelopes_25' })).data.error.code).toBe('plan_required')
     })
 
+    it('allows only one on-demand charge in flight per workspace', async () => {
+      const c = await newOwner(base)
+      await subscribe(base, c, 'collect_starter')
+      // A charge whose outcome is still unknown blocks a second one (e.g. a parallel click in another tab).
+      await query(
+        `INSERT INTO billing_invoices (workspace_id, kind, status, lines, subtotal, vat, total, currency, last_error)
+         VALUES ($1, 'pack', 'pending', '[]', 4900, 882, 5782, 'ILS', 'unknown_outcome')`, [wsOf(c)],
+      )
+      const r = await c.post('/api/billing/packs', { packCode: 'requests_25' })
+      expect(r.status).toBe(409)
+      expect(r.data.error.code).toBe('payment_in_progress')
+    })
+
     it('cancels at period end, can be resumed, and ends read-only', async () => {
       const c = await newOwner(base)
       await subscribe(base, c, 'collect_starter')

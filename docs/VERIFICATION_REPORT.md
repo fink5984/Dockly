@@ -64,3 +64,47 @@ See "Known limitations" in `UPGRADE_CHANGELOG.md`. Most relevant: single signer 
 ## Deployment considerations
 
 Follow the cut-over plan in `UPGRADE_ROADMAP.md`: back up, deploy, migrate, smoke test, hash legacy passwords. Expect brief dashboard downtime between deploy and migration. The Railway start command is unchanged (`npm start`). The repository's `dist/` is built by Railway as before.
+
+---
+
+# Addendum — Commercial launch (`feature/commercial-launch`, 2026-10-14)
+
+## Verified
+
+| Check | Result | How |
+|---|---|---|
+| TypeScript + production build | ✅ | `npm run build` (tsc, Vite client, Vite SSR, prerender of 12 marketing pages) |
+| Unit + integration tests | ✅ 150/150 | `npm test` on a throwaway database (90 existing + 60 new) |
+| Browser E2E | ✅ 14/14 | Playwright + Chrome on the production build: the original journey (now through legacy URLs), the full trial → paid funnel, pricing toggles, legal pages, Hebrew RTL on a phone |
+| Existing workspaces untouched | ✅ | Migration on a database with pre-existing workspaces → all `legacy`, no limits, no invoices; new workspace → 30-day trial; re-run is a no-op |
+| No activation from a redirect | ✅ | Integration test: return page sync before payment leaves the trial unchanged; E2E confirms with the server before showing success |
+| Webhook forgery and replay | ✅ | Forged signature, valid signature with unpaid session, foreign reference, 3× replay → one invoice, one event row |
+| Price tampering | ✅ | Client-sent amounts ignored; provider amount ≠ quote → session failed, `payment_mismatch` audited, plan unchanged |
+| No double charges | ✅ | Lost charge response resolved by lookup (`attempt_count` stays 1); parallel on-demand charges blocked by a unique index; renewal invoice unique per period |
+| Quotas under concurrency | ✅ | 3 parallel creates at 24/25 → exactly one succeeds |
+| Dunning | ✅ | Decline → `past_due` + 7-day grace → retries → `suspended` (read-only) → card update charges the outstanding invoice → `active` |
+| Marketing site quality | ✅ | No console errors, no horizontal overflow at 390 px (HE) and 1440 px; one `h1`; every image has `alt`; ~2 KB JS + 8.4 KB CSS gzipped; correct `lang`/`dir`, canonical, hreflang, JSON-LD (no ratings), robots, sitemap, 404 status |
+| Screenshots are real | ✅ | Captured from the running app with fictional data (`e2e/marketing-capture.spec.ts`) |
+| Funnel privacy | ✅ | Tests: only whitelisted props stored (an email passed in attribution is dropped); DNT/GPC respected; no IP/user agent columns exist |
+
+## Could not be verified
+
+- **Live Cardcom.** No terminal credentials. The adapter follows Cardcom's published v11 OpenAPI spec and is tested against responses in that shape; the assumptions to confirm on a test terminal are listed in `BILLING.md` §5.
+- **Tax documents.** Issued by Cardcom; not exercised.
+- **Legal text.** Written to describe the actual system under Israeli law, but **not reviewed by a lawyer**. Set `SITE_LEGAL_NAME` and `SITE_CONTACT_EMAIL` before launch.
+- **Screen-reader walkthrough and Safari/Firefox** of the new pages (same caveat as before).
+
+## Security notes for the new surface
+
+- Public endpoints added: `/api/public/billing/catalog` (static), `/api/public/billing/webhook/:provider` (HMAC-signed session id in the URL + reference match + server-to-server fetch; rate-limited), `/api/public/events` (whitelisted, rate-limited, DNT/GPC), `/api/public/site`, and sandbox endpoints that return 404 unless the sandbox provider is active (refused in production by config).
+- Billing management is owner-only; admins can view. All state-changing billing calls go through the existing CSRF protection.
+- Payment tokens are AES-256-GCM encrypted; card numbers never reach Dockly; logs redact token fields.
+- Marketing pages are static; deployment values are HTML-escaped on substitution; JSON-LD escapes `<`.
+
+## New required/optional environment variables
+
+`SITE_LEGAL_NAME`, `SITE_CONTACT_EMAIL` (required before launch, shown on legal pages) · `BILLING_SALES_EMAIL` (optional) · `CARDCOM_TERMINAL_NUMBER`, `CARDCOM_API_NAME`, `CARDCOM_API_PASSWORD`, `BILLING_ENCRYPTION_KEY` (when going live with payments). See `.env.example`.
+
+## Required migration
+
+`0004_billing.sql` — additive; grandfathers every existing workspace as `legacy`.

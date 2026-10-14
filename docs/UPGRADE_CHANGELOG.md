@@ -45,3 +45,17 @@ _Branch `feature/premium-saas-upgrade` · commits after `3219406`_
 - The WhatsApp bot's in-chat replies remain Hebrew.
 - Rate limits and live updates are per-instance (fine for the current single Railway service).
 - Electronic signatures are simple e-signatures with an audit trail, not qualified or certified signatures.
+
+---
+
+## Commercial launch (`feature/commercial-launch`)
+
+- **Public website:** prerendered Hebrew (`/`) and English (`/en`) home, pricing, privacy policy, terms, accessibility statement and 404, with real product screenshots, SEO metadata, sitemap and robots. Signed-in users opening `/` go to `/app`.
+- **Routing:** the dashboard moved to `/app/*`; every older dashboard URL redirects. Client links (`/p`, `/upload`, `/sign`) are unchanged.
+- **Plans:** Document Collection and E-Signatures sold separately or together (Suite, discounted); monthly/yearly; monthly quotas, storage and seats; storage/seat add-ons; one-time request/envelope packs. Pricing is provisional and lives in `shared/billing/catalog.json`.
+- **Trials:** 30 days, no card, both products; read-only (never deleted) when it ends; reminders 7/3/1 days before. **Existing workspaces are grandfathered** (`legacy`) — no limits, no charges.
+- **Billing page:** usage meters, plan picker with VAT/proration preview, add-ons, packs, payment method, invoice details, invoices and receipts, cancel/resume; upgrade dialog whenever the server refuses an action for plan reasons.
+- **Payments:** Cardcom hosted checkout and token renewals behind a provider abstraction; verified server-side results only; idempotent everywhere; dunning with a 7-day grace period; labelled sandbox for development; `disabled` in production until credentials are set.
+- **Analytics:** privacy-first funnel events from landing visit to trial-to-paid; `scripts/funnel-report.mjs`.
+- **Operations:** `scripts/billing-admin.mjs` (status, list, extend trial, legacy deadline, comp, reconcile, tick).
+- **Docs:** `COMMERCIAL_LAUNCH_PLAN.md`, `BILLING.md`, verification addendum.

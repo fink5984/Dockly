@@ -492,11 +492,16 @@ async function markInvoicePaid(invoiceId, result) {
 }
 
 async function createChargeInvoice(workspaceId, kind, quote, meta, period = {}) {
-  return queryOne(
+  try {
+    return await queryOne(
     `INSERT INTO billing_invoices (workspace_id, kind, status, lines, meta, subtotal, vat, total, currency, period_start, period_end)
      VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
     [workspaceId, kind, JSON.stringify(quote.lines), JSON.stringify(meta), quote.subtotal, quote.vat, quote.total, quote.currency, period.start || null, period.end || null],
-  )
+    )
+  } catch (err) {
+    if (err.code === '23505') throw conflict('payment_in_progress', 'Another payment for this workspace is being processed. Try again in a minute.')
+    throw err
+  }
 }
 
 /** Charge an on-demand invoice right away; void it if the card declines. */
