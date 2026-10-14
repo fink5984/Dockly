@@ -180,7 +180,7 @@ function BrandingSection() {
             {message && <p className="whitespace-pre-wrap text-xs text-fg-3">{message}</p>}
             <div className="rounded-lg border border-line bg-surface p-3">
               <p className="text-xs font-medium">{t('settings.branding.sampleDoc')}</p>
-              <span className="mt-2 inline-flex h-8 items-center rounded-md bg-brand-600 px-3 text-xs font-semibold text-brand-fg">{t('portal.upload')}</span>
+              <span className="mt-2 inline-flex h-8 items-center rounded-full bg-brand-600 px-3 text-xs font-semibold text-brand-fg">{t('portal.upload')}</span>
             </div>
           </div>
         </div>

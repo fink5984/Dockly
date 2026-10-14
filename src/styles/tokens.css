@@ -279,3 +279,13 @@
 
 /* Mirror directional icons (arrows/chevrons) in RTL */
 [dir='rtl'] .rtl-flip { transform: scaleX(-1); }
+
+/* Every button in the system is pill-shaped. Unlayered on purpose so it wins
+   over Tailwind's rounded-* utilities on raw <button> elements. Underlined tabs are excluded. */
+button:not([role='tab']),
+[role='button'],
+input[type='button'],
+input[type='submit'],
+input[type='reset'] {
+  border-radius: 9999px;
+}

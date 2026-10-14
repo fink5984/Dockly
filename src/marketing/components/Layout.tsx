@@ -48,7 +48,7 @@ export function Layout({ copy, lang, page, children }: PageProps & { page: Marke
               <Languages className="size-4" aria-hidden />{copy.nav.otherLanguage}
             </a>
             <a href="/auth/signin" className="hidden rounded-md px-3 py-2 text-sm font-medium text-fg-2 hover:bg-surface-3 hover:text-fg sm:inline-flex">{copy.nav.signIn}</a>
-            <a href={signup} data-cta="header" className="inline-flex h-9 items-center rounded-md bg-brand-600 px-3.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700">{copy.nav.cta}</a>
+            <a href={signup} data-cta="header" className="inline-flex h-9 items-center rounded-full bg-brand-600 px-3.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700">{copy.nav.cta}</a>
             <details className="mk-menu relative lg:hidden">
               <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-fg-2 hover:bg-surface-3" aria-label={copy.nav.menu}>
                 <Menu className="size-5" aria-hidden />

@@ -50,7 +50,7 @@ export function NotFoundPage({ copy, lang }: PageProps) {
         <p className="text-sm font-semibold text-brand-600">404</p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight">{copy.notFound.title}</h1>
         <p className="mt-4 text-fg-3">{copy.notFound.body}</p>
-        <a href={marketingPath('home', lang)} className="mt-8 inline-flex h-11 items-center rounded-lg bg-brand-600 px-5 font-semibold text-white hover:bg-brand-700">{copy.notFound.home}</a>
+        <a href={marketingPath('home', lang)} className="mt-8 inline-flex h-11 items-center rounded-full bg-brand-600 px-5 font-semibold text-white hover:bg-brand-700">{copy.notFound.home}</a>
       </Container>
     </Layout>
   )

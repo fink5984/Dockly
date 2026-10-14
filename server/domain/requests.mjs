@@ -235,6 +235,8 @@ export async function ingestUpload(p) {
       workspaceId: p.workspaceId,
       type: 'info',
       title: `${slot.client_name} uploaded ${slot.doc_name}`,
+      template: 'document_uploaded',
+      params: { client: slot.client_name, document: slot.doc_name },
       message: finalName,
       actionUrl: `/app/requests/${p.caseId}`,
     })
@@ -253,6 +255,8 @@ export async function ingestUpload(p) {
       workspaceId: p.workspaceId,
       type: 'success',
       title: `${slot.client_name} submitted every required document`,
+      template: 'request_completed',
+      params: { client: slot.client_name },
       actionUrl: `/app/requests/${p.caseId}`,
     })
   }

@@ -298,6 +298,9 @@ export interface Notification {
   message: string
   read: boolean
   actionUrl?: string
+  /** Localization key; the UI renders `notifications.templates.<template>` with `params`. */
+  template?: string
+  params?: Record<string, unknown>
   timestamp: string
 }
 

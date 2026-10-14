@@ -37,8 +37,10 @@ export function Tabs({ tabs, value, onChange, label, className, variant = 'line'
       role="tablist"
       aria-label={label}
       className={cn(
-        'flex gap-1 overflow-x-auto scroll-thin',
-        variant === 'line' ? 'border-b border-line' : 'rounded-lg bg-surface-3 p-1',
+        'flex gap-1 overflow-x-auto overflow-y-hidden scroll-thin',
+        // The baseline is an inset shadow (not a border) so the active tab's underline can sit on it
+        // without overflowing the container, which would otherwise show a needless scrollbar.
+        variant === 'line' ? 'shadow-[inset_0_-1px_0_var(--dk-line)]' : 'rounded-full bg-surface-3 p-1',
         className,
       )}
     >
@@ -59,8 +61,8 @@ export function Tabs({ tabs, value, onChange, label, className, variant = 'line'
             className={cn(
               'relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none',
               variant === 'line'
-                ? cn('h-10 px-3 -mb-px border-b-2', selected ? 'border-brand-600 text-fg' : 'border-transparent text-fg-3 hover:text-fg-2 focus-visible:text-fg')
-                : cn('h-8 rounded-md px-3', selected ? 'bg-surface text-fg shadow-xs' : 'text-fg-3 hover:text-fg-2'),
+                ? cn('h-10 px-3 border-b-2 rounded-none', selected ? 'border-brand-600 text-fg' : 'border-transparent text-fg-3 hover:text-fg-2 focus-visible:text-fg')
+                : cn('h-8 rounded-full px-3', selected ? 'bg-surface text-fg shadow-xs' : 'text-fg-3 hover:text-fg-2'),
             )}
           >
             {tab.icon}

@@ -47,14 +47,18 @@ export async function logActivity(e, db = { query }) {
   }
 }
 
-/** Notify every active member of a workspace (optionally excluding the actor). */
-export async function notifyWorkspace({ workspaceId, type = 'info', title, message = '', actionUrl = null, excludeUserId = null }) {
+/**
+ * Notify every active member of a workspace (optionally excluding the actor).
+ * `template` + `params` let the UI render the text in the viewer's language;
+ * `title`/`message` are the English fallback.
+ */
+export async function notifyWorkspace({ workspaceId, type = 'info', title, message = '', actionUrl = null, excludeUserId = null, template = null, params = null }) {
   try {
     await query(
-      `INSERT INTO notifications (workspace_id, user_id, type, title, message, action_url)
-       SELECT $1, p.id, $2, $3, $4, $5 FROM profiles p
+      `INSERT INTO notifications (workspace_id, user_id, type, title, message, action_url, template, params)
+       SELECT $1, p.id, $2, $3, $4, $5, $7, $8 FROM profiles p
        WHERE p.workspace_id = $1 AND p.is_active AND ($6::uuid IS NULL OR p.id <> $6::uuid)`,
-      [workspaceId, type, title, message, actionUrl, excludeUserId],
+      [workspaceId, type, title, message, actionUrl, excludeUserId, template, params ? JSON.stringify(params) : null],
     )
     publish(workspaceId, 'notifications')
   } catch (err) {

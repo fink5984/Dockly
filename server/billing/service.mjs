@@ -648,7 +648,8 @@ async function notifyOwners(workspaceId, { type = 'warning', en, he, actionUrl =
   const ws = await queryOne('SELECT name, default_language, brand_color FROM workspaces WHERE id = $1', [workspaceId])
   const lang = ws?.default_language === 'en' ? 'en' : 'he'
   const copy = lang === 'en' ? en : he
-  await notifyWorkspace({ workspaceId, type, title: copy.title, message: copy.body, actionUrl })
+  // Both languages travel with the notification so each viewer sees their own.
+  await notifyWorkspace({ workspaceId, type, title: copy.title, message: copy.body, actionUrl, template: 'localized', params: { en, he } })
   const owners = await query(`SELECT email FROM profiles WHERE workspace_id = $1 AND role = 'owner' AND is_active`, [workspaceId])
   const { html, text } = renderEmail({
     language: lang, brandName: 'Dockly', heading: copy.title, paragraphs: [copy.body],

@@ -212,7 +212,7 @@ export async function completeSigning(token, { signerName, consent, language, va
     actor: { type: 'client', name, id: r.client_id }, clientId: r.client_id, clientName: r.client_name,
     caseId: r.case_id || undefined, metadata: { signatureRequestId: r.id },
   })
-  await notifyWorkspace({ workspaceId: r.workspace_id, type: 'success', title: `${name} signed "${r.title}"`, actionUrl: `/app/signatures/${r.id}` })
+  await notifyWorkspace({ workspaceId: r.workspace_id, type: 'success', title: `${name} signed "${r.title}"`, template: 'signature_signed', params: { signer: name, title: r.title }, actionUrl: `/app/signatures/${r.id}` })
   publish(r.workspace_id, 'signatures', { id: r.id })
   await recordMilestone(r.workspace_id, 'first_signature_completed')
   return { signedAt: new Date().toISOString() }
@@ -231,7 +231,7 @@ export async function declineSigning(token, { reason }, { ip, userAgent }) {
     workspaceId: r.workspace_id, type: 'signature_declined', description: `${r.title} declined`,
     actor: { type: 'client', name: r.client_name, id: r.client_id }, clientId: r.client_id, clientName: r.client_name, metadata: { reason: why },
   })
-  await notifyWorkspace({ workspaceId: r.workspace_id, type: 'warning', title: `${r.client_name} declined "${r.title}"`, message: why, actionUrl: `/app/signatures/${r.id}` })
+  await notifyWorkspace({ workspaceId: r.workspace_id, type: 'warning', title: `${r.client_name} declined "${r.title}"`, template: 'signature_declined', params: { client: r.client_name, title: r.title }, message: why, actionUrl: `/app/signatures/${r.id}` })
   publish(r.workspace_id, 'signatures', { id: r.id })
 }
 

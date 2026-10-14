@@ -74,7 +74,7 @@ export function PricingCards({ copy, lang, showToggles = true }: { copy: Marketi
                         data-plan={plan.code}
                         data-plan-interval={interval}
                         href={`/auth/signup?lang=${lang}&plan=${plan.code}&interval=${interval}`}
-                        className={`mt-6 inline-flex h-11 items-center justify-center rounded-lg px-5 text-sm font-semibold ${best ? 'bg-brand-600 text-white hover:bg-brand-700' : 'border border-line-2 bg-white text-fg hover:bg-surface-2'}`}
+                        className={`mt-6 inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold ${best ? 'bg-brand-600 text-white hover:bg-brand-700' : 'border border-line-2 bg-white text-fg hover:bg-surface-2'}`}
                       >
                         {p.cta}
                       </a>

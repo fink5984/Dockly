@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ClipboardList, Inbox, AlertTriangle, PenLine, ArrowRight, CheckCircle2, Clock, MessageSquare, Send, Plus,
-  UserPlus, Upload, Circle, Sparkles, Hourglass,
+  UserPlus, Upload, Circle, Sparkles, Hourglass, ChevronDown, BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/contexts/I18nContext'
@@ -170,11 +170,19 @@ function GettingStarted({ o }: { o: Dashboard['onboarding'] }) {
   )
 }
 
+const INSIGHTS_KEY = 'dockly-dashboard-insights'
+
 export default function DashboardPage() {
   const { t, fmt } = useI18n()
   const { user, can } = useAuth()
   const { data, error, loading, refetch } = useApi('dashboard', insightsApi.dashboard, { topics: ['requests', 'signatures', 'support', 'clients'] })
-  const activity = useApi('activity:recent', () => insightsApi.activity({ limit: 12 }), { topics: ['activity'] })
+  const [insightsOpen, setInsightsOpen] = useState(() => {
+    try { return localStorage.getItem(INSIGHTS_KEY) === 'open' } catch { return false }
+  })
+  const toggleInsights = (open: boolean) => {
+    setInsightsOpen(open)
+    try { localStorage.setItem(INSIGHTS_KEY, open ? 'open' : 'closed') } catch { /* ignore */ }
+  }
   const hour = new Date().getHours()
   const greeting = hour < 12 ? t('dashboard.morning') : hour < 18 ? t('dashboard.afternoon') : t('dashboard.evening')
 
@@ -217,27 +225,49 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <Card>
-              <CardHeader
-                title={t('dashboard.trendTitle')}
-                description={data?.kpis.avgDaysToComplete != null ? t('dashboard.avgDays', { days: fmt.number(data.kpis.avgDaysToComplete) }) : undefined}
-              />
-              <CardBody>{data ? <WeeklyChart trend={data.trend} /> : <Skeleton className="h-44" />}</CardBody>
-            </Card>
-            <Card>
-              <CardHeader title={t('dashboard.recentActivity')} action={<Link to="/app/activity" className="text-sm font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')}</Link>} />
-              <CardBody>
-                {activity.loading ? <Skeleton className="h-44" /> : activity.data && activity.data.length > 0 ? (
-                  <ActivityFeed items={activity.data.slice(0, 7)} compact />
-                ) : (
-                  <EmptyState compact icon={<Upload />} title={t('activity.empty')} description={t('activity.emptyHint')} />
-                )}
-              </CardBody>
-            </Card>
-          </div>
+          <section aria-label={t('dashboard.insights')}>
+            <button
+              type="button"
+              aria-expanded={insightsOpen}
+              aria-controls="dashboard-insights-panel"
+              onClick={() => toggleInsights(!insightsOpen)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-2 hover:bg-surface-3 hover:text-fg focus-visible:outline-none focus-visible:shadow-[var(--shadow-focus)]"
+            >
+              <BarChart3 className="size-4" />
+              {insightsOpen ? t('dashboard.hideInsights') : t('dashboard.showInsights')}
+              <ChevronDown className={cn('size-4 transition-transform', insightsOpen && 'rotate-180')} />
+            </button>
+            {insightsOpen && <div id="dashboard-insights-panel" className="mt-3"><Insights data={data} /></div>}
+          </section>
         </div>
       )}
     </>
+  )
+}
+
+/** Weekly trend + recent activity. Mounted only when opened, so the activity feed isn't fetched otherwise. */
+function Insights({ data }: { data: Dashboard | undefined }) {
+  const { t, fmt } = useI18n()
+  const activity = useApi('activity:recent', () => insightsApi.activity({ limit: 12 }), { topics: ['activity'] })
+  return (
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <Card>
+        <CardHeader
+          title={t('dashboard.trendTitle')}
+          description={data?.kpis.avgDaysToComplete != null ? t('dashboard.avgDays', { days: fmt.number(data.kpis.avgDaysToComplete) }) : undefined}
+        />
+        <CardBody>{data ? <WeeklyChart trend={data.trend} /> : <Skeleton className="h-44" />}</CardBody>
+      </Card>
+      <Card>
+        <CardHeader title={t('dashboard.recentActivity')} action={<Link to="/app/activity" className="text-sm font-medium text-brand-600 hover:text-brand-700">{t('common.viewAll')}</Link>} />
+        <CardBody>
+          {activity.loading ? <Skeleton className="h-44" /> : activity.data && activity.data.length > 0 ? (
+            <ActivityFeed items={activity.data.slice(0, 7)} compact />
+          ) : (
+            <EmptyState compact icon={<Upload />} title={t('activity.empty')} description={t('activity.emptyHint')} />
+          )}
+        </CardBody>
+      </Card>
+    </div>
   )
 }

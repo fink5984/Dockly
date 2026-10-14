@@ -21,6 +21,7 @@ export default {
     pipeline: 'Request pipeline', trendTitle: 'Requests completed per week', week: 'Week', weekOf: 'Week of {{date}}',
     completedShort: 'completed', uploadsShort: 'uploads', completedTotal_one: '{{count}} request completed in the last 8 weeks', completedTotal_other: '{{count}} requests completed in the last 8 weeks',
     avgDays: 'Average {{days}} days from sending to complete', recentActivity: 'Recent activity',
+    insights: 'Trends and activity', showInsights: 'Show trends & activity', hideInsights: 'Hide trends & activity',
     start: {
       title: 'Get set up', progress: '{{done}} of {{total}} done', client: 'Add your first client', request: 'Create a document request',
       send: 'Send it to the client', branding: 'Add your logo and color', signature: 'Send a document for signature',
@@ -48,6 +49,7 @@ export default {
     pipeline: 'מצב הבקשות', trendTitle: 'בקשות שהושלמו בכל שבוע', week: 'שבוע', weekOf: 'שבוע {{date}}',
     completedShort: 'הושלמו', uploadsShort: 'העלאות', completedTotal_one: 'בקשה אחת הושלמה ב-8 השבועות האחרונים', completedTotal_two: '{{count}} בקשות הושלמו ב-8 השבועות האחרונים', completedTotal_other: '{{count}} בקשות הושלמו ב-8 השבועות האחרונים',
     avgDays: 'בממוצע {{days}} ימים משליחה ועד השלמה', recentActivity: 'פעילות אחרונה',
+    insights: 'מגמות ופעילות', showInsights: 'הצגת מגמות ופעילות', hideInsights: 'הסתרת מגמות ופעילות',
     start: {
       title: 'צעדים ראשונים', progress: '{{done}} מתוך {{total}} הושלמו', client: 'הוספת הלקוח הראשון', request: 'יצירת בקשת מסמכים',
       send: 'שליחה ללקוח', branding: 'הוספת לוגו וצבע', signature: 'שליחת מסמך לחתימה',

@@ -9,13 +9,31 @@ import { useApp } from '@/contexts/AppContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useApi, invalidate } from '@/hooks/useApi'
 import { notificationsApi } from '@/services'
+import type { Notification } from '@/types'
 import { Menu } from '@/components/ui/Menu'
 import { Button, IconButton } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Misc'
 import { Kbd } from '@/components/ui/States'
 
+const NOTIFICATION_TEMPLATES = new Set(['document_uploaded', 'request_completed', 'signature_signed', 'signature_declined', 'support_message'])
+
+/** Render a notification in the viewer's language; falls back to the stored (English) text. */
+function useNotificationText() {
+  const { t, language } = useI18n()
+  return (n: Notification): { title: string; message: string } => {
+    if (n.template === 'localized') {
+      const copy = (n.params as Record<string, { title?: string; body?: string }> | undefined)?.[language]
+      if (copy?.title) return { title: copy.title, message: copy.body || '' }
+    } else if (n.template && NOTIFICATION_TEMPLATES.has(n.template)) {
+      return { title: t(`notifications.templates.${n.template}`, n.params as Record<string, string>), message: n.message }
+    }
+    return { title: n.title, message: n.message }
+  }
+}
+
 function NotificationsButton() {
   const { t, fmt } = useI18n()
+  const text = useNotificationText()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const btn = useRef<HTMLButtonElement>(null)
@@ -73,7 +91,9 @@ function NotificationsButton() {
           </div>
           <ul className="max-h-[420px] overflow-y-auto scroll-thin divide-y divide-line">
             {data.length === 0 && <li className="px-4 py-10 text-center text-sm text-fg-3">{t('notifications.empty')}</li>}
-            {data.map((n) => (
+            {data.map((n) => {
+              const { title, message } = text(n)
+              return (
               <li key={n.id}>
                 <button
                   type="button"
@@ -86,13 +106,14 @@ function NotificationsButton() {
                 >
                   <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', n.read ? 'bg-transparent' : 'bg-brand-600')} aria-hidden />
                   <span className="min-w-0 flex-1">
-                    <span className={cn('block text-sm', n.read ? 'text-fg-2' : 'font-medium text-fg')}>{n.title}</span>
-                    {n.message && <span className="mt-0.5 block truncate text-xs text-fg-3">{n.message}</span>}
+                    <span className={cn('block text-sm', n.read ? 'text-fg-2' : 'font-medium text-fg')}>{title}</span>
+                    {message && <span className="mt-0.5 block truncate text-xs text-fg-3"><bdi>{message}</bdi></span>}
                     <span className="mt-1 block text-2xs text-fg-4">{fmt.relative(n.timestamp)}</span>
                   </span>
                 </button>
               </li>
-            ))}
+              )
+            })}
           </ul>
         </div>,
         document.body,

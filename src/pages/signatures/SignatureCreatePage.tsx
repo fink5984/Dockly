@@ -133,7 +133,7 @@ export default function SignatureCreatePage() {
           {ready.length > 1 && (
             <div role="tablist" className="flex gap-2 overflow-x-auto">
               {ready.map((d, i) => (
-                <button key={d.localId} role="tab" aria-selected={activeDoc === i} type="button" onClick={() => setActiveDoc(i)} className={cn('flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm', activeDoc === i ? 'border-brand-500 bg-brand-soft' : 'border-line bg-surface')}>
+                <button key={d.localId} role="tab" aria-selected={activeDoc === i} type="button" onClick={() => setActiveDoc(i)} className={cn('flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm', activeDoc === i ? 'border-brand-500 bg-brand-soft' : 'border-line bg-surface')}>
                   <FileText className="size-4" /><bdi>{d.uploaded!.fileName}</bdi>
                   <span className="rounded-full bg-surface-3 px-1.5 text-2xs tabular">{fields.filter((f) => f.docIndex === i).length}</span>
                 </button>

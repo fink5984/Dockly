@@ -65,10 +65,10 @@ export function HomePage({ copy, lang }: PageProps) {
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-fg-3">{copy.hero.subtitle}</p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a href={signup} data-cta="hero" className="inline-flex h-12 items-center gap-2 rounded-lg bg-brand-600 px-6 text-md font-semibold text-white shadow-sm hover:bg-brand-700">
+              <a href={signup} data-cta="hero" className="inline-flex h-12 items-center gap-2 rounded-full bg-brand-600 px-6 text-md font-semibold text-white shadow-sm hover:bg-brand-700">
                 {copy.hero.primary}<Arrow className="size-4" aria-hidden />
               </a>
-              <a href="#how" className="inline-flex h-12 items-center rounded-lg border border-line-2 bg-white px-6 text-md font-semibold text-fg hover:bg-surface-2">{copy.hero.secondary}</a>
+              <a href="#how" className="inline-flex h-12 items-center rounded-full border border-line-2 bg-white px-6 text-md font-semibold text-fg hover:bg-surface-2">{copy.hero.secondary}</a>
             </div>
             <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-fg-3">
               {copy.hero.points.map((p) => <li key={p} className="flex items-center gap-1.5"><Check className="size-4 text-success" aria-hidden />{p}</li>)}
@@ -263,8 +263,8 @@ export function FinalCta({ copy, lang }: PageProps) {
         <h2 id="final-title" className="text-3xl font-semibold tracking-tight sm:text-4xl">{copy.final.title}</h2>
         <p className="mx-auto mt-4 max-w-xl text-lg text-brand-100">{copy.final.subtitle}</p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <a href={`/auth/signup?lang=${lang}`} data-cta="final" className="inline-flex h-12 items-center rounded-lg bg-white px-6 font-semibold text-brand-800 hover:bg-brand-50">{copy.final.cta}</a>
-          <a href={marketingPath('pricing', lang)} className="inline-flex h-12 items-center rounded-lg px-6 font-semibold text-white ring-1 ring-white/30 hover:bg-white/10">{copy.final.secondary}</a>
+          <a href={`/auth/signup?lang=${lang}`} data-cta="final" className="inline-flex h-12 items-center rounded-full bg-white px-6 font-semibold text-brand-800 hover:bg-brand-50">{copy.final.cta}</a>
+          <a href={marketingPath('pricing', lang)} className="inline-flex h-12 items-center rounded-full px-6 font-semibold text-white ring-1 ring-white/30 hover:bg-white/10">{copy.final.secondary}</a>
         </div>
         <p className="mt-6 text-sm text-brand-200">{copy.final.note}</p>
       </div>

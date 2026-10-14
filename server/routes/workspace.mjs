@@ -267,11 +267,11 @@ router.delete('/team/members/:id', requireRole('admin'), async (req, res) => {
 // ── Notifications ─────────────────────────────────────────
 router.get('/notifications', async (req, res) => {
   const rows = await query(
-    `SELECT id, type, title, message, read, action_url, created_at FROM notifications
+    `SELECT id, type, title, message, read, action_url, template, params, created_at FROM notifications
       WHERE user_id = $1 AND workspace_id = $2 ORDER BY created_at DESC LIMIT 50`,
     [req.user.id, req.user.workspaceId],
   )
-  res.json(rows.map((n) => ({ id: n.id, type: n.type, title: n.title, message: n.message, read: n.read, actionUrl: n.action_url || undefined, timestamp: n.created_at })))
+  res.json(rows.map((n) => ({ id: n.id, type: n.type, title: n.title, message: n.message, read: n.read, actionUrl: n.action_url || undefined, template: n.template || undefined, params: n.params || undefined, timestamp: n.created_at })))
 })
 
 router.post('/notifications/read-all', async (req, res) => {

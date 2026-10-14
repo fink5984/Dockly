@@ -29,7 +29,15 @@ const en = {
     open: 'Search', placeholder: 'Search clients, requests, signatures…', actions: 'Quick actions', goTo: 'Go to',
     typeMore: 'Type at least 2 characters', noResults: 'No matches',
   },
-  notifications: { label: 'Notifications', labelUnread_one: 'Notifications, {{count}} unread', labelUnread_other: 'Notifications, {{count}} unread', markAll: 'Mark all read', empty: 'You’re all caught up' },
+  notifications: { label: 'Notifications', labelUnread_one: 'Notifications, {{count}} unread', labelUnread_other: 'Notifications, {{count}} unread', markAll: 'Mark all read', empty: 'You’re all caught up',
+    templates: {
+      document_uploaded: '{{client}} uploaded {{document}}',
+      request_completed: '{{client}} submitted every required document',
+      signature_signed: '{{signer}} signed "{{title}}"',
+      signature_declined: '{{client}} declined "{{title}}"',
+      support_message: 'New support message from {{client}}',
+    },
+  },
   upload: {
     choose: 'Choose a file', chooseFiles: 'Choose files', orDrag: 'or drag it here', takePhoto: 'Take a photo',
     formats: 'Accepted: {{formats}} · up to {{size}} MB', uploading: 'Uploading…', processing: 'Processing…', cancel: 'Cancel upload',

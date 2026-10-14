@@ -23,10 +23,10 @@ const variants: Record<ButtonVariant, string> = {
 }
 
 const sizes: Record<ButtonSize, string> = {
-  xs: 'h-7 px-2 text-xs rounded-sm gap-1',
-  sm: 'h-8 px-3 text-sm rounded-md gap-1.5',
-  md: 'h-9 px-3.5 text-sm rounded-md',
-  lg: 'h-11 px-5 text-md rounded-lg',
+  xs: 'h-7 px-2 text-xs rounded-full gap-1',
+  sm: 'h-8 px-3 text-sm rounded-full gap-1.5',
+  md: 'h-9 px-3.5 text-sm rounded-full',
+  lg: 'h-11 px-5 text-md rounded-full',
 }
 
 const iconSizes: Record<ButtonSize, string> = { xs: 'size-7', sm: 'size-8', md: 'size-9', lg: 'size-11' }
@@ -79,7 +79,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   { label, icon, variant = 'ghost', size = 'md', loading, tooltip = true, to, className, type = 'button', disabled, ...props },
   ref,
 ) {
-  const classes = cn(base, variants[variant], 'rounded-md p-0', iconSizes[size], className)
+  const classes = cn(base, variants[variant], 'rounded-full p-0', iconSizes[size], className)
   const inner = loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : icon
   const el = to && !disabled
     ? <Link to={to} className={classes} aria-label={label}>{inner}</Link>

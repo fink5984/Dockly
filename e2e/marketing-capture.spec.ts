@@ -132,7 +132,7 @@ async function capture(browser: Browser, request: APIRequestContext, lang: Lang)
 
   const desk = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'light', locale: lang === 'he' ? 'he-IL' : 'en-US', storageState: await request.storageState() })
   const d = await desk.newPage()
-  await d.addInitScript((l) => { localStorage.setItem('dockly-language', l); localStorage.setItem('dockly-theme', 'light') }, lang)
+  await d.addInitScript((l) => { localStorage.setItem('dockly-language', l); localStorage.setItem('dockly-theme', 'light'); localStorage.setItem('dockly-dashboard-insights', 'open') }, lang)
   const shot = async (path: string, name: string, ready: () => Promise<void>) => {
     await d.goto(path)
     await ready()

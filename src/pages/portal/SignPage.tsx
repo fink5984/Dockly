@@ -207,7 +207,7 @@ function Signer({ token }: { token: string }) {
       {data.documents.length > 1 && (
         <div role="tablist" className="mb-3 flex gap-2 overflow-x-auto">
           {data.documents.map((d, i) => (
-            <button key={d.id} role="tab" type="button" aria-selected={activeDoc === i} onClick={() => setActiveDoc(i)} className={cn('flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm', activeDoc === i ? 'border-brand-500 bg-brand-soft' : 'border-line bg-surface')}>
+            <button key={d.id} role="tab" type="button" aria-selected={activeDoc === i} onClick={() => setActiveDoc(i)} className={cn('flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm', activeDoc === i ? 'border-brand-500 bg-brand-soft' : 'border-line bg-surface')}>
               <FileText className="size-4" /><bdi>{d.fileName}</bdi>
             </button>
           ))}

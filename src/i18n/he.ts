@@ -29,7 +29,15 @@ const he = {
     open: 'חיפוש', placeholder: 'חיפוש לקוחות, בקשות וחתימות…', actions: 'פעולות מהירות', goTo: 'מעבר אל',
     typeMore: 'הקלידו לפחות 2 תווים', noResults: 'לא נמצאו תוצאות',
   },
-  notifications: { label: 'התראות', labelUnread_one: 'התראות, התראה אחת שלא נקראה', labelUnread_two: 'התראות, {{count}} שלא נקראו', labelUnread_other: 'התראות, {{count}} שלא נקראו', markAll: 'סימון הכול כנקרא', empty: 'אין התראות חדשות' },
+  notifications: { label: 'התראות', labelUnread_one: 'התראות, התראה אחת שלא נקראה', labelUnread_two: 'התראות, {{count}} שלא נקראו', labelUnread_other: 'התראות, {{count}} שלא נקראו', markAll: 'סימון הכול כנקרא', empty: 'אין התראות חדשות',
+    templates: {
+      document_uploaded: '{{client}} העלה/תה את {{document}}',
+      request_completed: '{{client}} הגיש/ה את כל המסמכים הנדרשים',
+      signature_signed: '{{signer}} חתם/ה על "{{title}}"',
+      signature_declined: '{{client}} סירב/ה לחתום על "{{title}}"',
+      support_message: 'הודעת תמיכה חדשה מ{{client}}',
+    },
+  },
   upload: {
     choose: 'בחירת קובץ', chooseFiles: 'בחירת קבצים', orDrag: 'או גררו לכאן', takePhoto: 'צילום',
     formats: 'קבצים מותרים: {{formats}} · עד {{size}}MB', uploading: 'מעלה…', processing: 'מעבד…', cancel: 'ביטול העלאה',
