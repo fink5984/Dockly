@@ -1,8 +1,11 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useApp } from '@/contexts/AppContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { pushApi } from '@/services'
+import { PAID_STATUSES, setInstallable, syncPush } from '@/lib/push'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
@@ -11,9 +14,25 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { BillingBanner } from '@/components/billing/BillingBanner'
 import { UpgradeDialog } from '@/components/billing/UpgradeDialog'
 
+/** "Install app" for paying workspaces only; keep this device's push subscription current. */
+function useAppDevice() {
+  const { billing, user } = useAuth()
+  const { language } = useI18n()
+  const paid = Boolean(billing && PAID_STATUSES.has(billing.status))
+  useEffect(() => {
+    setInstallable(paid)
+    return () => setInstallable(false)
+  }, [paid])
+  useEffect(() => {
+    if (!user) return
+    pushApi.get().then((s) => { if (s.configured && s.publicKey) return syncPush(s.publicKey, language) }).catch(() => {})
+  }, [user, language])
+}
+
 export function AppLayout() {
   const { sidebarCollapsed } = useApp()
   const { t } = useI18n()
+  useAppDevice()
   return (
     <div className="min-h-dvh bg-canvas">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[400] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:shadow-lg">

@@ -6,6 +6,7 @@
 import { query } from '../db/pool.mjs'
 import { publish } from './events.mjs'
 import { logger } from './logger.mjs'
+import { pushToUsers } from '../messaging/push.mjs'
 
 /**
  * @param {object} e
@@ -50,17 +51,20 @@ export async function logActivity(e, db = { query }) {
 /**
  * Notify every active member of a workspace (optionally excluding the actor).
  * `template` + `params` let the UI render the text in the viewer's language;
- * `title`/`message` are the English fallback.
+ * `title`/`message` are the English fallback. Recipients who opted in also
+ * get a push on their devices (sent in the background).
  */
 export async function notifyWorkspace({ workspaceId, type = 'info', title, message = '', actionUrl = null, excludeUserId = null, template = null, params = null }) {
   try {
-    await query(
+    const rows = await query(
       `INSERT INTO notifications (workspace_id, user_id, type, title, message, action_url, template, params)
        SELECT $1, p.id, $2, $3, $4, $5, $7, $8 FROM profiles p
-       WHERE p.workspace_id = $1 AND p.is_active AND ($6::uuid IS NULL OR p.id <> $6::uuid)`,
+       WHERE p.workspace_id = $1 AND p.is_active AND ($6::uuid IS NULL OR p.id <> $6::uuid)
+       RETURNING user_id`,
       [workspaceId, type, title, message, actionUrl, excludeUserId, template, params ? JSON.stringify(params) : null],
     )
     publish(workspaceId, 'notifications')
+    void pushToUsers({ userIds: rows.map((r) => r.user_id), template, params, title, message, actionUrl })
   } catch (err) {
     logger.error('notify_failed', { err })
   }

@@ -10,6 +10,7 @@ import type {
 } from '@/types'
 import type { BillingState, CheckoutSession, ChangeResult, Invoice, BillingSummary } from '@/types/billing'
 import type { Catalog, Interval, QuoteLine } from '@shared/billing/pricing.mjs'
+import type { PushEvent } from '@shared/push.mjs'
 
 const qs = (params: Record<string, string | number | undefined | null>) => {
   const s = new URLSearchParams()
@@ -51,6 +52,16 @@ export const notificationsApi = {
   list: () => api.get<Notification[]>('/api/notifications'),
   readAll: () => api.post<{ ok: boolean }>('/api/notifications/read-all'),
   read: (id: string) => api.post<{ ok: boolean }>(`/api/notifications/${id}/read`),
+}
+
+export interface PushSettings { configured: boolean; publicKey: string | null; events: PushEvent[]; devices: number }
+
+export const pushApi = {
+  get: () => api.get<PushSettings>('/api/push'),
+  setEvents: (events: PushEvent[]) => api.put<{ events: PushEvent[] }>('/api/push/preferences', { events }),
+  subscribe: (d: { endpoint: string; keys: { p256dh: string; auth: string }; language: Language }) => api.post<{ ok: boolean }>('/api/push/subscriptions', d),
+  unsubscribe: (endpoint: string) => api.post<{ ok: boolean }>('/api/push/subscriptions/remove', { endpoint }),
+  test: () => api.post<{ sent: number }>('/api/push/test'),
 }
 
 export type ClientInput = { name: string; email?: string; phone?: string; company?: string | null; notes?: string | null; status?: Client['status'] }

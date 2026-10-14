@@ -6,17 +6,19 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
 import { useApi, invalidate } from '@/hooks/useApi'
-import { authApi, workspaceApi } from '@/services'
+import { authApi, workspaceApi, pushApi } from '@/services'
 import { ApiError } from '@/lib/api'
 import { Card, CardHeader, CardBody } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input, Textarea, Select, Switch } from '@/components/ui/Field'
+import { Input, Textarea, Select, Switch, Checkbox } from '@/components/ui/Field'
 import { PageHeader, Avatar, CopyButton } from '@/components/ui/Misc'
 import { Dialog, ConfirmDialog } from '@/components/ui/Dialog'
 import { Badge } from '@/components/ui/Badge'
 import { ErrorState, Skeleton } from '@/components/ui/States'
 import { brandStyle } from '@/pages/portal/PublicShell'
 import type { AutomationSettings, Role, Language } from '@/types'
+import { PUSH_EVENTS, type PushEvent } from '@shared/push.mjs'
+import { PAID_STATUSES, disablePush, enablePush, isIos, isPushOnHere, isStandalone, pushSupported } from '@/lib/push'
 
 const SECTIONS = [
   { id: 'profile', icon: User },
@@ -36,6 +38,90 @@ function SaveBar({ dirty, busy, onSave, onReset }: { dirty: boolean; busy: boole
       <Button onClick={onReset} disabled={!dirty || busy}>{t('common.cancel')}</Button>
       <Button variant="primary" onClick={onSave} loading={busy} disabled={!dirty}>{t('common.save')}</Button>
     </div>
+  )
+}
+
+/** Push notifications: on/off for this device, and which events push (per user, all devices). */
+function PushCard() {
+  const { t, language } = useI18n()
+  const { billing } = useAuth()
+  const { toast, toastError } = useApp()
+  const { data, mutate, refetch } = useApi('push', pushApi.get)
+  const [here, setHere] = useState<boolean | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [blocked, setBlocked] = useState(() => pushSupported() && Notification.permission === 'denied')
+  useEffect(() => { isPushOnHere().then(setHere).catch(() => setHere(false)) }, [])
+  if (!data) return null
+
+  // Why this device can't turn push on, if it can't.
+  const iosNeedsInstall = isIos() && !isStandalone()
+  const paid = Boolean(billing && PAID_STATUSES.has(billing.status))
+  const unavailable = !data.configured ? t('settings.push.notConfigured')
+    : iosNeedsInstall ? t(paid ? 'settings.push.iosInstall' : 'settings.push.iosPaid')
+    : !pushSupported() ? t('settings.push.unsupported')
+    : blocked ? t('settings.push.blocked') : null
+
+  const toggleDevice = async (on: boolean) => {
+    setBusy(true)
+    try {
+      if (on) {
+        const r = await enablePush(data.publicKey!, language)
+        if (r === 'denied') { setBlocked(Notification.permission === 'denied'); return }
+      } else {
+        await disablePush()
+      }
+      setHere(on)
+      await refetch()
+      toast({ tone: 'success', title: t(on ? 'settings.push.enabled' : 'settings.push.disabled') })
+    } catch (e) { toastError(e, t('settings.push.failed')) } finally { setBusy(false) }
+  }
+  const toggleEvent = async (ev: PushEvent, on: boolean) => {
+    const events = on ? [...data.events, ev] : data.events.filter((x) => x !== ev)
+    mutate({ ...data, events })
+    try { mutate({ ...data, ...(await pushApi.setEvents(events)) }) } catch (e) { mutate(data); toastError(e, t('settings.saveFailed')) }
+  }
+  const test = async () => {
+    setTesting(true)
+    try {
+      const r = await pushApi.test()
+      toast({ tone: r.sent ? 'success' : 'warning', title: t(r.sent ? 'settings.push.testSent' : 'settings.push.testNone') })
+    } catch (e) { toastError(e, t('common.error')) } finally { setTesting(false) }
+  }
+
+  return (
+    <Card id="notifications">
+      <CardHeader title={t('settings.push.title')} description={t('settings.push.hint')} />
+      <CardBody className="space-y-5">
+        {unavailable ? (
+          <p className="flex items-start gap-2 rounded-lg bg-surface-2 px-3 py-2.5 text-sm text-fg-2"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-fg-4" aria-hidden />{unavailable}</p>
+        ) : (
+          <div className="space-y-3">
+            <Switch
+              checked={Boolean(here)}
+              disabled={busy || here === null}
+              onChange={toggleDevice}
+              label={t('settings.push.device')}
+              description={here ? t('settings.push.deviceOn', { count: data.devices }) : t('settings.push.deviceOff')}
+            />
+            {here && <Button size="sm" onClick={test} loading={testing}>{t('settings.push.test')}</Button>}
+          </div>
+        )}
+        {data.configured && (
+          <div className="border-t border-line pt-4">
+            <fieldset className="space-y-2.5">
+              <legend className="text-sm font-medium text-fg">{t('settings.push.events')}</legend>
+              <p className="!mt-0.5 text-xs text-fg-3">{t('settings.push.eventsHint')}</p>
+              <div className="space-y-2.5 pt-1">
+                {PUSH_EVENTS.map((ev) => (
+                  <Checkbox key={ev} label={t(`settings.push.ev.${ev}`)} checked={data.events.includes(ev)} onChange={(e) => toggleEvent(ev, e.target.checked)} />
+                ))}
+              </div>
+            </fieldset>
+          </div>
+        )}
+      </CardBody>
+    </Card>
   )
 }
 
@@ -72,6 +158,7 @@ function ProfileSection() {
         </CardBody>
         <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={() => setF({ name: user?.name || '', phone: user?.phone || '' })} />
       </Card>
+      <PushCard />
       <Card>
         <CardHeader title={t('settings.password.title')} description={t('settings.password.hint')} />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">

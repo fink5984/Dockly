@@ -23,6 +23,7 @@ import insightRoutes from './routes/insights.mjs'
 import publicRoutes from './routes/public.mjs'
 import { billingRouter, publicBillingRouter } from './routes/billing.mjs'
 import analyticsRoutes from './routes/analytics.mjs'
+import pushRoutes from './routes/push.mjs'
 import { mountSite } from './site.mjs'
 import { handleVerification, handleIncoming } from './messaging/whatsappBot.mjs'
 
@@ -106,6 +107,7 @@ export function createApp() {
   app.use('/api/public', analyticsRoutes)
   app.use('/api/public', publicRoutes)
   app.use('/api/billing', billingRouter)
+  app.use('/api/push', pushRoutes)
   app.use('/api', workspaceRoutes)
   app.use('/api', libraryRoutes)
   app.use('/api', insightRoutes)

@@ -150,6 +150,8 @@ router.post('/signout', (req, res) => {
 /** Sign out every session for this user (bumps session_version). */
 router.post('/signout-all', requireAuth, async (req, res) => {
   await query('UPDATE profiles SET session_version = session_version + 1 WHERE id = $1', [req.user.id])
+  // Signed-out devices must stop receiving this user's notifications too.
+  await query('DELETE FROM push_subscriptions WHERE user_id = $1', [req.user.id])
   invalidateUserCache(req.user.id)
   res.setHeader('Set-Cookie', clearSessionCookie({ secure: config.isProduction }))
   res.json({ ok: true })

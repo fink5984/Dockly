@@ -5,6 +5,7 @@ import { clearCache } from '@/hooks/useApi'
 import { startLive, stopLive, subscribeLive } from '@/lib/live'
 import type { Language, Role, User, Workspace } from '@/types'
 import type { BillingSummary } from '@/types/billing'
+import { disablePush } from '@/lib/push'
 
 interface AuthContextType {
   user: User | null
@@ -70,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp: async (d) => { clearCache(); apply(await authApi.signUp(d)) },
     acceptInvite: async (token, name, password) => { clearCache(); apply(await authApi.acceptInvite(token, name, password)) },
     signOut: async () => {
+      // Stop this device getting the signed-out user's notifications (needs the session, so first).
+      await disablePush().catch(() => {})
       try { await authApi.signOut() } finally {
         clearCache()
         apply({ user: null, workspace: null })

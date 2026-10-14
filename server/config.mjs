@@ -88,6 +88,14 @@ export const config = Object.freeze({
 
   billing: billingConfig(),
 
+  // Web push (VAPID). Generate once with `npx web-push generate-vapid-keys`.
+  // Without keys push is reported as not configured and the setting is hidden.
+  push: {
+    publicKey: env.VAPID_PUBLIC_KEY || '',
+    privateKey: env.VAPID_PRIVATE_KEY || '',
+    subject: env.VAPID_SUBJECT || (env.SITE_CONTACT_EMAIL ? `mailto:${env.SITE_CONTACT_EMAIL}` : (env.APP_BASE_URL || 'mailto:support@example.com')),
+  },
+
   // Public website details shown on the marketing and legal pages.
   site: {
     legalName: env.SITE_LEGAL_NAME || 'Sadir',

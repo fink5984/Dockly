@@ -259,6 +259,7 @@ router.delete('/team/members/:id', requireRole('admin'), async (req, res) => {
   if (normalizeRole(target.role) === 'owner' && (await ownerCount(req.user.workspaceId)) <= 1) throw conflict('last_owner', 'A workspace needs at least one owner')
   // Deactivate rather than delete: keeps authorship on history, revokes sessions.
   await query('UPDATE profiles SET is_active = false, session_version = session_version + 1 WHERE id = $1', [id])
+  await query('DELETE FROM push_subscriptions WHERE user_id = $1', [id])
   invalidateUserCache(id)
   await logActivity({ workspaceId: req.user.workspaceId, type: 'member_removed', description: `${target.name} removed`, actor: { type: 'user', id: req.user.id, name: req.user.name } })
   res.json({ ok: true })
