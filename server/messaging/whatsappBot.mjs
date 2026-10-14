@@ -222,7 +222,7 @@ async function relayToSupport(phone, state, text, messageId) {
   await query(`UPDATE support_requests SET status = 'waiting-for-staff' WHERE id = $1`, [sr.id])
   await logMessage(state, 'inbound', phone, 'support_chat', text, null, { supportRequestId: sr.id })
   publish(state.workspace_id, 'support', { caseId: state.case_id })
-  await notifyWorkspace({ workspaceId: state.workspace_id, type: 'info', title: `${client?.name || ''}: new support message`, message: text.slice(0, 140), actionUrl: `/requests/${state.case_id}?panel=support` })
+  await notifyWorkspace({ workspaceId: state.workspace_id, type: 'info', title: `${client?.name || ''}: new support message`, message: text.slice(0, 140), actionUrl: `/app/requests/${state.case_id}?panel=support` })
   if (!prior) await reply(phone, '✉️ ההודעה שלך נשלחה לצוות. נחזור אליך בהקדם.\n💡 כתוב *חזור* לחזור לתפריט המסמכים.', state)
 }
 

@@ -13,6 +13,7 @@ import { publish } from '../lib/events.mjs'
 import { appendEvent, verifyEventChain, certificateFor, effectiveStatus } from '../signing/service.mjs'
 import { pdfPageCount, imageToPdf } from '../signing/pdf.mjs'
 import { sendSignatureMessage } from '../messaging/index.mjs'
+import { assertCanUse, assertStorage, consumeQuota, assertWritable } from '../billing/access.mjs'
 
 const router = Router()
 router.use(requireAuth)
@@ -109,6 +110,8 @@ router.get('/:id', async (req, res) => {
 /** Step 1: upload a document to sign. Returns an opaque key used in step 2. */
 router.post('/uploads', requireWrite, singleFile(), async (req, res) => {
   if (!req.file) throw badRequest('file_required', 'Choose a file')
+  await assertCanUse(req.user.workspaceId, 'sign')
+  await assertStorage(req.user.workspaceId, req.file.size, { via: 'staff' })
   const name = cleanDisplayName(req.file.originalname)
   const check = validateUpload({ buffer: req.file.buffer, fileName: name, allowedFormats: ['pdf', 'jpg', 'png'], maxBytes: 25 * 1024 * 1024 })
   if (!check.ok) throw new HttpError(415, check.code, 'Upload a PDF (or a JPG/PNG image)')
@@ -173,6 +176,7 @@ router.post('/', requireWrite, async (req, res) => {
   const originalSha = createHash('sha256').update(original).digest('hex')
 
   const id = await withTransaction(async (tx) => {
+    await consumeQuota(tx, req.user.workspaceId, 'envelopes')
     const r = await tx.queryOne(
       `INSERT INTO signature_requests (workspace_id, client_id, case_id, title, description, status, public_token,
           document_file_name, document_storage_path, document_file_type, document_file_size, canvas_width, expires_at,
@@ -269,6 +273,7 @@ router.get('/:id/certificate', async (req, res) => {
 router.post('/:id/send', requireWrite, async (req, res) => {
   const r = await loadRequest(req)
   const b = parse(z.object({ channel: z.enum(['email', 'whatsapp']), kind: z.enum(['request', 'reminder']).default('request') }), req.body)
+  await assertWritable(req.user.workspaceId)
   const result = await sendSignatureMessage({
     workspaceId: req.user.workspaceId, requestId: r.id, kind: b.kind === 'reminder' ? 'signature_reminder' : 'signature_request', channel: b.channel,
   })

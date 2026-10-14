@@ -20,6 +20,8 @@ import { reviewTransition, canonicalDocStatus, summarizeDocuments } from '../dom
 import { sendRequestMessage } from '../messaging/index.mjs'
 import { escapeLike } from './clients.mjs'
 import { serializeTemplate } from './library.mjs'
+import { consumeQuota, assertWritable } from '../billing/access.mjs'
+import { recordMilestone } from '../lib/funnel.mjs'
 
 const router = Router()
 router.use(requireAuth)
@@ -125,6 +127,8 @@ router.post('/', requireWrite, async (req, res) => {
   await assertDocumentTypes(req.user.workspaceId, b.items.map((i) => i.documentTypeId))
 
   const created = await withTransaction(async (tx) => {
+    // Counts against the monthly quota; rolled back with the request if anything fails.
+    await consumeQuota(tx, req.user.workspaceId, 'requests')
     let clientId = b.clientId
     let clientName
     if (clientId) {
@@ -172,6 +176,7 @@ router.post('/', requireWrite, async (req, res) => {
     })
   }
   publish(req.user.workspaceId, 'requests', { caseId: created.id })
+  await recordMilestone(req.user.workspaceId, 'first_request')
   const { request } = await getRequest(req.user.workspaceId, created.id)
   res.status(201).json({ request, send })
 })
@@ -251,6 +256,7 @@ router.post('/:id/duplicate', requireWrite, async (req, res) => {
     throw notFound('client_not_found', 'Client not found')
   }
   const newId = await withTransaction(async (tx) => {
+    await consumeQuota(tx, req.user.workspaceId, 'requests')
     const c = await tx.queryOne(
       `INSERT INTO cases (workspace_id, client_id, case_type, title, status, assigned_owner, notes, instructions, language, reminders_enabled, public_token, created_by, last_activity_date)
        VALUES ($1,$2,$3,$3,'new',$4,$5,$6,$7,$8,$9,$10,now()) RETURNING id`,
@@ -439,6 +445,7 @@ router.post('/:id/send', requireWrite, rateLimit({ name: 'send', limit: 30, wind
   const id = requireUuid(req.params.id)
   const b = parse(z.object({ channel: z.enum(['whatsapp', 'email']), kind: z.enum(['initial', 'reminder']) }), req.body)
   await getRequest(req.user.workspaceId, id)
+  await assertWritable(req.user.workspaceId)
   const result = await sendRequestMessage({
     workspaceId: req.user.workspaceId, caseId: id, kind: b.kind === 'initial' ? 'request_initial' : 'request_reminder',
     channel: b.channel, actor: req.user,

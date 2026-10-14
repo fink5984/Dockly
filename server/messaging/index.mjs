@@ -18,6 +18,10 @@ import { sendWhatsApp, templatePayload, whatsappStatus } from './whatsapp.mjs'
 import { sendEmail, renderEmail, emailStatus } from './email.mjs'
 import { recomputeRequestStatus } from '../domain/requests.mjs'
 import { NEEDS_UPLOAD } from '../domain/requestStatus.mjs'
+import { messagingAllowed } from '../billing/access.mjs'
+
+// Client messages (WhatsApp costs money) aren't sent from read-only workspaces (trial ended, suspended, cancelled).
+const INACTIVE = Object.freeze({ ok: false, code: 'subscription_inactive', error: 'Messages are paused until the workspace has an active plan' })
 
 export function channelStatus() {
   return { whatsapp: whatsappStatus(), email: emailStatus() }
@@ -95,6 +99,7 @@ const COPY = {
  * @returns {Promise<{ ok: boolean, code?: string, error?: string, deliveryId?: string, simulated?: boolean }>}
  */
 export async function sendRequestMessage(p) {
+  if (!(await messagingAllowed(p.workspaceId))) return INACTIVE
   const c = await queryOne(
     `SELECT c.id, c.workspace_id, c.client_id, c.status, c.sent_at, COALESCE(c.title, c.case_type) AS title, c.language,
             cl.name AS client_name, cl.phone AS client_phone, cl.email AS client_email,
@@ -193,6 +198,7 @@ export async function sendRequestMessage(p) {
  * {{1}} name, {{2}} title, {{3}} link); without it only email/link apply.
  */
 export async function sendSignatureMessage(p) {
+  if (!(await messagingAllowed(p.workspaceId))) return INACTIVE
   const r = await queryOne(
     `SELECT s.id, s.workspace_id, s.client_id, s.title, s.public_token, s.language, s.status,
             cl.name AS client_name, cl.phone AS client_phone, cl.email AS client_email,

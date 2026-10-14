@@ -17,6 +17,7 @@ import { publish } from '../lib/events.mjs'
 import { automationSettings } from '../routes/workspace.mjs'
 import { sendRequestMessage, sendSignatureMessage } from '../messaging/index.mjs'
 import { appendEvent } from '../signing/service.mjs'
+import { messagingAllowed } from '../billing/access.mjs'
 
 const LOCK_ID = 727_001
 const MAX_ATTEMPTS = 3
@@ -154,7 +155,7 @@ async function expireSignatures(stats) {
 
 export async function runAutomationTick(now = new Date()) {
   const client = await pool.connect()
-  const stats = { workspaces: 0, sent: 0, failed: 0, expired: 0, skippedQuiet: 0 }
+  const stats = { workspaces: 0, sent: 0, failed: 0, expired: 0, skippedQuiet: 0, skippedInactive: 0 }
   try {
     const { rows } = await client.query('SELECT pg_try_advisory_lock($1) AS ok', [LOCK_ID])
     if (!rows[0].ok) return { ...stats, locked: true }
@@ -165,6 +166,7 @@ export async function runAutomationTick(now = new Date()) {
         const s = automationSettings(ws)
         if (!s.requestReminders.enabled && !s.deadlineReminder.enabled && !s.signatureReminders.enabled) continue
         if (isQuiet(s, now, ws.timezone)) { stats.skippedQuiet++; continue }
+        if (!(await messagingAllowed(ws.id))) { stats.skippedInactive++; continue }
         stats.workspaces++
         try {
           if (s.requestReminders.enabled) await requestReminders(ws, s, now, stats)

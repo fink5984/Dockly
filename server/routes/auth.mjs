@@ -11,6 +11,9 @@ import { requireAuth, invalidateUserCache, normalizeRole } from '../middleware/a
 import { logActivity } from '../lib/activity.mjs'
 import { serializeWorkspace } from './workspace.mjs'
 import { logger } from '../lib/logger.mjs'
+import { accessSummary } from '../billing/access.mjs'
+import { recordMilestone } from '../lib/funnel.mjs'
+import { catalog } from '../../shared/billing/pricing.mjs'
 
 const router = Router()
 
@@ -55,6 +58,7 @@ export async function loadMe(profileId) {
       workspaceId: p.workspace_id,
     },
     workspace: ws ? serializeWorkspace(ws) : null,
+    billing: ws ? await accessSummary(ws.id) : null,
   }
 }
 
@@ -67,6 +71,8 @@ router.post('/signup', rateLimit({ name: 'signup', limit: 5, windowMs: 60 * 60 *
     name: z.string().trim().min(1).max(120),
     phone: z.string().trim().max(40).optional().default(''),
     language: z.enum(['en', 'he']).optional(),
+    // Non-identifying marketing attribution (see lib/funnel.mjs for what is kept).
+    attribution: z.record(z.string(), z.string().max(100)).optional(),
   }), req.body)
   const policy = passwordPolicyError(body.password)
   if (policy) throw badRequest('weak_password', policy)
@@ -81,6 +87,11 @@ router.post('/signup', rateLimit({ name: 'signup', limit: 5, windowMs: 60 * 60 *
        VALUES ('', 'other', $1, $2, $3, $4, 'Asia/Jerusalem') RETURNING id`,
       [body.name, body.phone, body.email, body.language || 'he'],
     )
+    // The insert trigger started a trial; its length comes from the catalog.
+    await tx.query(
+      `UPDATE workspace_subscriptions SET trial_ends_at = trial_started_at + make_interval(days => $2) WHERE workspace_id = $1 AND status = 'trialing'`,
+      [ws.id, catalog.trial.days],
+    )
     return tx.queryOne(
       `INSERT INTO profiles (workspace_id, email, name, role, phone, password_hash)
        VALUES ($1, $2, $3, 'owner', $4, $5) RETURNING id, workspace_id, session_version`,
@@ -88,6 +99,8 @@ router.post('/signup', rateLimit({ name: 'signup', limit: 5, windowMs: 60 * 60 *
     )
   })
   issueSession(res, profile)
+  const a = body.attribution || {}
+  await recordMilestone(profile.workspace_id, 'signup', { ...a, lang: body.language || 'he' }, a.sessionId)
   res.status(201).json(await loadMe(profile.id))
 })
 

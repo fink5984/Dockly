@@ -11,7 +11,7 @@ const dbUrl = adminUrl.replace(/\/[^/?]+(\?|$)/, `/${dbName}$1`)
 process.env.TEST_DB_NAME = dbName
 
 export default defineConfig({
-  resolve: { alias: { '@': path.resolve(__dirname, './src') } },
+  resolve: { alias: { '@': path.resolve(__dirname, './src'), '@shared': path.resolve(__dirname, './shared') } },
   test: {
     include: ['server/tests/**/*.test.mjs', 'src/**/*.test.ts'],
     globalSetup: ['server/tests/globalSetup.mjs'],

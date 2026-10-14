@@ -11,18 +11,21 @@ import { createApp } from './app.mjs'
 import { closePool } from './db/pool.mjs'
 import { logger } from './lib/logger.mjs'
 import { startScheduler, stopScheduler } from './automation/scheduler.mjs'
+import { startBillingScheduler, stopBillingScheduler } from './billing/scheduler.mjs'
 
 for (const w of configWarnings()) logger.warn('config_warning', { warning: w })
 
 const app = createApp()
 const server = app.listen(config.port, '0.0.0.0', () => {
-  logger.info('server_started', { port: config.port, storage: config.storage.driver, whatsapp: config.whatsapp.mode })
+  logger.info('server_started', { port: config.port, storage: config.storage.driver, whatsapp: config.whatsapp.mode, billing: config.billing.provider })
 })
 startScheduler()
+startBillingScheduler()
 
 async function shutdown(signal) {
   logger.info('shutdown', { signal })
   stopScheduler()
+  stopBillingScheduler()
   server.close()
   await closePool().catch(() => {})
   process.exit(0)

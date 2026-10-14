@@ -85,7 +85,48 @@ export const config = Object.freeze({
     enabled: env.AUTOMATION_ENABLED ? env.AUTOMATION_ENABLED !== 'false' : !isTest,
     intervalMs: Number(env.AUTOMATION_INTERVAL_MS || 5 * 60 * 1000),
   },
+
+  billing: billingConfig(),
 })
+
+/**
+ * Payment provider selection. Fails closed: production without Cardcom
+ * credentials runs with billing 'disabled' (trials work, checkout is
+ * unavailable). The sandbox never runs in production unless explicitly
+ * allowed for a staging environment.
+ */
+function billingConfig() {
+  const cardcom = {
+    terminalNumber: Number(env.CARDCOM_TERMINAL_NUMBER || 0),
+    apiName: env.CARDCOM_API_NAME || '',
+    apiPassword: env.CARDCOM_API_PASSWORD || '',
+    baseUrl: (env.CARDCOM_API_BASE || 'https://secure.cardcom.solutions/api/v11').replace(/\/+$/, ''),
+    // Cardcom issues the Israeli tax document (חשבונית מס/קבלה) for each charge.
+    issueDocuments: env.CARDCOM_ISSUE_DOCUMENTS !== 'false',
+    documentType: env.CARDCOM_DOCUMENT_TYPE || 'TaxInvoiceAndReceipt',
+    timeoutMs: Number(env.CARDCOM_TIMEOUT_MS || 20_000),
+  }
+  const cardcomConfigured = Boolean(cardcom.terminalNumber && cardcom.apiName)
+  const provider = env.BILLING_PROVIDER || (cardcomConfigured ? 'cardcom' : isProduction ? 'disabled' : 'sandbox')
+  if (!['cardcom', 'sandbox', 'disabled'].includes(provider)) throw new Error(`Unknown BILLING_PROVIDER ${provider}`)
+  if (provider === 'cardcom' && !cardcomConfigured) throw new Error('BILLING_PROVIDER=cardcom requires CARDCOM_TERMINAL_NUMBER and CARDCOM_API_NAME')
+  if (provider === 'sandbox' && isProduction && env.BILLING_SANDBOX_IN_PRODUCTION !== 'true') {
+    throw new Error('BILLING_PROVIDER=sandbox is refused in production (set BILLING_SANDBOX_IN_PRODUCTION=true only on a staging environment)')
+  }
+  const encryptionKey = env.BILLING_ENCRYPTION_KEY || ''
+  if (provider === 'cardcom' && isProduction && encryptionKey.length < 32) {
+    throw new Error('BILLING_ENCRYPTION_KEY (>= 32 chars) is required to store Cardcom tokens')
+  }
+  return {
+    provider,
+    cardcom,
+    encryptionKey,
+    // Hosted checkout sessions expire after this long without a result.
+    checkoutTtlMinutes: Number(env.BILLING_CHECKOUT_TTL_MINUTES || 60),
+    // Contact shown when online payment isn't available yet.
+    salesEmail: env.BILLING_SALES_EMAIL || '',
+  }
+}
 
 /** Warnings worth logging at startup (non-fatal). */
 export function configWarnings() {

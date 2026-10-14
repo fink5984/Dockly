@@ -7,6 +7,7 @@ import { query, queryOne } from '../db/pool.mjs'
 import { requireAuth } from '../middleware/auth.mjs'
 import { requireUuid } from '../lib/http.mjs'
 import { escapeLike } from './clients.mjs'
+import { storageUsedBytes } from '../billing/access.mjs'
 
 const router = Router()
 router.use(requireAuth)
@@ -80,12 +81,12 @@ router.get('/dashboard', async (req, res) => {
     [ws],
   )
   const actions = [
-    ...support.map((r) => ({ kind: 'support', id: r.id, title: r.title, clientName: r.client_name, at: r.at, href: `/requests/${r.id}?panel=support` })),
-    ...review.map((r) => ({ kind: 'review', id: r.id, title: r.title, clientName: r.client_name, count: r.n, at: r.at, href: `/requests/${r.id}` })),
-    ...overdue.map((r) => ({ kind: 'overdue', id: r.id, title: r.title, clientName: r.client_name, at: r.at, href: `/requests/${r.id}` })),
-    ...stalled.map((r) => ({ kind: 'stalled', id: r.id, title: r.title, clientName: r.client_name, count: r.n, at: r.at, href: `/requests/${r.id}` })),
-    ...signatures.map((r) => ({ kind: 'signature', id: r.id, title: r.title, clientName: r.client_name, at: r.at, href: `/signatures/${r.id}` })),
-    ...unsent.map((r) => ({ kind: 'unsent', id: r.id, title: r.title, clientName: r.client_name, at: r.at, href: `/requests/${r.id}` })),
+    ...support.map((r) => ({ kind: 'support', id: r.id, title: r.title, clientName: r.client_name, at: r.at, href: `/app/requests/${r.id}?panel=support` })),
+    ...review.map((r) => ({ kind: 'review', id: r.id, title: r.title, clientName: r.client_name, count: r.n, at: r.at, href: `/app/requests/${r.id}` })),
+    ...overdue.map((r) => ({ kind: 'overdue', id: r.id, title: r.title, clientName: r.client_name, at: r.at, href: `/app/requests/${r.id}` })),
+    ...stalled.map((r) => ({ kind: 'stalled', id: r.id, title: r.title, clientName: r.client_name, count: r.n, at: r.at, href: `/app/requests/${r.id}` })),
+    ...signatures.map((r) => ({ kind: 'signature', id: r.id, title: r.title, clientName: r.client_name, at: r.at, href: `/app/signatures/${r.id}` })),
+    ...unsent.map((r) => ({ kind: 'unsent', id: r.id, title: r.title, clientName: r.client_name, at: r.at, href: `/app/requests/${r.id}` })),
   ]
 
   const pipeline = await query(
@@ -233,14 +234,11 @@ router.get('/documents', async (req, res) => {
      SELECT * FROM x ${where} ORDER BY at DESC NULLS LAST LIMIT 500`,
     params,
   )
-  const usage = await queryOne(
-    `SELECT COALESCE((SELECT sum(size_bytes) FROM case_document_files WHERE workspace_id = $1), 0)::bigint
-          + COALESCE((SELECT sum(cd.file_size) FROM case_documents cd JOIN cases c ON c.id = cd.case_id
-                       WHERE c.workspace_id = $1 AND cd.current_file_id IS NULL AND cd.storage_path IS NOT NULL), 0)::bigint
-          + COALESCE((SELECT sum(document_file_size) FROM signature_requests WHERE workspace_id = $1), 0)::bigint AS bytes,
-            (SELECT count(*)::int FROM case_document_files WHERE workspace_id = $1) AS versions`,
-    [ws],
-  )
+  // Same measurement the plan's storage limit uses.
+  const usage = {
+    bytes: await storageUsedBytes(ws),
+    versions: (await queryOne('SELECT count(*)::int AS n FROM case_document_files WHERE workspace_id = $1', [ws])).n,
+  }
   res.json({
     items: rows.map((r) => ({
       source: r.source, id: r.id, parentId: r.parent_id, parentTitle: r.parent_title, label: r.label, fileName: r.file_name,

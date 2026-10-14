@@ -12,6 +12,8 @@ import { subscribe, publish } from '../lib/events.mjs'
 import { logActivity } from '../lib/activity.mjs'
 import { channelStatus } from '../messaging/index.mjs'
 import { sendEmail, renderEmail } from '../messaging/email.mjs'
+import { assertSeatAvailable } from '../billing/access.mjs'
+import { recordMilestone } from '../lib/funnel.mjs'
 
 const router = Router()
 
@@ -105,8 +107,11 @@ router.patch('/workspace', async (req, res) => {
   if (b.brandColor !== undefined) add('brand_color', b.brandColor)
   if (b.portalMessage !== undefined) add('portal_message', b.portalMessage)
   if (b.logoUrl === null) { add('logo_url', null); add('logo_storage_key', null) }
+  const before = await queryOne('SELECT name FROM workspaces WHERE id = $1', [req.user.workspaceId])
   if (sets.length) await query(`UPDATE workspaces SET ${sets.join(', ')} WHERE id = $1`, vals)
   const ws = await queryOne('SELECT * FROM workspaces WHERE id = $1', [req.user.workspaceId])
+  // Onboarding is complete the first time the workspace gets a business name.
+  if (!before?.name && ws.name) await recordMilestone(req.user.workspaceId, 'onboarding_completed', { lang: ws.default_language })
   publish(req.user.workspaceId, 'workspace')
   res.json(serializeWorkspace(ws))
 })
@@ -191,6 +196,7 @@ router.post('/team/invites', requireRole('admin'), async (req, res) => {
   if (await queryOne('SELECT 1 FROM profiles WHERE lower(email) = $1', [b.email])) {
     throw conflict('email_taken', 'This email already has a Dockly account')
   }
+  await assertSeatAvailable(req.user.workspaceId)
   const token = randomToken(32)
   const inv = await queryOne(
     `INSERT INTO workspace_invites (workspace_id, email, name, role, token_hash, invited_by, expires_at)

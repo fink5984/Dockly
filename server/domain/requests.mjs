@@ -11,6 +11,8 @@ import { badRequest, notFound, conflict, HttpError } from '../lib/http.mjs'
 import { logActivity, notifyWorkspace } from '../lib/activity.mjs'
 import { publish } from '../lib/events.mjs'
 import { computeRequestStatus, summarizeDocuments, clientCanUpload, canonicalDocStatus, isOverdue } from './requestStatus.mjs'
+import { assertStorage } from '../billing/access.mjs'
+import { recordMilestone } from '../lib/funnel.mjs'
 
 export const DOC_SELECT = `
   cd.id, cd.case_id, cd.document_type_id, cd.is_required, cd.status, cd.case_notes, cd.notes,
@@ -175,6 +177,9 @@ export async function ingestUpload(p) {
   const key = keys.requestFile(p.workspaceId, p.caseId, p.caseDocumentId, finalName)
   const sha256 = createHash('sha256').update(p.buffer).digest('hex')
 
+  // Plan storage limit (client uploads get a small buffer; staff uploads also need a writable workspace).
+  await assertStorage(p.workspaceId, p.buffer.length, { via: p.via === 'staff' ? 'staff' : 'portal' })
+
   // Store first; only record success in the DB once storage confirmed.
   await storage.put(key, p.buffer, check.mime)
 
@@ -231,7 +236,7 @@ export async function ingestUpload(p) {
       type: 'info',
       title: `${slot.client_name} uploaded ${slot.doc_name}`,
       message: finalName,
-      actionUrl: `/requests/${p.caseId}`,
+      actionUrl: `/app/requests/${p.caseId}`,
     })
   }
   if (statusChange && statusChange.status === 'completed' && statusChange.previous !== 'completed') {
@@ -248,10 +253,11 @@ export async function ingestUpload(p) {
       workspaceId: p.workspaceId,
       type: 'success',
       title: `${slot.client_name} submitted every required document`,
-      actionUrl: `/requests/${p.caseId}`,
+      actionUrl: `/app/requests/${p.caseId}`,
     })
   }
   publish(p.workspaceId, 'requests', { caseId: p.caseId })
+  if (p.via !== 'staff') await recordMilestone(p.workspaceId, 'first_upload_completed', { via: p.via })
   return { fileId, key, fileName: finalName, mime: check.mime, size: p.buffer.length, status: statusChange?.status }
 }
 

@@ -21,6 +21,8 @@ import signatureRoutes from './routes/signatures.mjs'
 import supportRoutes from './routes/support.mjs'
 import insightRoutes from './routes/insights.mjs'
 import publicRoutes from './routes/public.mjs'
+import { billingRouter, publicBillingRouter } from './routes/billing.mjs'
+import analyticsRoutes from './routes/analytics.mjs'
 import { handleVerification, handleIncoming } from './messaging/whatsappBot.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -97,7 +99,12 @@ export function createApp() {
   app.all(/^\/api\/whatsapp\/(send|support)(\/.*)?$/, requireAuth, (_req, _res, next) => next(notFound('endpoint_removed', 'This endpoint was removed')))
 
   app.use('/api/auth', authRoutes)
+  // Payment providers may post form-encoded callbacks.
+  app.use('/api/public/billing/webhook', express.urlencoded({ extended: false, limit: '100kb' }))
+  app.use('/api/public/billing', publicBillingRouter)
+  app.use('/api/public', analyticsRoutes)
   app.use('/api/public', publicRoutes)
+  app.use('/api/billing', billingRouter)
   app.use('/api', workspaceRoutes)
   app.use('/api', libraryRoutes)
   app.use('/api', insightRoutes)

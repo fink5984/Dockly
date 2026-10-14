@@ -1,0 +1,61 @@
+{
+  "$comment": "Dockly subscription catalog. PROVISIONAL pricing until validated with pilot customers. Amounts are in agorot (ILS minor units), excluding VAT. Bump `version` whenever prices or quotas change; subscriptions keep the price snapshot they were bought at.",
+  "version": "2026-10-provisional-1",
+  "provisional": true,
+  "currency": "ILS",
+  "vatRate": 0.18,
+  "pricesIncludeVat": false,
+  "yearlyMonthsCharged": 10,
+  "trial": {
+    "days": 30,
+    "requiresCard": false,
+    "products": ["collect", "sign"],
+    "limits": { "requests": 25, "envelopes": 10, "storageGb": 2, "seats": 3 }
+  },
+  "grace": { "pastDueDays": 7, "retryDays": [1, 3, 5] },
+  "portalStorageBuffer": 0.1,
+  "products": {
+    "collect": { "order": 1 },
+    "sign": { "order": 2 }
+  },
+  "plans": [
+    {
+      "code": "collect_starter", "family": "collect", "tier": "starter", "products": ["collect"],
+      "monthly": 8900,
+      "limits": { "requests": 40, "envelopes": 0, "storageGb": 10, "seats": 3 }
+    },
+    {
+      "code": "collect_pro", "family": "collect", "tier": "pro", "products": ["collect"],
+      "monthly": 22900,
+      "limits": { "requests": 200, "envelopes": 0, "storageGb": 50, "seats": 10 }
+    },
+    {
+      "code": "sign_starter", "family": "sign", "tier": "starter", "products": ["sign"],
+      "monthly": 6900,
+      "limits": { "requests": 0, "envelopes": 25, "storageGb": 5, "seats": 3 }
+    },
+    {
+      "code": "sign_pro", "family": "sign", "tier": "pro", "products": ["sign"],
+      "monthly": 17900,
+      "limits": { "requests": 0, "envelopes": 120, "storageGb": 25, "seats": 10 }
+    },
+    {
+      "code": "suite_starter", "family": "suite", "tier": "starter", "products": ["collect", "sign"], "highlight": true,
+      "monthly": 12900,
+      "limits": { "requests": 40, "envelopes": 25, "storageGb": 15, "seats": 3 }
+    },
+    {
+      "code": "suite_pro", "family": "suite", "tier": "pro", "products": ["collect", "sign"],
+      "monthly": 33900,
+      "limits": { "requests": 200, "envelopes": 120, "storageGb": 75, "seats": 10 }
+    }
+  ],
+  "addons": [
+    { "code": "storage_10gb", "kind": "recurring", "monthly": 1900, "grants": { "storageGb": 10 }, "max": 20 },
+    { "code": "extra_seat", "kind": "recurring", "monthly": 2900, "grants": { "seats": 1 }, "max": 40 }
+  ],
+  "packs": [
+    { "code": "requests_25", "price": 4900, "grants": { "requests": 25 }, "requiresProduct": "collect" },
+    { "code": "envelopes_25", "price": 5900, "grants": { "envelopes": 25 }, "requiresProduct": "sign" }
+  ]
+}
