@@ -209,6 +209,29 @@ describe.skipIf(skipIntegration())('WhatsApp Flow endpoint', () => {
     expect((await call({ action: 'INIT', flow_token: expired })).json.data.heading).toContain('פג תוקף')
   })
 
+  it('falls back to the regular template when the FLOW template is rejected by Meta', async () => {
+    const { config } = await import('../config.mjs')
+    const realFetch = globalThis.fetch
+    const sent = []
+    config.whatsapp.mode = 'cloud'
+    globalThis.fetch = async (url, opts) => {
+      if (!String(url).includes('graph.facebook.com')) return realFetch(url, opts)
+      const body = JSON.parse(opts.body)
+      sent.push(body.template?.name)
+      return body.template?.name === 'sadir_document_request_flow'
+        ? new Response(JSON.stringify({ error: { message: '(#132001) Template name does not exist in the translation', code: 132001 } }), { status: 404 })
+        : new Response(JSON.stringify({ messages: [{ id: 'wamid.ok' }] }))
+    }
+    try {
+      const res = await owner.post(`/api/requests/${request.id}/send`, { channel: 'whatsapp', kind: 'reminder' })
+      expect(res.status).toBe(200)
+    } finally {
+      globalThis.fetch = realFetch
+      config.whatsapp.mode = 'log'
+    }
+    expect(sent).toEqual(['sadir_document_request_flow', config.whatsapp.templates.documentReminder])
+  })
+
   it('sends the request template with a FLOW button and opens the Flow from the bot', async () => {
     const { sentLog } = await import('../messaging/whatsapp.mjs')
     const before = sentLog.length

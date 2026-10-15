@@ -264,11 +264,16 @@ export async function sendRequestMessage(p) {
     // Chat mode: quick-reply button 0 payload opens the in-chat document list.
     // Flow mode: one FLOW template for every kind; its button opens the upload form.
     const params = [c.client_name, String(pending), c.title]
-    const flowTemplate = flowEnabled() && config.whatsapp.flow.template
-    const payload = flowTemplate
-      ? templatePayload(flowTemplate, config.whatsapp.flow.templateLang, params, [], [flowTemplateButton({ caseId: c.id, phone: recipient })])
-      : templatePayload(template, t.lang, params, [`show_docs_${c.id}`])
-    result = await sendWhatsApp(recipient, payload)
+    let flowTemplate = flowEnabled() && config.whatsapp.flow.template
+    if (flowTemplate) {
+      result = await sendWhatsApp(recipient, templatePayload(flowTemplate, config.whatsapp.flow.templateLang, params, [], [flowTemplateButton({ caseId: c.id, phone: recipient })]))
+      // A missing / unapproved FLOW template must not cost the client their message.
+      if (!result.ok) {
+        logger.warn('wa_flow_template_failed', { template: flowTemplate, error: result.error })
+        flowTemplate = ''
+      }
+    }
+    if (!flowTemplate) result = await sendWhatsApp(recipient, templatePayload(template, t.lang, params, [`show_docs_${c.id}`]))
     await query(
       `INSERT INTO whatsapp_messages (workspace_id, case_id, client_id, direction, phone_number, message_type, content, status, wa_message_id, template_name, error_message, metadata)
        VALUES ($1,$2,$3,'outbound',$4,'template',$5,$6,$7,$8,$9,$10)`,
