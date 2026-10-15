@@ -111,7 +111,10 @@ describe.skipIf(skipIntegration())('WhatsApp webhook', () => {
     await settle()
     await postWebhook(base, wrap({ messages: [{ from: '972521112233', id: 'm6', type: 'text', text: { body: 'I have a question' } }] }))
     await settle()
+    await postWebhook(base, wrap({ messages: [{ from: '972521112233', id: 'm6b', type: 'text', text: { body: 'שלום' } }] }))
+    await settle()
     const support = (await owner.get(`/api/support?caseId=${request.id}`)).data
+    expect(support[0].messages.some((m) => m.content === 'שלום')).toBe(true)
     expect(support[0].status).toBe('waiting-for-staff')
     expect(support[0].messages.some((m) => m.content === 'I have a question')).toBe(true)
     const reply = await owner.post(`/api/support/${support[0].id}/reply`, { content: 'Happy to help' })

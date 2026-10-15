@@ -25,12 +25,14 @@ const docData = {
   sent_count: { type: 'number', __example__: 0 },
 }
 
-// The command key is `cmd`: WhatsApp drops a payload key named `action`
-// (it collides with the request envelope's own `action`).
-const docActionPayload = (cmd, extra = {}) => ({
-  cmd,
+// WhatsApp only forwards payload values bound to data or form fields; static
+// strings (e.g. { cmd: 'skip' }) never reach the endpoint. So each button
+// marks itself with its own key carrying a bound value, and the endpoint
+// reads the command from which key is present (see whatsappFlow.mjs).
+const docActionPayload = (marker, extra = {}) => ({
   doc_id: '${data.doc_id}',
   sent_count: '${data.sent_count}',
+  ...(marker ? { [marker]: '${data.doc_id}' } : {}),
   ...extra,
 })
 
@@ -72,7 +74,7 @@ export const documentsFlow = {
           { type: 'TextBody', text: '${data.intro}', markdown: true },
           { type: 'TextBody', text: '${data.docs_text}', markdown: true },
           { type: 'TextCaption', text: '🔒 הקבצים מועברים מוצפנים ישירות למשרד.' },
-          { type: 'Footer', label: 'התחלה', 'on-click-action': { name: 'data_exchange', payload: { cmd: 'start' } } },
+          { type: 'Footer', label: 'התחלה', 'on-click-action': { name: 'data_exchange', payload: { start: '${data.heading}' } } },
         ],
       },
     },
@@ -103,7 +105,7 @@ export const documentsFlow = {
           {
             type: 'Footer',
             label: 'העלאה והמשך',
-            'on-click-action': { name: 'data_exchange', payload: docActionPayload('upload', { photos: '${form.photos}' }) },
+            'on-click-action': { name: 'data_exchange', payload: docActionPayload(null, { photos: '${form.photos}' }) },
           },
         ],
       },
@@ -130,7 +132,7 @@ export const documentsFlow = {
           {
             type: 'Footer',
             label: 'העלאה והמשך',
-            'on-click-action': { name: 'data_exchange', payload: docActionPayload('upload', { files: '${form.files}' }) },
+            'on-click-action': { name: 'data_exchange', payload: docActionPayload(null, { files: '${form.files}' }) },
           },
         ],
       },

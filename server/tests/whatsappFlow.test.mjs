@@ -157,24 +157,24 @@ describe.skipIf(skipIntegration())('WhatsApp Flow endpoint', () => {
     expect(init.screen).toBe('WELCOME')
     expect(init.data.intro).toContain('Mortgage')
 
-    const first = (await call({ action: 'data_exchange', screen: 'WELCOME', flow_token: token, data: { cmd: 'start' } })).json
+    const first = (await call({ action: 'data_exchange', screen: 'WELCOME', flow_token: token, data: { start: 'Office' } })).json
     expect(first.screen).toBe('DOC')
     expect(first.data.heading).toBe('Payslip')
     expect(first.data.can_skip).toBe(false)
 
-    const empty = (await call({ action: 'data_exchange', screen: 'DOC', flow_token: token, data: { cmd: 'upload', doc_id: first.data.doc_id, sent_count: 0, photos: [] } })).json
+    const empty = (await call({ action: 'data_exchange', screen: 'DOC', flow_token: token, data: { doc_id: first.data.doc_id, sent_count: 0, photos: [] } })).json
     expect(empty.screen).toBe('DOC')
     expect(empty.data.error_message).toBeTruthy()
 
-    const asFile = (await call({ action: 'data_exchange', screen: 'DOC', flow_token: token, data: { cmd: 'use_file', doc_id: first.data.doc_id, sent_count: 0 } })).json
+    const asFile = (await call({ action: 'data_exchange', screen: 'DOC', flow_token: token, data: { use_file: first.data.doc_id, doc_id: first.data.doc_id, sent_count: 0 } })).json
     expect(asFile.screen).toBe('DOC_FILE')
 
-    const second = (await call({ action: 'data_exchange', screen: 'DOC_FILE', flow_token: token, data: { cmd: 'skip', doc_id: first.data.doc_id, sent_count: 0 } })).json
+    const second = (await call({ action: 'data_exchange', screen: 'DOC_FILE', flow_token: token, data: { skip: first.data.doc_id, doc_id: first.data.doc_id, sent_count: 0 } })).json
     expect(second.screen).toBe('DOC_FILE')
     expect(second.data.heading).toBe('Bank letter')
     expect(second.data.can_skip).toBe(true)
 
-    const done = (await call({ action: 'data_exchange', screen: 'DOC_FILE', flow_token: token, data: { cmd: 'skip', doc_id: second.data.doc_id, sent_count: 0 } })).json
+    const done = (await call({ action: 'data_exchange', screen: 'DOC_FILE', flow_token: token, data: { skip: second.data.doc_id, doc_id: second.data.doc_id, sent_count: 0 } })).json
     expect(done.screen).toBe('DONE')
   })
 
@@ -189,7 +189,7 @@ describe.skipIf(skipIntegration())('WhatsApp Flow endpoint', () => {
     }
     try {
       const photos = pages.map((p, i) => ({ media_id: `m${i}`, cdn_url: `https://mmg.whatsapp.net/${i}`, file_name: `p${i}.png`, encryption_metadata: p.meta }))
-      const res = (await call({ action: 'data_exchange', screen: 'DOC', flow_token: token, data: { cmd: 'upload', doc_id: docId, sent_count: 0, photos } })).json
+      const res = (await call({ action: 'data_exchange', screen: 'DOC', flow_token: token, data: { doc_id: docId, sent_count: 0, photos } })).json
       expect(res.data.heading).toBe('Bank letter')
       expect(res.data.sent_count).toBe(1)
       await new Promise((r) => setTimeout(r, 800))

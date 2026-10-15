@@ -38,7 +38,8 @@ import { NEEDS_UPLOAD, canonicalDocStatus } from '../domain/requestStatus.mjs'
 
 const MENU_WORDS = ['תפריט', 'menu', 'start', 'hi', 'hello', 'שלום', 'היי']
 const LIST_WORDS = ['מסמכים', 'documents', 'רשימה', 'list']
-const BACK_WORDS = ['חזור', 'חזרה', 'back', ...MENU_WORDS, ...LIST_WORDS]
+// Leave support mode only on an explicit request; anything else ("שלום", "מסמכים"…) goes to the team.
+const BACK_WORDS = ['חזור', 'חזרה', 'back', 'תפריט', 'menu', 'יציאה', 'exit']
 const SUPPORT_WORDS = ['תמיכה', 'support', 'עזרה', 'help', 'נציג']
 const STATUS_WORDS = ['סטטוס', 'status']
 const CANCEL_WORDS = ['ביטול', 'בטל', 'cancel']

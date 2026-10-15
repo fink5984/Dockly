@@ -201,11 +201,12 @@ async function routeFlow(p) {
     return k.docs.some(isPending) ? welcomeScreen(k) : doneScreen('✅ הכול התקבל', 'כל המסמכים בבקשה הזו כבר התקבלו. תודה!')
   }
 
-  // `cmd` (current Flow JSON) or `action` (first published version, where
-  // WhatsApp strips it); without either, infer it from the screen and files.
+  // WhatsApp drops static payload values, so the step is read from which
+  // key the button sent (see documentsFlow.mjs); `cmd`/`action` kept for safety.
   const data = p.data || {}
   const hasFiles = Array.isArray(data.photos) || Array.isArray(data.files)
-  const action = data.cmd || data.action || (hasFiles ? 'upload' : p.screen === S.welcome ? 'start' : null)
+  const action = data.cmd || data.action
+    || (data.use_file ? 'use_file' : data.skip ? 'skip' : hasFiles ? 'upload' : p.screen === S.welcome ? 'start' : null)
   const sentCount = Number(data.sent_count) || 0
   const current = data.doc_id ? k.docs.find((d) => d.id === data.doc_id) : null
   const keepScreen = p.screen === S.file ? S.file : undefined
