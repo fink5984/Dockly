@@ -168,10 +168,25 @@ function finishedScreen(k, sentCount) {
 }
 
 // ── routing ────────────────────────────────────────────────
+/**
+ * Keep a trace of Flow activity in the conversation log (whatsapp_messages),
+ * so a stuck or failing form can be diagnosed from the request's history.
+ */
+async function recordFlowEvent(p, content) {
+  const token = verifyFlowToken(p.flow_token)
+  if (!token) return
+  await query(
+    `INSERT INTO whatsapp_messages (workspace_id, case_id, client_id, direction, phone_number, message_type, content, status)
+     SELECT c.workspace_id, c.id, c.client_id, 'inbound', $2, 'flow_event', $3, 'received' FROM cases c WHERE c.id = $1`,
+    [token.caseId, token.phone, String(content).slice(0, 2000)],
+  ).catch((err) => logger.warn('wa_log_failed', { err }))
+}
+
 async function routeFlow(p) {
   if (p.action === 'ping') return { data: { status: 'active' } }
   if (p.data?.error) {
     logger.warn('wa_flow_client_error', { error: p.data.error, message: String(p.data.error_message || '').slice(0, 200) })
+    await recordFlowEvent(p, `client error on ${p.screen || p.action}: ${p.data.error} ${p.data.error_message || ''}`)
     return { data: { acknowledged: true } }
   }
 
@@ -328,8 +343,11 @@ export async function handleFlowRequest(req, res) {
   let response
   try {
     response = await routeFlow(decrypted.payload)
+    const { action, screen, data } = decrypted.payload
+    if (action === 'data_exchange') await recordFlowEvent(decrypted.payload, `${data?.action || '?'} @${screen || '?'} → ${response.screen || 'ack'}`)
   } catch (err) {
     logger.error('wa_flow_route_failed', { err })
+    await recordFlowEvent(decrypted.payload, `server error: ${err.message}`)
     response = doneScreen('משהו השתבש', 'אפשר לנסות שוב בעוד רגע, או לשלוח את המסמכים כאן בצ\'אט.')
   }
   res.type('text/plain').send(encryptFlowResponse(response, decrypted.aesKey, decrypted.iv))
