@@ -69,6 +69,32 @@ describe.skipIf(skipIntegration())('WhatsApp webhook', () => {
     expect(st2.awaiting_document_id).toBe(own)
   })
 
+  it('answers "menu" with the branded menu and progress', async () => {
+    const { sentLog } = await import('../messaging/whatsapp.mjs')
+    const before = sentLog.length
+    await postWebhook(base, wrap({ messages: [{ from: '972521112233', id: 'm7', type: 'text', text: { body: 'תפריט' } }] }))
+    await settle()
+    const menu = sentLog.slice(before).find((m) => m.to === '972521112233')
+    expect(menu.payload.interactive.type).toBe('button')
+    expect(menu.payload.interactive.body.text).toContain('0/1')
+    expect(menu.payload.interactive.action.buttons.map((b) => b.reply.id)).toEqual(['docs', 'status', 'support'])
+    for (const b of menu.payload.interactive.action.buttons) expect(b.reply.title.length).toBeLessThanOrEqual(20)
+  })
+
+  it('opens the document list and the status screen from menu buttons', async () => {
+    const { sentLog } = await import('../messaging/whatsapp.mjs')
+    const before = sentLog.length
+    await postWebhook(base, wrap({ messages: [{ from: '972521112233', id: 'm8', type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'docs' } } }] }))
+    await settle()
+    await postWebhook(base, wrap({ messages: [{ from: '972521112233', id: 'm9', type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'status' } } }] }))
+    await settle()
+    const [list, status] = sentLog.slice(before).filter((m) => m.to === '972521112233')
+    expect(list.payload.interactive.type).toBe('list')
+    const rows = list.payload.interactive.action.sections.flatMap((s) => s.rows)
+    expect(rows.map((r) => r.id)).toEqual([`upload_${request.requiredDocuments[0].id}`])
+    expect(status.payload.interactive.header.text).toContain('סטטוס')
+  })
+
   it('applies delivery statuses without moving backwards', async () => {
     const { query, queryOne } = await import('../db/pool.mjs')
     const d = await queryOne(`SELECT id FROM message_deliveries WHERE case_id = $1 LIMIT 1`, [request.id])
