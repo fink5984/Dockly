@@ -196,15 +196,21 @@ async function routeFlow(p) {
   if (!k) return doneScreen('הבקשה לא נמצאה', 'אפשר לפנות למשרד לקבלת קישור חדש.')
   if (k.status === 'closed') return doneScreen('🔒 הבקשה נסגרה', 'אין צורך להעלות מסמכים נוספים. לשאלות אפשר לכתוב לנו בצ\'אט.')
 
-  const action = p.action === 'data_exchange' ? p.data?.action : null
-  if (!action) {
+  if (p.action !== 'data_exchange') {
     // INIT / BACK
     return k.docs.some(isPending) ? welcomeScreen(k) : doneScreen('✅ הכול התקבל', 'כל המסמכים בבקשה הזו כבר התקבלו. תודה!')
   }
 
-  const sentCount = Number(p.data.sent_count) || 0
-  const current = p.data.doc_id ? k.docs.find((d) => d.id === p.data.doc_id) : null
+  // `cmd` (current Flow JSON) or `action` (first published version, where
+  // WhatsApp strips it); without either, infer it from the screen and files.
+  const data = p.data || {}
+  const hasFiles = Array.isArray(data.photos) || Array.isArray(data.files)
+  const action = data.cmd || data.action || (hasFiles ? 'upload' : p.screen === S.welcome ? 'start' : null)
+  const sentCount = Number(data.sent_count) || 0
+  const current = data.doc_id ? k.docs.find((d) => d.id === data.doc_id) : null
   const keepScreen = p.screen === S.file ? S.file : undefined
+  // Unknown command: stay where the client is (routes only go forward).
+  if (!action) return current ? docScreen(k, current, sentCount, keepScreen) : welcomeScreen(k)
   const next = (afterId, sent) => {
     const doc = nextPending(k, afterId)
     return doc ? docScreen(k, doc, sent, keepScreen) : finishedScreen(k, sent)
@@ -218,7 +224,7 @@ async function routeFlow(p) {
     case 'skip':
       return next(current?.id, sentCount)
     case 'upload': {
-      const files = Array.isArray(p.data.photos) ? p.data.photos : Array.isArray(p.data.files) ? p.data.files : []
+      const files = Array.isArray(data.photos) ? data.photos : Array.isArray(data.files) ? data.files : []
       if (!current) return next(null, sentCount)
       if (files.length === 0) {
         const again = docScreen(k, current, sentCount, p.screen === S.file ? S.file : S.photo)
@@ -344,7 +350,9 @@ export async function handleFlowRequest(req, res) {
   try {
     response = await routeFlow(decrypted.payload)
     const { action, screen, data } = decrypted.payload
-    if (action === 'data_exchange') await recordFlowEvent(decrypted.payload, `${data?.action || '?'} @${screen || '?'} → ${response.screen || 'ack'}`)
+    if (action === 'data_exchange') {
+      await recordFlowEvent(decrypted.payload, `${data?.cmd || data?.action || '?'} @${screen || '?'} → ${response.screen || 'ack'} [${Object.keys(data || {}).join(',')}]`)
+    }
   } catch (err) {
     logger.error('wa_flow_route_failed', { err })
     await recordFlowEvent(decrypted.payload, `server error: ${err.message}`)

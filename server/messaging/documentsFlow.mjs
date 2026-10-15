@@ -25,8 +25,10 @@ const docData = {
   sent_count: { type: 'number', __example__: 0 },
 }
 
-const docActionPayload = (action, extra = {}) => ({
-  action,
+// The command key is `cmd`: WhatsApp drops a payload key named `action`
+// (it collides with the request envelope's own `action`).
+const docActionPayload = (cmd, extra = {}) => ({
+  cmd,
   doc_id: '${data.doc_id}',
   sent_count: '${data.sent_count}',
   ...extra,
@@ -70,7 +72,7 @@ export const documentsFlow = {
           { type: 'TextBody', text: '${data.intro}', markdown: true },
           { type: 'TextBody', text: '${data.docs_text}', markdown: true },
           { type: 'TextCaption', text: '🔒 הקבצים מועברים מוצפנים ישירות למשרד.' },
-          { type: 'Footer', label: 'התחלה', 'on-click-action': { name: 'data_exchange', payload: { action: 'start' } } },
+          { type: 'Footer', label: 'התחלה', 'on-click-action': { name: 'data_exchange', payload: { cmd: 'start' } } },
         ],
       },
     },

@@ -5,7 +5,8 @@
  *
  *   node scripts/whatsapp-flow-setup.mjs keys                       generate the RSA key pair
  *   node scripts/whatsapp-flow-setup.mjs upload-key                 register the public key with Meta
- *   node scripts/whatsapp-flow-setup.mjs create --base https://sadir.app   create the Flow + upload its JSON
+ *   node scripts/whatsapp-flow-setup.mjs create --base https://sadir.app [--name x]   create a Flow + upload its JSON
+ *                                     (a published Flow can't be edited: create a new one, publish it, switch WHATSAPP_FLOW_ID)
  *   node scripts/whatsapp-flow-setup.mjs update  [flowId]           re-upload the Flow JSON after changes
  *   node scripts/whatsapp-flow-setup.mjs status  [flowId]           status, validation errors, health
  *   node scripts/whatsapp-flow-setup.mjs publish [flowId]           publish (irreversible for that version)
@@ -91,7 +92,7 @@ switch (cmd) {
   case 'create': {
     const base = (arg('base') || env.APP_BASE_URL || fail('Pass --base https://your-domain')).replace(/\/+$/, '')
     const created = graph('POST', `${need('WHATSAPP_BUSINESS_ACCOUNT_ID')}/flows`, {
-      json: { name: FLOW_NAME, categories: ['OTHER'], endpoint_uri: `${base}/api/whatsapp/webhook/flow` },
+      json: { name: arg('name') || FLOW_NAME, categories: ['OTHER'], endpoint_uri: `${base}/api/whatsapp/webhook/flow` },
     })
     console.log(`✔ Flow created: ${created.id}  →  set WHATSAPP_FLOW_ID=${created.id} in Railway`)
     uploadAsset(created.id)
