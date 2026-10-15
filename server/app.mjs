@@ -26,6 +26,7 @@ import analyticsRoutes from './routes/analytics.mjs'
 import pushRoutes from './routes/push.mjs'
 import { mountSite } from './site.mjs'
 import { handleVerification, handleIncoming } from './messaging/whatsappBot.mjs'
+import { handleFlowRequest } from './messaging/whatsappFlow.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DIST = join(__dirname, '..', 'dist')
@@ -82,6 +83,8 @@ export function createApp() {
   // WhatsApp (authenticated by Meta signature, not cookies)
   app.get('/api/whatsapp/webhook', handleVerification)
   app.post('/api/whatsapp/webhook', handleIncoming)
+  // WhatsApp Flow data endpoint (encrypted; same signature + exemptions as the webhook)
+  app.post('/api/whatsapp/webhook/flow', handleFlowRequest)
 
   // Local storage driver: serve files via signed, expiring URLs.
   app.get('/api/files/local/:token', async (req, res) => {

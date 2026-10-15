@@ -54,7 +54,11 @@ export async function sendWhatsApp(to, payload) {
   }
 }
 
-export function templatePayload(templateName, languageCode, bodyParams = [], buttonPayloads = []) {
+/**
+ * @param {string[]} [buttonPayloads] quick-reply payloads, by button index
+ * @param {object[]} [extraButtons] ready-made button components (e.g. a FLOW button)
+ */
+export function templatePayload(templateName, languageCode, bodyParams = [], buttonPayloads = [], extraButtons = []) {
   const components = []
   if (bodyParams.length) {
     components.push({ type: 'body', parameters: bodyParams.map((p) => ({ type: 'text', text: String(p).slice(0, 1000) })) })
@@ -62,6 +66,7 @@ export function templatePayload(templateName, languageCode, bodyParams = [], but
   buttonPayloads.forEach((payload, i) => {
     components.push({ type: 'button', sub_type: 'quick_reply', index: String(i), parameters: [{ type: 'payload', payload }] })
   })
+  components.push(...extraButtons)
   return { type: 'template', template: { name: templateName, language: { code: languageCode }, components } }
 }
 

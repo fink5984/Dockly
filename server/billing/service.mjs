@@ -653,7 +653,7 @@ async function notifyOwners(workspaceId, { type = 'warning', en, he, actionUrl =
   await notifyWorkspace({ workspaceId, type, title: copy.title, message: copy.body, actionUrl, template: 'localized', params: { en, he } })
   const owners = await query(`SELECT email FROM profiles WHERE workspace_id = $1 AND role = 'owner' AND is_active`, [workspaceId])
   const { html, text } = renderEmail({
-    language: lang, brandName: BRAND.name, heading: copy.title, paragraphs: [copy.body],
+    language: lang, brandName: BRAND.name, logoUrl: `${config.appBaseUrl}${BRAND.assets.icon}`, heading: copy.title, paragraphs: [copy.body],
     ctaLabel: lang === 'en' ? 'Open billing' : 'למסך החיוב', ctaUrl: `${config.appBaseUrl}${actionUrl}`,
     footer: lang === 'en' ? 'You receive this because you own this Sadir workspace.' : 'קיבלת הודעה זו כבעלים של סביבת העבודה ב-Sadir.',
   })

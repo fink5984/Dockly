@@ -15,9 +15,11 @@ import { publish } from '../lib/events.mjs'
 import { logger } from '../lib/logger.mjs'
 import { normalizePhone } from './phone.mjs'
 import { sendWhatsApp, templatePayload, whatsappStatus } from './whatsapp.mjs'
+import { flowEnabled, flowTemplateButton } from './whatsappFlow.mjs'
 import { sendEmail, renderEmail, emailStatus } from './email.mjs'
 import { recomputeRequestStatus } from '../domain/requests.mjs'
-import { NEEDS_UPLOAD } from '../domain/requestStatus.mjs'
+import { NEEDS_UPLOAD, canonicalDocStatus } from '../domain/requestStatus.mjs'
+import { logoUrlOf } from '../routes/workspace.mjs'
 import { messagingAllowed } from '../billing/access.mjs'
 
 // Client messages (WhatsApp costs money) aren't sent from read-only workspaces (trial ended, suspended, cancelled).
@@ -57,33 +59,151 @@ export async function ensurePortalToken(caseId) {
 
 const COPY = {
   en: {
-    initialSubject: (ws) => `${ws} needs a few documents from you`,
-    reminderSubject: (ws) => `Reminder: documents for ${ws}`,
-    rejectedSubject: (ws) => `${ws}: a document needs to be replaced`,
     hello: (n) => `Hi ${n},`,
-    initialBody: (ws, title, n) => `${ws} asked you to upload ${n} document(s) for "${title}". It takes a few minutes and works from your phone — no account needed.`,
-    reminderBody: (title, n) => `${n} document(s) for "${title}" are still missing.`,
-    rejectedBody: (title) => `One of the documents you sent for "${title}" couldn't be accepted. Please open the link to see why and upload a replacement.`,
-    cta: 'Upload documents',
-    signSubject: (ws) => `${ws} sent you a document to sign`,
-    signBody: (ws, title) => `${ws} asked you to review and sign "${title}".`,
-    signCta: 'Review and sign',
-    footer: 'Sent with Sadir. If you weren\'t expecting this, you can ignore it.',
+    count: (n) => (n === 1 ? 'one document' : `${n} documents`),
+    missing: (n) => (n === 1 ? 'One document is still missing' : `${n} documents are still missing`),
+    initial: {
+      subject: (x) => `${x.ws}: documents needed for ${x.title}`,
+      eyebrow: 'Document request',
+      heading: (x) => `${x.ws} needs ${COPY.en.count(x.n)} from you`,
+      body: (x) => `To move forward with **${x.title}**, please upload the documents below. It takes a few minutes, works from your phone and needs no account.`,
+      preheader: (x) => `${COPY.en.count(x.n)} to upload · a few minutes from your phone`,
+      cta: 'Upload documents',
+      itemsTitle: 'What we need',
+    },
+    reminder: {
+      subject: (x) => `Reminder: ${COPY.en.missing(x.n).toLowerCase()} for ${x.title}`,
+      eyebrow: 'Reminder',
+      heading: (x) => COPY.en.missing(x.n),
+      body: (x) => `We're almost there with **${x.title}**. Only the documents below are left.`,
+      preheader: (x) => `${COPY.en.missing(x.n)} · finish in a few minutes`,
+      cta: 'Finish uploading',
+      itemsTitle: 'Still missing',
+    },
+    rejected: {
+      subject: (x) => `${x.ws}: a document needs to be replaced (${x.title})`,
+      eyebrow: 'Action needed',
+      heading: (x) => (x.r > 1 ? `${x.r} documents need to be replaced` : 'One document needs to be replaced'),
+      body: (x) => `We reviewed what you sent for **${x.title}**. Below is what needs replacing and why; it only takes a minute.`,
+      preheader: () => 'See what needs replacing and upload a new copy',
+      cta: 'Upload a replacement',
+      itemsTitle: 'What to replace',
+    },
+    notAccepted: (r) => `Not accepted: ${r}`,
+    optional: 'Optional',
+    more: (n) => `and ${n} more`,
+    progress: (d, t) => `${d} of ${t} documents received`,
+    deadline: (d) => `📅 Please upload by **${d}**`,
+    trust: ['🔒 Secure upload', '📱 Works on your phone', '✋ No account needed'],
+    sign: {
+      subject: (ws) => `${ws} sent you a document to sign`,
+      eyebrow: 'Signature request',
+      reminderEyebrow: 'Reminder',
+      heading: 'A document is waiting for your signature',
+      body: (ws, title) => `**${ws}** asked you to review and sign **${title}**. Signing takes a minute and works from your phone.`,
+      cta: 'Review and sign',
+      trust: ['🔒 Secure signing', '📱 Works on your phone', '✋ No account needed'],
+    },
+    footer: (ws) => `This message was sent on behalf of **${ws}**. If you weren't expecting it, you can ignore it.`,
   },
   he: {
-    initialSubject: (ws) => `${ws} מבקשים ממך מספר מסמכים`,
-    reminderSubject: (ws) => `תזכורת: מסמכים עבור ${ws}`,
-    rejectedSubject: (ws) => `${ws}: יש להחליף מסמך`,
     hello: (n) => `שלום ${n},`,
-    initialBody: (ws, title, n) => `${ws} ביקשו ממך להעלות ${n} מסמכים עבור "${title}". זה לוקח כמה דקות ועובד מהטלפון — בלי צורך בהרשמה.`,
-    reminderBody: (title, n) => `עדיין חסרים ${n} מסמכים עבור "${title}".`,
-    rejectedBody: (title) => `אחד המסמכים ששלחת עבור "${title}" לא התקבל. פתחו את הקישור כדי לראות את הסיבה ולהעלות מסמך חלופי.`,
-    cta: 'להעלאת המסמכים',
-    signSubject: (ws) => `${ws} שלחו לך מסמך לחתימה`,
-    signBody: (ws, title) => `${ws} ביקשו ממך לעיין ולחתום על "${title}".`,
-    signCta: 'לעיון וחתימה',
-    footer: 'נשלח באמצעות Sadir. אם לא ציפית להודעה זו, ניתן להתעלם ממנה.',
+    count: (n) => (n === 1 ? 'מסמך אחד' : `${n} מסמכים`),
+    missing: (n) => (n === 1 ? 'חסר עוד מסמך אחד' : `חסרים עוד ${n} מסמכים`),
+    initial: {
+      subject: (x) => `${x.ws} | בקשת מסמכים: ${x.title}`,
+      eyebrow: 'בקשת מסמכים',
+      heading: (x) => `נשמח לקבל ממך ${COPY.he.count(x.n)}`,
+      body: (x) => `**${x.ws}** ביקשו ${COPY.he.count(x.n)} עבור **${x.title}**. ההעלאה לוקחת כמה דקות, עובדת מהטלפון ולא דורשת הרשמה.`,
+      preheader: (x) => `${COPY.he.count(x.n)} להעלאה · כמה דקות מהטלפון`,
+      cta: 'להעלאת המסמכים',
+      itemsTitle: 'מה צריך להעלות',
+    },
+    reminder: {
+      subject: (x) => `תזכורת: ${COPY.he.missing(x.n)} · ${x.title}`,
+      eyebrow: 'תזכורת',
+      heading: (x) => COPY.he.missing(x.n),
+      body: (x) => `כדי להתקדם עם **${x.title}**, נשאר רק להעלות את ${x.n === 1 ? 'המסמך' : 'המסמכים'} שברשימה.`,
+      preheader: (x) => `${COPY.he.missing(x.n)} · אפשר להשלים בכמה דקות מהטלפון`,
+      cta: 'להשלמת המסמכים',
+      itemsTitle: 'מה עוד חסר',
+    },
+    rejected: {
+      subject: (x) => `${x.ws} | נדרשת החלפת מסמך · ${x.title}`,
+      eyebrow: 'נדרש עדכון',
+      heading: (x) => (x.r > 1 ? `${x.r} מסמכים צריכים החלפה` : 'אחד המסמכים צריך החלפה'),
+      body: (x) => `עברנו על המסמכים ששלחת עבור **${x.title}**. ברשימה מופיע מה צריך להחליף ולמה, וזה לוקח רק דקה.`,
+      preheader: () => 'מה צריך להחליף, ואיך מעלים מסמך חלופי',
+      cta: 'להעלאת מסמך חלופי',
+      itemsTitle: 'מה צריך להחליף',
+    },
+    notAccepted: (r) => `לא התקבל: ${r}`,
+    optional: 'רשות',
+    more: (n) => `ועוד ${n} מסמכים`,
+    progress: (d, t) => `התקבלו ${d} מתוך ${t} מסמכים`,
+    deadline: (d) => `📅 מועד אחרון להעלאה: **${d}**`,
+    trust: ['🔒 העלאה מאובטחת', '📱 עובד מהטלפון', '✋ בלי הרשמה'],
+    sign: {
+      subject: (ws) => `${ws} שלחו לך מסמך לחתימה`,
+      eyebrow: 'מסמך לחתימה',
+      reminderEyebrow: 'תזכורת',
+      heading: 'מסמך מחכה לחתימה שלך',
+      body: (ws, title) => `**${ws}** ביקשו ממך לעיין ולחתום על **${title}**. החתימה לוקחת דקה ועובדת גם מהטלפון.`,
+      cta: 'לעיון וחתימה',
+      trust: ['🔒 חתימה מאובטחת', '📱 עובד מהטלפון', '✋ בלי הרשמה'],
+    },
+    footer: (ws) => `ההודעה נשלחה עבור **${ws}**. אם לא ציפית לה, אפשר להתעלם ממנה.`,
   },
+}
+
+const MAX_EMAIL_ITEMS = 8
+
+/** Absolute logo URL for emails, when the workspace has one. */
+function emailLogo(w) {
+  const url = logoUrlOf({ id: w.ws_id, logo_url: w.logo_url, logo_storage_key: w.logo_storage_key, updated_at: w.ws_updated_at })
+  if (!url) return undefined
+  return url.startsWith('/') ? `${config.appBaseUrl}${url}` : url
+}
+
+/** Subject + rendered body for a request email (initial, reminder or rejection notice). */
+export function buildRequestEmail({ c, docs, kind, lang, url }) {
+  const copy = COPY[lang]
+  const variant = kind === 'request_reminder' ? copy.reminder : kind === 'document_rejected' ? copy.rejected : copy.initial
+  const pending = docs.filter((d) => NEEDS_UPLOAD.has(d.status))
+  const rejected = pending.filter((d) => canonicalDocStatus(d.status) === 'rejected')
+  const listed = kind === 'document_rejected' && rejected.length ? rejected : pending
+  const x = { ws: c.ws_name, title: c.title, n: pending.length, r: rejected.length }
+
+  const items = listed.slice(0, MAX_EMAIL_ITEMS).map((d) => {
+    const isRejected = canonicalDocStatus(d.status) === 'rejected'
+    return {
+      title: d.name,
+      note: isRejected ? copy.notAccepted(d.rejection_reason || '—') : d.is_required ? '' : copy.optional,
+      tone: isRejected ? 'warn' : undefined,
+    }
+  })
+  if (listed.length > MAX_EMAIL_ITEMS) items.push({ title: copy.more(listed.length - MAX_EMAIL_ITEMS) })
+
+  const received = docs.length - pending.length
+  const rendered = renderEmail({
+    language: lang,
+    brandName: c.ws_name,
+    brandColor: c.brand_color || undefined,
+    logoUrl: emailLogo(c),
+    eyebrow: variant.eyebrow,
+    heading: variant.heading(x),
+    preheader: variant.preheader(x),
+    paragraphs: [copy.hello(c.client_name), variant.body(x)],
+    progress: kind !== 'request_initial' && received > 0 ? { done: received, total: docs.length, label: copy.progress(received, docs.length) } : undefined,
+    itemsTitle: variant.itemsTitle,
+    items,
+    meta: c.deadline ? [copy.deadline(new Date(c.deadline).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-GB', { timeZone: 'Asia/Jerusalem' }))] : [],
+    ctaLabel: variant.cta,
+    ctaUrl: url,
+    trust: copy.trust,
+    footer: copy.footer(c.ws_name),
+  })
+  return { subject: variant.subject(x), ...rendered }
 }
 
 /**
@@ -103,13 +223,19 @@ export async function sendRequestMessage(p) {
   const c = await queryOne(
     `SELECT c.id, c.workspace_id, c.client_id, c.status, c.sent_at, COALESCE(c.title, c.case_type) AS title, c.language,
             cl.name AS client_name, cl.phone AS client_phone, cl.email AS client_email,
-            w.name AS ws_name, w.default_language, w.brand_color
+            c.deadline, w.name AS ws_name, w.default_language, w.brand_color,
+            w.id AS ws_id, w.logo_url, w.logo_storage_key, w.updated_at AS ws_updated_at
        FROM cases c JOIN clients cl ON cl.id = c.client_id JOIN workspaces w ON w.id = c.workspace_id
       WHERE c.id = $1 AND c.workspace_id = $2`,
     [p.caseId, p.workspaceId],
   )
   if (!c) return { ok: false, code: 'request_not_found' }
-  const docs = await query('SELECT status, is_required FROM case_documents WHERE case_id = $1', [p.caseId])
+  const docs = await query(
+    `SELECT cd.status, cd.is_required, cd.rejection_reason, COALESCE(cd.custom_name, dt.name, 'Document') AS name
+       FROM case_documents cd LEFT JOIN document_types dt ON dt.id = cd.document_type_id
+      WHERE cd.case_id = $1 ORDER BY cd.sort_order, cd.id`,
+    [p.caseId],
+  )
   const pending = docs.filter((d) => NEEDS_UPLOAD.has(d.status)).length
   const channel = p.channel || 'whatsapp'
   const lang = c.language === 'he' || c.language === 'en' ? c.language : c.default_language === 'he' ? 'he' : 'en'
@@ -134,14 +260,20 @@ export async function sendRequestMessage(p) {
   if (channel === 'whatsapp') {
     const t = config.whatsapp.templates
     const template = p.kind === 'request_reminder' ? t.documentReminder : p.kind === 'document_rejected' ? t.documentRejected : t.documentRequest
-    // Template contract (approved in Meta): {{1}} client name, {{2}} pending count, {{3}} title;
-    // quick-reply button 0 payload opens the in-chat document list.
-    result = await sendWhatsApp(recipient, templatePayload(template, t.lang, [c.client_name, String(pending), c.title], [`show_docs_${c.id}`]))
+    // Template contract (approved in Meta): {{1}} client name, {{2}} pending count, {{3}} title.
+    // Chat mode: quick-reply button 0 payload opens the in-chat document list.
+    // Flow mode: one FLOW template for every kind; its button opens the upload form.
+    const params = [c.client_name, String(pending), c.title]
+    const flowTemplate = flowEnabled() && config.whatsapp.flow.template
+    const payload = flowTemplate
+      ? templatePayload(flowTemplate, config.whatsapp.flow.templateLang, params, [], [flowTemplateButton({ caseId: c.id, phone: recipient })])
+      : templatePayload(template, t.lang, params, [`show_docs_${c.id}`])
+    result = await sendWhatsApp(recipient, payload)
     await query(
       `INSERT INTO whatsapp_messages (workspace_id, case_id, client_id, direction, phone_number, message_type, content, status, wa_message_id, template_name, error_message, metadata)
        VALUES ($1,$2,$3,'outbound',$4,'template',$5,$6,$7,$8,$9,$10)`,
       [p.workspaceId, c.id, c.client_id, recipient, `${p.kind}: ${c.title}`, result.ok ? (result.simulated ? 'pending' : 'sent') : 'failed',
-        result.messageId || null, template, result.ok ? null : result.error, JSON.stringify({ kind: p.kind, pending, deliveryId })],
+        result.messageId || null, flowTemplate || template, result.ok ? null : result.error, JSON.stringify({ kind: p.kind, pending, deliveryId })],
     )
     if (result.ok) {
       await query(
@@ -154,13 +286,7 @@ export async function sendRequestMessage(p) {
     }
   } else {
     const token = await ensurePortalToken(c.id)
-    const copy = COPY[lang]
-    const subject = p.kind === 'request_reminder' ? copy.reminderSubject(c.ws_name) : p.kind === 'document_rejected' ? copy.rejectedSubject(c.ws_name) : copy.initialSubject(c.ws_name)
-    const body = p.kind === 'request_reminder' ? copy.reminderBody(c.title, pending) : p.kind === 'document_rejected' ? copy.rejectedBody(c.title) : copy.initialBody(c.ws_name, c.title, pending)
-    const { html, text } = renderEmail({
-      language: lang, brandName: c.ws_name, brandColor: c.brand_color || undefined, heading: subject,
-      paragraphs: [copy.hello(c.client_name), body], ctaLabel: copy.cta, ctaUrl: `${config.appBaseUrl}/p/${token}`, footer: copy.footer,
-    })
+    const { subject, html, text } = buildRequestEmail({ c, docs, kind: p.kind, lang, url: `${config.appBaseUrl}/p/${token}` })
     result = await sendEmail({ to: recipient, subject, html, text })
   }
 
@@ -202,7 +328,8 @@ export async function sendSignatureMessage(p) {
   const r = await queryOne(
     `SELECT s.id, s.workspace_id, s.client_id, s.title, s.public_token, s.language, s.status,
             cl.name AS client_name, cl.phone AS client_phone, cl.email AS client_email,
-            w.name AS ws_name, w.default_language, w.brand_color
+            w.name AS ws_name, w.default_language, w.brand_color,
+            w.id AS ws_id, w.logo_url, w.logo_storage_key, w.updated_at AS ws_updated_at
        FROM signature_requests s JOIN clients cl ON cl.id = s.client_id JOIN workspaces w ON w.id = s.workspace_id
       WHERE s.id = $1 AND s.workspace_id = $2 AND s.deleted_at IS NULL`,
     [p.requestId, p.workspaceId],
@@ -236,10 +363,13 @@ export async function sendSignatureMessage(p) {
   } else {
     const copy = COPY[lang]
     const { html, text } = renderEmail({
-      language: lang, brandName: r.ws_name, brandColor: r.brand_color || undefined, heading: copy.signSubject(r.ws_name),
-      paragraphs: [copy.hello(r.client_name), copy.signBody(r.ws_name, r.title)], ctaLabel: copy.signCta, ctaUrl: link, footer: copy.footer,
+      language: lang, brandName: r.ws_name, brandColor: r.brand_color || undefined, logoUrl: emailLogo(r),
+      eyebrow: p.kind === 'signature_reminder' ? copy.sign.reminderEyebrow : copy.sign.eyebrow,
+      heading: copy.sign.heading,
+      paragraphs: [copy.hello(r.client_name), copy.sign.body(r.ws_name, r.title)],
+      ctaLabel: copy.sign.cta, ctaUrl: link, trust: copy.sign.trust, footer: copy.footer(r.ws_name),
     })
-    result = await sendEmail({ to: recipient, subject: copy.signSubject(r.ws_name), html, text })
+    result = await sendEmail({ to: recipient, subject: copy.sign.subject(r.ws_name), html, text })
   }
   await finishDelivery(deliveryId, result)
   if (result.ok && p.kind === 'signature_reminder') {

@@ -14,6 +14,13 @@ const env = process.env
 const isProduction = env.NODE_ENV === 'production'
 const isTest = env.NODE_ENV === 'test'
 
+/** Accept a PEM key as-is, with "\n" escapes, or base64-encoded on one line. */
+function decodePem(value) {
+  if (!value) return ''
+  if (value.includes('BEGIN')) return value.replace(/\\n/g, '\n')
+  return Buffer.from(value, 'base64').toString('utf8')
+}
+
 function required(name, fallbackForDev) {
   const value = env[name]
   if (value) return value
@@ -71,6 +78,18 @@ export const config = Object.freeze({
       staffReply: env.WA_TEMPLATE_STAFF_REPLY || env.WA_TEMPLATE_DOCUMENT_REQUEST || '_dockly_document_request',
       signatureRequest: env.WA_TEMPLATE_SIGNATURE_REQUEST || '',
       lang: env.WA_TEMPLATE_LANG || 'en',
+    },
+    // How clients upload from WhatsApp: 'chat' (the in-chat bot) or 'flow'
+    // (a WhatsApp Flow form). Flow mode needs the settings below; without
+    // them, or with WHATSAPP_UPLOAD_MODE unset, the chat bot is used.
+    uploadMode: env.WHATSAPP_UPLOAD_MODE === 'flow' ? 'flow' : 'chat',
+    flow: {
+      id: env.WHATSAPP_FLOW_ID || '',
+      // PEM, either with real/escaped newlines or base64-encoded as one line.
+      privateKey: decodePem(env.WHATSAPP_FLOW_PRIVATE_KEY),
+      // Request template whose only button is a FLOW button (same body params as documentRequest).
+      template: env.WA_TEMPLATE_DOCUMENT_REQUEST_FLOW || '',
+      templateLang: env.WA_TEMPLATE_FLOW_LANG || 'he',
     },
   },
 
@@ -150,6 +169,9 @@ export function configWarnings() {
     w.push('WHATSAPP_APP_SECRET not set — webhook signatures cannot be verified; inbound webhooks will be rejected')
   }
   if (config.whatsapp.mode === 'cloud' && !config.whatsapp.verifyToken) w.push('WHATSAPP_VERIFY_TOKEN not set — webhook verification handshake will fail')
+  if (config.whatsapp.uploadMode === 'flow' && !(config.whatsapp.flow.id && config.whatsapp.flow.privateKey)) {
+    w.push('WHATSAPP_UPLOAD_MODE=flow but WHATSAPP_FLOW_ID / WHATSAPP_FLOW_PRIVATE_KEY are missing — using the chat bot')
+  }
   if (config.storage.driver === 'local' && isProduction) w.push('STORAGE_DRIVER=local in production — files are stored on the container disk')
   if (isProduction && !config.site.contactEmail) w.push('SITE_CONTACT_EMAIL not set — the privacy policy, terms and accessibility statement show a placeholder contact')
   if (isProduction && config.billing.provider === 'disabled') w.push('Billing provider is disabled (no Cardcom credentials) — trials work, paid checkout is unavailable')

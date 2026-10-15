@@ -10,6 +10,10 @@
  *     when only one document is missing, otherwise the client picks its slot.
  *  5. Buttons (or "תפריט" / "סטטוס" / "תמיכה") open the menu, status and a staff chat
  *
+ * With WHATSAPP_UPLOAD_MODE=flow the "upload documents" buttons open the
+ * WhatsApp Flow form (whatsappFlow.mjs) instead of the list; everything else
+ * here, including files sent in chat and "רשימה", keeps working as a fallback.
+ *
  * Copy is gender-neutral Hebrew and respects Meta's interactive-message limits
  * (button title 20, list row title 24 / description 72, header/footer 60).
  *
@@ -28,6 +32,7 @@ import { logActivity, notifyWorkspace } from '../lib/activity.mjs'
 import { sendWhatsApp, textPayload, markRead, downloadMedia, verifyWebhookSignature } from './whatsapp.mjs'
 import { applyDeliveryStatus, ensurePortalToken } from './index.mjs'
 import { normalizePhone } from './phone.mjs'
+import { flowEnabled, flowMessagePayload } from './whatsappFlow.mjs'
 import { ingestUpload } from '../domain/requests.mjs'
 import { NEEDS_UPLOAD, canonicalDocStatus } from '../domain/requestStatus.mjs'
 
@@ -252,6 +257,27 @@ async function sendDocumentList(phone, state, { k, mediaId, intro } = {}) {
   return replyList(phone, state, { header: k.wsName || 'מסמכים להעלאה', body, button: '📋 בחירת מסמך', sections })
 }
 
+/** Entry point for "upload documents": the Flow form when enabled, else the chat list. */
+async function openUpload(phone, state) {
+  if (!flowEnabled()) return sendDocumentList(phone, state)
+  const k = await loadCase(state.case_id)
+  if (k.pending.length === 0) return sendCompletion(phone, state, k)
+  const body = `${greeting(k)}\nבקשת מסמכים: *${k.title}*\n${progressLine(k)}\n\nבלחיצה על הכפתור ייפתח טופס מאובטח: מסך לכל מסמך, עם צילום או צירוף קובץ.`
+  return send(phone, flowMessagePayload({ caseId: state.case_id, phone, header: k.wsName, body, footer: T.footer }), state, 'interactive_flow', body)
+}
+
+/** The client submitted the Flow; files are still being stored in the background. */
+async function handleFlowCompleted(phone) {
+  const state = await getState(phone)
+  if (!state) return
+  await logMessage(state, 'inbound', phone, 'flow_reply', 'Flow completed')
+  return replyButtons(phone, state, {
+    header: '✅ הטופס נשלח',
+    body: 'תודה! המסמכים בדרך למשרד.\nאם משהו לא יעבור, נעדכן כאן בצ\'אט.',
+    buttons: [BTN.status, BTN.support],
+  })
+}
+
 async function sendStatus(phone, state) {
   const k = await loadCase(state.case_id)
   const groups = { approved: [], uploaded: [], rejected: [], missing: [] }
@@ -468,7 +494,7 @@ async function handlePayload(phone, id) {
   // Template and older buttons carry the case id; they also (re)bind the conversation.
   if (id.startsWith('show_docs_')) {
     const state = await authorizeCase(phone, id.slice('show_docs_'.length))
-    if (state) await sendDocumentList(phone, state)
+    if (state) await openUpload(phone, state)
     return
   }
   if (id.startsWith('support_')) {
@@ -487,7 +513,7 @@ async function handlePayload(phone, id) {
   if (id.startsWith('upload_')) return handleDocumentSelected(phone, state, id.slice('upload_'.length))
   if (id.startsWith('attach_')) return attachMedia(phone, state, id.slice('attach_'.length))
   switch (id) {
-    case P.docs: return sendDocumentList(phone, state)
+    case P.docs: return openUpload(phone, state)
     case P.status: return sendStatus(phone, state)
     case P.support: return state.support_mode ? undefined : enterSupport(phone, state)
     case P.exitSupport: return showMenu(phone, state, '↩️ חזרנו לתפריט הראשי.')
@@ -512,6 +538,7 @@ async function handleMessage(msg) {
   switch (msg.type) {
     case 'interactive': {
       const i = msg.interactive
+      if (i?.type === 'nfm_reply') return handleFlowCompleted(phone)
       const id = i?.type === 'button_reply' ? i.button_reply?.id : i?.type === 'list_reply' ? i.list_reply?.id : null
       return id ? handlePayload(phone, id) : undefined
     }
