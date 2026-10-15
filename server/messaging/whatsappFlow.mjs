@@ -26,9 +26,14 @@ import { NEEDS_UPLOAD, canonicalDocStatus } from '../domain/requestStatus.mjs'
 
 const TOKEN_TTL_DAYS = 30
 
+/** The endpoint answers once the Flow id and key exist (Meta health-checks it before publishing). */
+export function flowConfigured() {
+  return Boolean(config.whatsapp.flow.id && config.whatsapp.flow.privateKey)
+}
+
+/** Clients are sent the Flow only in flow mode; otherwise they get the chat bot. */
 export function flowEnabled() {
-  const wa = config.whatsapp
-  return wa.uploadMode === 'flow' && Boolean(wa.flow.id && wa.flow.privateKey)
+  return config.whatsapp.uploadMode === 'flow' && flowConfigured()
 }
 
 // ── flow_token ─────────────────────────────────────────────
@@ -311,7 +316,7 @@ async function processUpload({ k, doc, files, phone }) {
 
 // ── Express handler ────────────────────────────────────────
 export async function handleFlowRequest(req, res) {
-  if (!flowEnabled()) return res.sendStatus(404)
+  if (!flowConfigured()) return res.sendStatus(404)
   if (!verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'))) return res.sendStatus(432)
   let decrypted
   try {
