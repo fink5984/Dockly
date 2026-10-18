@@ -119,14 +119,18 @@ export const config = Object.freeze({
     subject: env.VAPID_SUBJECT || (env.SITE_CONTACT_EMAIL ? `mailto:${env.SITE_CONTACT_EMAIL}` : (env.APP_BASE_URL || 'mailto:support@example.com')),
   },
 
-  // Passkeys (WebAuthn). A passkey is bound to the RP ID (a domain) it was made
-  // on, so each address the app is served from gets its own passkeys: the RP ID
-  // is that address's host (or WEBAUTHN_RP_ID, for its own domain and subdomains).
-  // Changing an address's RP ID orphans its passkeys. Accepted addresses:
-  // APP_BASE_URL, ALLOWED_ORIGINS, Railway's own domain and WEBAUTHN_ORIGINS.
+  // Passkeys (WebAuthn). A passkey is bound to the RP ID (a domain); changing
+  // it orphans every passkey. All accepted addresses share one RP ID (the
+  // APP_BASE_URL host, or WEBAUTHN_RP_ID): subdomains natively, other domains
+  // through "related origins" (the RP ID domain serves /.well-known/webauthn
+  // listing them; Chrome/Edge 128+, Safari 18+). With
+  // WEBAUTHN_RELATED_ORIGINS=false each other address gets its own passkeys
+  // instead (works in every browser, but a passkey only works where it was made).
+  // Accepted addresses: APP_BASE_URL, ALLOWED_ORIGINS, Railway's own domain, WEBAUTHN_ORIGINS.
   webauthn: {
     rpId: env.WEBAUTHN_RP_ID || new URL(appBaseUrl).hostname,
     rpName: env.SITE_LEGAL_NAME || 'Sadir',
+    relatedOrigins: env.WEBAUTHN_RELATED_ORIGINS !== 'false',
     origins: [...new Set([
       appBaseUrl, ...allowedOrigins,
       ...(env.RAILWAY_PUBLIC_DOMAIN ? [`https://${env.RAILWAY_PUBLIC_DOMAIN}`] : []),

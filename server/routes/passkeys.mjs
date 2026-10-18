@@ -31,17 +31,25 @@ const MAX_PASSKEYS = 20
 
 /**
  * The relying party for this request. The app is served from several
- * addresses (e.g. its own domain and the Railway one); the browser only lets a
- * page use passkeys of its own domain, so each accepted address is its own RP.
- * The browser-set Origin header picks it (pages can't forge it); requests
- * without one (non-browser clients) get the default RP.
+ * addresses (its own domain and the Railway one). They share the main RP ID,
+ * so one passkey works on all of them: subdomains natively, other domains via
+ * related origins (see relatedOriginsDocument). With related origins off, an
+ * address outside the RP ID domain is its own RP. The browser-set Origin
+ * header picks the address (pages can't forge it); requests without one
+ * (non-browser clients) get the main RP and any accepted origin.
  */
 export function relyingParty(originHeader) {
-  const { rpId, origins } = config.webauthn
+  const { rpId, origins, relatedOrigins } = config.webauthn
   const origin = origins.includes(originHeader) ? originHeader : null
   if (!origin) return { id: rpId, origins }
   const host = new URL(origin).hostname
-  return { id: host === rpId || host.endsWith(`.${rpId}`) ? rpId : host, origins: [origin] }
+  const underRpId = host === rpId || host.endsWith(`.${rpId}`)
+  return { id: underRpId || relatedOrigins ? rpId : host, origins: [origin] }
+}
+
+/** Body of /.well-known/webauthn on the RP ID domain: the other addresses allowed to use its passkeys. */
+export function relatedOriginsDocument() {
+  return { origins: config.webauthn.relatedOrigins ? config.webauthn.origins.filter((o) => o.startsWith('https://')) : [] }
 }
 
 async function createChallenge(challenge, purpose, userId = null) {
@@ -72,12 +80,13 @@ export function deviceLabel(ua = '') {
   return [os, browser].filter(Boolean).join(' · ')
 }
 
-const serialize = (r) => ({
+const serialize = (r, rpIdHere) => ({
   id: r.id,
   name: r.name,
   synced: r.device_type === 'multiDevice',
-  // Address the passkey works on (it can't be used on the app's other addresses).
+  // Domain the passkey belongs to, and whether it works at the address the user is on.
   domain: r.rp_id,
+  worksHere: !r.rp_id || r.rp_id === rpIdHere,
   createdAt: r.created_at,
   lastUsedAt: r.last_used_at,
 })
@@ -96,7 +105,9 @@ router.get('/', requireAuth, async (req, res) => {
     'SELECT id, name, device_type, rp_id, created_at, last_used_at FROM webauthn_credentials WHERE user_id = $1 ORDER BY created_at',
     [req.user.id],
   )
-  res.json({ passkeys: rows.map(serialize) })
+  // Same-origin GETs carry no Origin header: rebuild it from the request.
+  const here = relyingParty(req.get('origin') || `${req.protocol}://${req.get('host')}`).id
+  res.json({ passkeys: rows.map((r) => serialize(r, here)) })
 })
 
 /**
@@ -160,7 +171,7 @@ router.post('/register/verify', requireAuth, async (req, res) => {
       credentialDeviceType, credentialBackedUp, deviceLabel(String(req.get('user-agent') || '')), rp.id],
   )
   if (!row) throw conflict('passkey_exists', 'This passkey is already registered')
-  res.status(201).json(serialize(row))
+  res.status(201).json(serialize(row, rp.id))
 })
 
 router.delete('/:id', requireAuth, async (req, res) => {

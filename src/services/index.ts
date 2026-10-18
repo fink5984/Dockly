@@ -34,7 +34,7 @@ export const authApi = {
   acceptInvite: (token: string, name: string, password: string) => api.post<Me>(`/api/auth/invite/${encodeURIComponent(token)}/accept`, { name, password }),
 }
 
-export interface Passkey { id: string; name: string; synced: boolean; /** Address it works on (RP ID). */ domain: string; createdAt: string; lastUsedAt: string | null }
+export interface Passkey { id: string; name: string; synced: boolean; /** Domain it belongs to (RP ID). */ domain: string; /** Usable at the address the user is on. */ worksHere: boolean; createdAt: string; lastUsedAt: string | null }
 
 export const passkeyApi = {
   list: () => api.get<{ passkeys: Passkey[] }>('/api/auth/passkeys'),

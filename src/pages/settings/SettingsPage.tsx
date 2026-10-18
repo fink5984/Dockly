@@ -174,7 +174,7 @@ function PasskeyCard() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{k.name || t('settings.passkeys.unnamed')}{k.synced && <span className="ms-1.5 text-xs text-fg-4">· {t('settings.passkeys.synced')}</span>}</p>
                 <p className="truncate text-xs text-fg-3">{t('settings.passkeys.addedOn', { date: fmt.date(k.createdAt) })}{k.lastUsedAt ? ` · ${t('settings.passkeys.lastUsed', { date: fmt.relative(k.lastUsedAt) })}` : ''}</p>
-                {k.domain && k.domain !== window.location.hostname && <p className="truncate text-xs text-fg-4">{t('settings.passkeys.otherDomain')} <span dir="ltr">{k.domain}</span></p>}
+                {!k.worksHere && k.domain && <p className="truncate text-xs text-fg-4">{t('settings.passkeys.otherDomain')} <span dir="ltr">{k.domain}</span></p>}
               </div>
               <Button size="sm" variant="ghost" className="text-danger-fg" onClick={() => setRemoving({ id: k.id, name: k.name || t('settings.passkeys.unnamed') })}>{t('common.remove')}</Button>
             </li>

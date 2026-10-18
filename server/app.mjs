@@ -24,7 +24,7 @@ import publicRoutes from './routes/public.mjs'
 import { billingRouter, publicBillingRouter } from './routes/billing.mjs'
 import analyticsRoutes from './routes/analytics.mjs'
 import pushRoutes from './routes/push.mjs'
-import passkeyRoutes from './routes/passkeys.mjs'
+import passkeyRoutes, { relatedOriginsDocument } from './routes/passkeys.mjs'
 import { mountSite } from './site.mjs'
 import { handleVerification, handleIncoming } from './messaging/whatsappBot.mjs'
 import { handleFlowRequest } from './messaging/whatsappFlow.mjs'
@@ -70,6 +70,13 @@ export function createApp() {
     // Keep raw bytes for webhook signature verification.
     verify: (req, _res, buf) => { if (req.url.startsWith('/api/whatsapp/webhook')) req.rawBody = buf },
   }))
+
+  // Passkey related origins: lets the app's other addresses use passkeys made for
+  // this domain. Browsers require JSON, served directly (no redirect).
+  app.get('/.well-known/webauthn', (_req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=300')
+    res.json(relatedOriginsDocument())
+  })
 
   app.get('/api/health', async (_req, res) => {
     let db = 'ok'

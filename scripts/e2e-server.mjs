@@ -27,7 +27,8 @@ Object.assign(process.env, {
   APP_BASE_URL: `http://127.0.0.1:${PORT}`,
   // Passkeys need a domain, not an IP: passkey specs open the app on localhost,
   // and on old.localhost to stand in for a second address (like the Railway one).
-  ALLOWED_ORIGINS: `http://localhost:${PORT},http://old.localhost:${PORT}`,
+  // Related origins need https, so each address keeps its own passkeys here.
+  ALLOWED_ORIGINS: `http://localhost:${PORT},http://old.localhost:${PORT}`, WEBAUTHN_RELATED_ORIGINS: 'false',
   STORAGE_DRIVER: 'local', LOCAL_STORAGE_DIR: storageDir,
   WHATSAPP_MODE: 'log', AUTOMATION_ENABLED: 'false', DISABLE_RATE_LIMIT: 'true', AWS_ACCESS_KEY_ID: '', AWS_SECRET_ACCESS_KEY: '', RESEND_API_KEY: '',
 })

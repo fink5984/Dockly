@@ -83,22 +83,34 @@ describe('deviceLabel', () => {
 })
 
 describe('relyingParty', () => {
-  it('gives each accepted address its own RP and falls back to the default', async () => {
+  const prod = ['https://sadir.app', 'https://dockly-production-8797.up.railway.app', 'https://app.sadir.app']
+  const RAILWAY = 'https://dockly-production-8797.up.railway.app'
+  async function withConfig(over, fn) {
     const { config } = await import('../config.mjs')
-    const { relyingParty } = await import('../routes/passkeys.mjs')
-    const origins = config.webauthn.origins
-    try {
-      // Simulate production: own domain plus the Railway address.
-      config.webauthn.origins = ['https://sadir.app', 'https://dockly-production-8797.up.railway.app', 'https://app.sadir.app']
-      config.webauthn.rpId = 'sadir.app'
+    const saved = { ...config.webauthn }
+    Object.assign(config.webauthn, { origins: prod, rpId: 'sadir.app', relatedOrigins: true }, over)
+    try { await fn() } finally { Object.assign(config.webauthn, saved) }
+  }
+
+  it('shares the main RP ID across addresses through related origins', async () => {
+    const { relyingParty, relatedOriginsDocument } = await import('../routes/passkeys.mjs')
+    await withConfig({}, () => {
       expect(relyingParty('https://sadir.app')).toEqual({ id: 'sadir.app', origins: ['https://sadir.app'] })
-      expect(relyingParty('https://dockly-production-8797.up.railway.app')).toEqual({ id: 'dockly-production-8797.up.railway.app', origins: ['https://dockly-production-8797.up.railway.app'] })
+      expect(relyingParty(RAILWAY)).toEqual({ id: 'sadir.app', origins: [RAILWAY] })
       expect(relyingParty('https://app.sadir.app').id).toBe('sadir.app')
-      expect(relyingParty('https://evil.example')).toEqual({ id: 'sadir.app', origins: config.webauthn.origins })
+      expect(relyingParty('https://evil.example')).toEqual({ id: 'sadir.app', origins: prod })
       expect(relyingParty(undefined).id).toBe('sadir.app')
-    } finally {
-      Object.assign(config.webauthn, { origins, rpId: 'localhost' })
-    }
+      expect(relatedOriginsDocument().origins).toEqual(prod)
+    })
+  })
+
+  it('gives other domains their own RP when related origins are off', async () => {
+    const { relyingParty, relatedOriginsDocument } = await import('../routes/passkeys.mjs')
+    await withConfig({ relatedOrigins: false }, () => {
+      expect(relyingParty(RAILWAY).id).toBe('dockly-production-8797.up.railway.app')
+      expect(relyingParty('https://app.sadir.app').id).toBe('sadir.app')
+      expect(relatedOriginsDocument().origins).toEqual([])
+    })
   })
 })
 
@@ -111,6 +123,13 @@ describe.skipIf(skipIntegration())('passkeys (fingerprint sign-in)', () => {
     resetRateLimits()
   })
   afterAll(stopApp)
+
+  it('serves the related-origins document as JSON', async () => {
+    const r = await new Client(base).get('/.well-known/webauthn')
+    expect(r.status).toBe(200)
+    expect(r.headers.get('content-type')).toMatch(/application\/json/)
+    expect(Array.isArray(r.data.origins)).toBe(true)
+  })
 
   it('requires the current password to add a passkey', async () => {
     const c = await newOwner(base)
