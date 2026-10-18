@@ -36,8 +36,9 @@ export default function SignInPage() {
     setError('')
     setDetail('')
     setPasskeyBusy(true)
+    const started = performance.now()
     try {
-      await signInWithPasskey()
+      await signInWithPasskey(email.trim())
       goOn()
     } catch (err) {
       // A "cancel" is also how the browser reports that no passkey for this
@@ -45,14 +46,14 @@ export default function SignInPage() {
       if (isPasskeyCancel(err)) {
         setError(t('auth.passkeyNone', { domain: window.location.hostname }))
         setDetail(passkeyErrorDetail(err))
-        reportPasskeyError('signin', err)
+        reportPasskeyError('signin', err, performance.now() - started)
         return
       }
       const code = err instanceof ApiError ? err.code : ''
       if (code === 'passkey_unknown' || code === 'rate_limited') { setError(t(code === 'passkey_unknown' ? 'auth.passkeyUnknown' : 'auth.locked')); return }
       setError(t('auth.passkeyFailed'))
       setDetail(passkeyErrorDetail(err))
-      reportPasskeyError('signin', err)
+      reportPasskeyError('signin', err, performance.now() - started)
     } finally {
       setPasskeyBusy(false)
     }
@@ -90,13 +91,13 @@ export default function SignInPage() {
     setPasskeyBusy(true)
     try {
       await registerPasskey(password)
-      markPasskeyOnDevice(offer.user.id)
+      markPasskeyOnDevice(offer.user)
       toast({ tone: 'success', title: t('auth.offer.enabled') })
       finishOffer(offer)
     } catch (err) {
       if (isPasskeyCancel(err)) return
       const code = err instanceof ApiError ? err.code : ''
-      if (code === 'passkey_exists' || isPasskeyDuplicate(err)) { markPasskeyOnDevice(offer.user.id); finishOffer(offer); return }
+      if (code === 'passkey_exists' || isPasskeyDuplicate(err)) { markPasskeyOnDevice(offer.user); finishOffer(offer); return }
       setError(t('auth.offer.failed'))
       setDetail(passkeyErrorDetail(err))
       reportPasskeyError('register', err)

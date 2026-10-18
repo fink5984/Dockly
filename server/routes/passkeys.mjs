@@ -91,6 +91,8 @@ const serialize = (r, rpIdHere) => ({
   lastUsedAt: r.last_used_at,
 })
 
+const emailSchema = z.string().trim().toLowerCase().email().max(254)
+
 // The browser's credential JSON; field-level checks are done by the WebAuthn library.
 const credentialJson = z.object({
   id: z.string().min(1).max(1024),
@@ -197,8 +199,25 @@ router.post('/client-error', rateLimit({ name: 'passkey-client-error', limit: 20
 })
 
 // ── Sign-in (public) ───────────────────────────────────────
+/**
+ * With an email, the browser is told exactly which passkeys to use
+ * (allowCredentials) instead of searching the device for one. Some Android
+ * versions fail that search ("not allowed") even when the passkey is there.
+ * Unknown emails get the plain search, like no email.
+ */
 router.post('/signin/options', rateLimit({ name: 'passkey-signin-options', limit: 30, windowMs: 10 * 60 * 1000 }), async (req, res) => {
-  const options = await generateAuthenticationOptions({ rpID: relyingParty(req.get('origin')).id, userVerification: 'required' })
+  const body = parse(z.object({ email: emailSchema.optional().catch(undefined) }), req.body || {})
+  const rp = relyingParty(req.get('origin'))
+  const creds = body.email ? await query(
+    `SELECT c.credential_id, c.transports FROM webauthn_credentials c JOIN profiles p ON p.id = c.user_id
+      WHERE lower(p.email) = $1 AND p.is_active AND c.rp_id IN ($2, '')`,
+    [body.email, rp.id],
+  ) : []
+  const options = await generateAuthenticationOptions({
+    rpID: rp.id,
+    userVerification: 'required',
+    ...(creds.length ? { allowCredentials: creds.map((c) => ({ id: c.credential_id, transports: c.transports })) } : {}),
+  })
   const challengeId = await createChallenge(options.challenge, 'signin')
   res.json({ challengeId, options })
 })

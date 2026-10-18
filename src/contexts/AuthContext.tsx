@@ -24,7 +24,7 @@ interface AuthContextType {
   signIn: (email: string, password: string, opts?: { defer?: boolean }) => Promise<Me>
   enter: (me: Me) => void
   /** Fingerprint / face / device-lock sign-in with a passkey saved on this device. */
-  signInWithPasskey: () => Promise<void>
+  signInWithPasskey: (email?: string) => Promise<void>
   signUp: (d: { email: string; password: string; name: string; phone?: string; language?: Language; attribution?: Record<string, string> }) => Promise<void>
   acceptInvite: (token: string, name: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -82,9 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return me
     },
     enter: (me) => { clearCache(); apply(me) },
-    signInWithPasskey: async () => {
-      const me = await signInWithPasskey()
-      if (me.user) markPasskeyOnDevice(me.user.id)
+    signInWithPasskey: async (email) => {
+      const me = await signInWithPasskey(email)
+      if (me.user) markPasskeyOnDevice(me.user)
       clearCache()
       apply(me)
     },

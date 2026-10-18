@@ -42,7 +42,7 @@ export const passkeyApi = {
   registerVerify: (challengeId: string, response: RegistrationResponseJSON) => api.post<Passkey>('/api/auth/passkeys/register/verify', { challengeId, response }),
   remove: (id: string) => api.del<{ ok: boolean }>(`/api/auth/passkeys/${id}`),
   reportError: (stage: 'register' | 'signin', detail: string) => api.post<{ ok: boolean }>('/api/auth/passkeys/client-error', { stage, detail }),
-  signInOptions: () => api.post<{ challengeId: string; options: PublicKeyCredentialRequestOptionsJSON }>('/api/auth/passkeys/signin/options'),
+  signInOptions: (email?: string) => api.post<{ challengeId: string; options: PublicKeyCredentialRequestOptionsJSON }>('/api/auth/passkeys/signin/options', email ? { email } : {}),
   signInVerify: (challengeId: string, response: AuthenticationResponseJSON) => api.post<Me>('/api/auth/passkeys/signin/verify', { challengeId, response }),
 }
 

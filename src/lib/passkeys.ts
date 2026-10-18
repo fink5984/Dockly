@@ -35,8 +35,9 @@ export function passkeyErrorDetail(err: unknown): string {
 }
 
 /** Best-effort: record why a passkey step failed on this device (never throws). */
-export function reportPasskeyError(stage: 'register' | 'signin', err: unknown) {
-  passkeyApi.reportError(stage, passkeyErrorDetail(err).slice(0, 500)).catch(() => {})
+export function reportPasskeyError(stage: 'register' | 'signin', err: unknown, elapsedMs?: number) {
+  const timing = elapsedMs === undefined ? '' : ` after ${Math.round(elapsedMs)}ms`
+  passkeyApi.reportError(stage, `${passkeyErrorDetail(err)}${timing}`.slice(0, 500)).catch(() => {})
 }
 
 export async function registerPasskey(password: string): Promise<Passkey> {
@@ -45,8 +46,9 @@ export async function registerPasskey(password: string): Promise<Passkey> {
   return passkeyApi.registerVerify(challengeId, response)
 }
 
-export async function signInWithPasskey(): Promise<Me> {
-  const { challengeId, options } = await passkeyApi.signInOptions()
+/** `email` (typed, or the last one used with a passkey here) lets the server name the passkey to use. */
+export async function signInWithPasskey(email?: string): Promise<Me> {
+  const { challengeId, options } = await passkeyApi.signInOptions(email || rememberedPasskeyEmail() || undefined)
   const response = await startAuthentication({ optionsJSON: options })
   return passkeyApi.signInVerify(challengeId, response)
 }
@@ -64,8 +66,16 @@ function writeOffer(userId: string, state: 'done' | 'snoozed') {
   try { localStorage.setItem(offerKey(userId), JSON.stringify({ state, at: Date.now() })) } catch { /* storage unavailable */ }
 }
 
-/** This device holds a passkey for the user: never offer again here. */
-export const markPasskeyOnDevice = (userId: string) => writeOffer(userId, 'done')
+const EMAIL_KEY = 'dockly.passkeyEmail'
+export function rememberedPasskeyEmail(): string {
+  try { return localStorage.getItem(EMAIL_KEY) || '' } catch { return '' }
+}
+
+/** This device holds a passkey for the user: never offer again here, and remember the email for sign-in. */
+export function markPasskeyOnDevice(user: { id: string; email: string }) {
+  writeOffer(user.id, 'done')
+  try { localStorage.setItem(EMAIL_KEY, user.email) } catch { /* storage unavailable */ }
+}
 /** "Not now": ask again in 30 days. */
 export const snoozePasskeyOffer = (userId: string) => writeOffer(userId, 'snoozed')
 

@@ -154,6 +154,20 @@ describe.skipIf(skipIntegration())('passkeys (fingerprint sign-in)', () => {
     expect((await owner.get('/api/auth/passkeys')).data.passkeys[0].lastUsedAt).not.toBeNull()
   })
 
+  it('names the account passkeys when an email is given (Android-safe sign-in)', async () => {
+    const owner = await newOwner(base)
+    const { device } = await addPasskey(owner)
+    const c = new Client(base)
+    const o = await c.post('/api/auth/passkeys/signin/options', { email: owner.email.toUpperCase() })
+    expect(o.data.options.allowCredentials).toEqual([{ id: Buffer.from(device.credentialId).toString('base64url'), type: 'public-key', transports: ['internal'] }])
+    const r = await c.post('/api/auth/passkeys/signin/verify', { challengeId: o.data.challengeId, response: device.signIn(o.data.options) })
+    expect(r.status).toBe(200)
+    expect(r.data.user.id).toBe(owner.me.user.id)
+    // Unknown or malformed emails fall back to the device search, revealing nothing.
+    expect((await c.post('/api/auth/passkeys/signin/options', { email: 'nobody@example.test' })).data.options.allowCredentials).toBeUndefined()
+    expect((await c.post('/api/auth/passkeys/signin/options', { email: 'not an email' })).status).toBe(200)
+  })
+
   it('uses each challenge once and rejects other origins and missing user verification', async () => {
     const owner = await newOwner(base)
     const { device } = await addPasskey(owner)

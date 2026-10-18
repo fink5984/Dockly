@@ -148,7 +148,7 @@ function PasskeyCard() {
     setBusy(true)
     try {
       await registerPasskey(password)
-      if (user) markPasskeyOnDevice(user.id)
+      if (user) markPasskeyOnDevice(user)
       close()
       refetch()
       toast({ tone: 'success', title: t('settings.passkeys.added') })
