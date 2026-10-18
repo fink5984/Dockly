@@ -82,6 +82,26 @@ describe('deviceLabel', () => {
   })
 })
 
+describe('relyingParty', () => {
+  it('gives each accepted address its own RP and falls back to the default', async () => {
+    const { config } = await import('../config.mjs')
+    const { relyingParty } = await import('../routes/passkeys.mjs')
+    const origins = config.webauthn.origins
+    try {
+      // Simulate production: own domain plus the Railway address.
+      config.webauthn.origins = ['https://sadir.app', 'https://dockly-production-8797.up.railway.app', 'https://app.sadir.app']
+      config.webauthn.rpId = 'sadir.app'
+      expect(relyingParty('https://sadir.app')).toEqual({ id: 'sadir.app', origins: ['https://sadir.app'] })
+      expect(relyingParty('https://dockly-production-8797.up.railway.app')).toEqual({ id: 'dockly-production-8797.up.railway.app', origins: ['https://dockly-production-8797.up.railway.app'] })
+      expect(relyingParty('https://app.sadir.app').id).toBe('sadir.app')
+      expect(relyingParty('https://evil.example')).toEqual({ id: 'sadir.app', origins: config.webauthn.origins })
+      expect(relyingParty(undefined).id).toBe('sadir.app')
+    } finally {
+      Object.assign(config.webauthn, { origins, rpId: 'localhost' })
+    }
+  })
+})
+
 describe.skipIf(skipIntegration())('passkeys (fingerprint sign-in)', () => {
   let base
   beforeAll(async () => {

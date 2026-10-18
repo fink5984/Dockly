@@ -1,7 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 
 // Passkeys need a domain (not 127.0.0.1); the e2e server accepts localhost too.
-const BASE = `http://localhost:${process.env.E2E_PORT || '3199'}`
+const PORT = process.env.E2E_PORT || '3199'
+const BASE = `http://localhost:${PORT}`
+// A second address the app is served from (stands in for the old Railway link).
+const OTHER = `http://old.localhost:${PORT}`
 const PASSWORD = 'correct horse battery'
 
 /** Chrome's virtual authenticator stands in for the fingerprint sensor. */
@@ -13,8 +16,8 @@ async function fingerprintDevice(page: Page) {
   })
 }
 
-async function signUp(page: Page, email: string) {
-  await page.goto(`${BASE}/auth/signup`)
+async function signUp(page: Page, email: string, base = BASE) {
+  await page.goto(`${base}/auth/signup`)
   await page.getByLabel('Full name').fill('Passkey Tester')
   await page.getByLabel('Work email').fill(email)
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(PASSWORD)
@@ -31,8 +34,8 @@ async function signOutViaApi(page: Page) {
   await page.evaluate(() => fetch('/api/auth/signout', { method: 'POST', headers: { 'X-Requested-With': 'dockly' } }))
 }
 
-async function passwordSignIn(page: Page, email: string) {
-  await page.goto(`${BASE}/auth/signin`)
+async function passwordSignIn(page: Page, email: string, base = BASE) {
+  await page.goto(`${base}/auth/signin`)
   await page.getByLabel('Work email').fill(email)
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -80,5 +83,30 @@ test.describe.serial('fingerprint sign-in offer', () => {
     await passwordSignIn(page, email)
     await expect(page).toHaveURL(/\/app/)
     await expect(page.getByRole('heading', { name: 'Sign in faster next time' })).toHaveCount(0)
+  })
+
+  test('works on each address the app is served from', async ({ page }) => {
+    await fingerprintDevice(page)
+    const email = `passkey_two_${Date.now()}@example.test`
+    await signUp(page, email, OTHER)
+    await signOutViaApi(page)
+
+    // Old address: set up and use fingerprint sign-in there.
+    await passwordSignIn(page, email, OTHER)
+    await page.getByRole('button', { name: 'Turn on fingerprint sign-in' }).click()
+    await expect(page).toHaveURL(/old\.localhost.*\/app/)
+    await signOutViaApi(page)
+    await page.goto(`${OTHER}/auth/signin`)
+    await page.getByRole('button', { name: 'Sign in with fingerprint or face' }).click()
+    await expect(page).toHaveURL(/old\.localhost.*\/app/)
+
+    // Main address: its own passkey, set up and used the same way.
+    await passwordSignIn(page, email)
+    await page.getByRole('button', { name: 'Turn on fingerprint sign-in' }).click()
+    await expect(page).toHaveURL(/\/app/)
+    await signOutViaApi(page)
+    await page.goto(`${BASE}/auth/signin`)
+    await page.getByRole('button', { name: 'Sign in with fingerprint or face' }).click()
+    await expect(page).toHaveURL(/\/app/)
   })
 })

@@ -31,6 +31,11 @@ function required(name, fallbackForDev) {
 const databaseUrl = required('DATABASE_URL')
 const looksLocal = /localhost|127\.0\.0\.1/.test(databaseUrl)
 
+const appBaseUrl = (env.APP_BASE_URL || `http://localhost:${env.PORT || 3001}`).replace(/\/+$/, '')
+const allowedOrigins = (env.ALLOWED_ORIGINS || (isProduction ? '' : 'http://localhost:5173,http://127.0.0.1:5173'))
+  .split(',').map((s) => s.trim()).filter(Boolean)
+const listOrigins = (value) => (value || '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean)
+
 const awsConfigured = Boolean(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.AWS_S3_BUCKET)
 
 export const config = Object.freeze({
@@ -47,10 +52,9 @@ export const config = Object.freeze({
   sessionTtlDays: Number(env.SESSION_TTL_DAYS || 14),
 
   // Public origin, used to build links sent to clients and for Origin checks.
-  appBaseUrl: (env.APP_BASE_URL || `http://localhost:${env.PORT || 3001}`).replace(/\/+$/, ''),
+  appBaseUrl,
   // Extra allowed origins for state-changing requests (e.g. Vite dev server).
-  allowedOrigins: (env.ALLOWED_ORIGINS || (isProduction ? '' : 'http://localhost:5173,http://127.0.0.1:5173'))
-    .split(',').map((s) => s.trim()).filter(Boolean),
+  allowedOrigins,
 
   storage: {
     driver: env.STORAGE_DRIVER || (awsConfigured ? 's3' : isProduction ? 's3' : 'local'),
@@ -115,13 +119,19 @@ export const config = Object.freeze({
     subject: env.VAPID_SUBJECT || (env.SITE_CONTACT_EMAIL ? `mailto:${env.SITE_CONTACT_EMAIL}` : (env.APP_BASE_URL || 'mailto:support@example.com')),
   },
 
-  // Passkeys (WebAuthn). A passkey is bound to the RP ID (a domain), so it must
-  // stay stable: changing it orphans every registered passkey. Defaults to the
-  // APP_BASE_URL host; set WEBAUTHN_RP_ID to a parent domain to share passkeys
-  // across subdomains. Sign-in is accepted only from APP_BASE_URL / ALLOWED_ORIGINS.
+  // Passkeys (WebAuthn). A passkey is bound to the RP ID (a domain) it was made
+  // on, so each address the app is served from gets its own passkeys: the RP ID
+  // is that address's host (or WEBAUTHN_RP_ID, for its own domain and subdomains).
+  // Changing an address's RP ID orphans its passkeys. Accepted addresses:
+  // APP_BASE_URL, ALLOWED_ORIGINS, Railway's own domain and WEBAUTHN_ORIGINS.
   webauthn: {
-    rpId: env.WEBAUTHN_RP_ID || new URL(env.APP_BASE_URL || `http://localhost:${env.PORT || 3001}`).hostname,
+    rpId: env.WEBAUTHN_RP_ID || new URL(appBaseUrl).hostname,
     rpName: env.SITE_LEGAL_NAME || 'Sadir',
+    origins: [...new Set([
+      appBaseUrl, ...allowedOrigins,
+      ...(env.RAILWAY_PUBLIC_DOMAIN ? [`https://${env.RAILWAY_PUBLIC_DOMAIN}`] : []),
+      ...listOrigins(env.WEBAUTHN_ORIGINS),
+    ])],
   },
 
   // Public website details shown on the marketing and legal pages.

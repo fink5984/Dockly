@@ -29,7 +29,20 @@ const router = Router()
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
 const MAX_PASSKEYS = 20
 
-const expectedOrigins = () => [config.appBaseUrl, ...config.allowedOrigins]
+/**
+ * The relying party for this request. The app is served from several
+ * addresses (e.g. its own domain and the Railway one); the browser only lets a
+ * page use passkeys of its own domain, so each accepted address is its own RP.
+ * The browser-set Origin header picks it (pages can't forge it); requests
+ * without one (non-browser clients) get the default RP.
+ */
+export function relyingParty(originHeader) {
+  const { rpId, origins } = config.webauthn
+  const origin = origins.includes(originHeader) ? originHeader : null
+  if (!origin) return { id: rpId, origins }
+  const host = new URL(origin).hostname
+  return { id: host === rpId || host.endsWith(`.${rpId}`) ? rpId : host, origins: [origin] }
+}
 
 async function createChallenge(challenge, purpose, userId = null) {
   await query('DELETE FROM webauthn_challenges WHERE expires_at < now()')
@@ -63,6 +76,8 @@ const serialize = (r) => ({
   id: r.id,
   name: r.name,
   synced: r.device_type === 'multiDevice',
+  // Address the passkey works on (it can't be used on the app's other addresses).
+  domain: r.rp_id,
   createdAt: r.created_at,
   lastUsedAt: r.last_used_at,
 })
@@ -78,7 +93,7 @@ const credentialJson = z.object({
 // ── Management (signed in) ─────────────────────────────────
 router.get('/', requireAuth, async (req, res) => {
   const rows = await query(
-    'SELECT id, name, device_type, created_at, last_used_at FROM webauthn_credentials WHERE user_id = $1 ORDER BY created_at',
+    'SELECT id, name, device_type, rp_id, created_at, last_used_at FROM webauthn_credentials WHERE user_id = $1 ORDER BY created_at',
     [req.user.id],
   )
   res.json({ passkeys: rows.map(serialize) })
@@ -97,9 +112,10 @@ router.post('/register/options', requireAuth, rateLimit({ name: 'passkey-registe
   const existing = await query('SELECT credential_id, transports FROM webauthn_credentials WHERE user_id = $1', [req.user.id])
   if (existing.length >= MAX_PASSKEYS) throw conflict('too_many_passkeys', 'Remove a passkey before adding another')
 
+  const rp = relyingParty(req.get('origin'))
   const options = await generateRegistrationOptions({
     rpName: config.webauthn.rpName,
-    rpID: config.webauthn.rpId,
+    rpID: rp.id,
     userName: req.user.email,
     userDisplayName: req.user.name || req.user.email,
     userID: new TextEncoder().encode(req.user.id),
@@ -117,14 +133,15 @@ router.post('/register/verify', requireAuth, async (req, res) => {
   const body = parse(z.object({ challengeId: z.string().uuid(), response: credentialJson }), req.body)
   const ch = await consumeChallenge(body.challengeId, 'register', req.user.id)
   if (!ch) throw badRequest('passkey_expired', 'This request expired. Try again.')
+  const rp = relyingParty(req.get('origin'))
 
   let verification
   try {
     verification = await verifyRegistrationResponse({
       response: body.response,
       expectedChallenge: ch.challenge,
-      expectedOrigin: expectedOrigins(),
-      expectedRPID: config.webauthn.rpId,
+      expectedOrigin: rp.origins,
+      expectedRPID: rp.id,
       requireUserVerification: true,
     })
   } catch (err) {
@@ -135,12 +152,12 @@ router.post('/register/verify', requireAuth, async (req, res) => {
 
   const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo
   const row = await queryOne(
-    `INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter, transports, device_type, backed_up, name)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter, transports, device_type, backed_up, name, rp_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (credential_id) DO NOTHING
-     RETURNING id, name, device_type, created_at, last_used_at`,
+     RETURNING id, name, device_type, rp_id, created_at, last_used_at`,
     [req.user.id, credential.id, Buffer.from(credential.publicKey), credential.counter, credential.transports || [],
-      credentialDeviceType, credentialBackedUp, deviceLabel(String(req.get('user-agent') || ''))],
+      credentialDeviceType, credentialBackedUp, deviceLabel(String(req.get('user-agent') || '')), rp.id],
   )
   if (!row) throw conflict('passkey_exists', 'This passkey is already registered')
   res.status(201).json(serialize(row))
@@ -162,8 +179,8 @@ router.post('/client-error', rateLimit({ name: 'passkey-client-error', limit: 20
 })
 
 // ── Sign-in (public) ───────────────────────────────────────
-router.post('/signin/options', rateLimit({ name: 'passkey-signin-options', limit: 30, windowMs: 10 * 60 * 1000 }), async (_req, res) => {
-  const options = await generateAuthenticationOptions({ rpID: config.webauthn.rpId, userVerification: 'required' })
+router.post('/signin/options', rateLimit({ name: 'passkey-signin-options', limit: 30, windowMs: 10 * 60 * 1000 }), async (req, res) => {
+  const options = await generateAuthenticationOptions({ rpID: relyingParty(req.get('origin')).id, userVerification: 'required' })
   const challengeId = await createChallenge(options.challenge, 'signin')
   res.json({ challengeId, options })
 })
@@ -190,13 +207,14 @@ router.post('/signin/verify', rateLimit({ name: 'signin-ip', limit: 20, windowMs
   const userHandle = body.response.response.userHandle
   if (userHandle && userHandle !== Buffer.from(cred.user_id).toString('base64url')) throw fail('user_handle')
 
+  const rp = relyingParty(req.get('origin'))
   let verification
   try {
     verification = await verifyAuthenticationResponse({
       response: body.response,
       expectedChallenge: ch.challenge,
-      expectedOrigin: expectedOrigins(),
-      expectedRPID: config.webauthn.rpId,
+      expectedOrigin: rp.origins,
+      expectedRPID: rp.id,
       credential: { id: cred.credential_id, publicKey: new Uint8Array(cred.public_key), counter: Number(cred.counter), transports: cred.transports },
       requireUserVerification: true,
     })

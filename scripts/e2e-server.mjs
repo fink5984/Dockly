@@ -25,8 +25,9 @@ rmSync(storageDir, { recursive: true, force: true })
 Object.assign(process.env, {
   NODE_ENV: 'development', DATABASE_URL: url, DATABASE_SSL: 'false', PORT, SESSION_SECRET: randomBytes(32).toString('hex'),
   APP_BASE_URL: `http://127.0.0.1:${PORT}`,
-  // Passkeys need a domain, not an IP: passkey specs open the app on localhost.
-  ALLOWED_ORIGINS: `http://localhost:${PORT}`, WEBAUTHN_RP_ID: 'localhost',
+  // Passkeys need a domain, not an IP: passkey specs open the app on localhost,
+  // and on old.localhost to stand in for a second address (like the Railway one).
+  ALLOWED_ORIGINS: `http://localhost:${PORT},http://old.localhost:${PORT}`,
   STORAGE_DRIVER: 'local', LOCAL_STORAGE_DIR: storageDir,
   WHATSAPP_MODE: 'log', AUTOMATION_ENABLED: 'false', DISABLE_RATE_LIMIT: 'true', AWS_ACCESS_KEY_ID: '', AWS_SECRET_ACCESS_KEY: '', RESEND_API_KEY: '',
 })
