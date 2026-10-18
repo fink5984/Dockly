@@ -62,6 +62,7 @@ const en = {
       enable: 'Turn on fingerprint sign-in', notNow: 'Not now', later: 'You can always turn it on later in Settings → Profile.',
       enabled: 'Fingerprint sign-in is on for this device', failed: 'Couldn’t turn on fingerprint sign-in. Try again, or continue without it.',
     },
+    passkeyNone: 'Fingerprint sign-in didn’t complete. If you haven’t set it up at {{domain}} yet, sign in with your password and turn it on.',
     passkeyUnknown: 'This passkey isn’t linked to an account anymore. Sign in with your password and add it again in Settings.',
     invalidCredentials: 'Incorrect email or password', locked: 'Too many attempts. Try again in a few minutes.', emailTaken: 'An account with this email already exists',
     forgotTitle: 'Reset your password', forgotBody: 'For security, password resets are handled by your workspace owner or admin. Ask them to send you a new invitation, or contact Sadir support from your registered email.', backToSignIn: 'Back to sign in',

@@ -40,7 +40,14 @@ export default function SignInPage() {
       await signInWithPasskey()
       goOn()
     } catch (err) {
-      if (isPasskeyCancel(err)) return
+      // A "cancel" is also how the browser reports that no passkey for this
+      // address exists here, so say so rather than doing nothing.
+      if (isPasskeyCancel(err)) {
+        setError(t('auth.passkeyNone', { domain: window.location.hostname }))
+        setDetail(passkeyErrorDetail(err))
+        reportPasskeyError('signin', err)
+        return
+      }
       const code = err instanceof ApiError ? err.code : ''
       if (code === 'passkey_unknown' || code === 'rate_limited') { setError(t(code === 'passkey_unknown' ? 'auth.passkeyUnknown' : 'auth.locked')); return }
       setError(t('auth.passkeyFailed'))

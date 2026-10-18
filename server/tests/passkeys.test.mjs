@@ -160,6 +160,9 @@ describe.skipIf(skipIntegration())('passkeys (fingerprint sign-in)', () => {
     expect(bad.data.error.details.reason).toMatch(/origin/i)
     const report = await owner.post('/api/auth/passkeys/client-error', { stage: 'register', detail: 'ERROR_AUTHENTICATOR_GENERAL_ERROR (UnknownError: x)' })
     expect(report.status).toBe(200)
+    const { queryOne } = await import('../db/pool.mjs')
+    const row = await queryOne('SELECT stage, detail, user_id FROM passkey_client_errors WHERE user_id = $1', [owner.me.user.id])
+    expect(row).toMatchObject({ stage: 'register', detail: 'ERROR_AUTHENTICATOR_GENERAL_ERROR (UnknownError: x)' })
   })
 
   it('rejects a cloned authenticator (signature counter went backwards)', async () => {

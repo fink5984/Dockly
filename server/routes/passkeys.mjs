@@ -172,9 +172,16 @@ router.delete('/:id', requireAuth, async (req, res) => {
 /** A ceremony failed in the browser (never reaches verify): record why, for support. */
 router.post('/client-error', rateLimit({ name: 'passkey-client-error', limit: 20, windowMs: 10 * 60 * 1000 }), async (req, res) => {
   const body = parse(z.object({ stage: z.enum(['register', 'signin']), detail: z.string().max(500) }), req.body)
-  logger.warn('passkey_client_error', {
-    stage: body.stage, detail: body.detail, userId: req.user?.id, ua: String(req.get('user-agent') || '').slice(0, 300),
-  })
+  const report = {
+    stage: body.stage, detail: body.detail, origin: String(req.get('origin') || '').slice(0, 200),
+    userId: req.user?.id || null, ua: String(req.get('user-agent') || '').slice(0, 300),
+  }
+  logger.warn('passkey_client_error', report)
+  await query(`DELETE FROM passkey_client_errors WHERE created_at < now() - interval '14 days'`)
+  await query(
+    'INSERT INTO passkey_client_errors (stage, detail, origin, user_id, user_agent) VALUES ($1, $2, $3, $4, $5)',
+    [report.stage, report.detail, report.origin, report.userId, report.ua],
+  )
   res.json({ ok: true })
 })
 
