@@ -115,6 +115,15 @@ export const config = Object.freeze({
     subject: env.VAPID_SUBJECT || (env.SITE_CONTACT_EMAIL ? `mailto:${env.SITE_CONTACT_EMAIL}` : (env.APP_BASE_URL || 'mailto:support@example.com')),
   },
 
+  // Passkeys (WebAuthn). A passkey is bound to the RP ID (a domain), so it must
+  // stay stable: changing it orphans every registered passkey. Defaults to the
+  // APP_BASE_URL host; set WEBAUTHN_RP_ID to a parent domain to share passkeys
+  // across subdomains. Sign-in is accepted only from APP_BASE_URL / ALLOWED_ORIGINS.
+  webauthn: {
+    rpId: env.WEBAUTHN_RP_ID || new URL(env.APP_BASE_URL || `http://localhost:${env.PORT || 3001}`).hostname,
+    rpName: env.SITE_LEGAL_NAME || 'Sadir',
+  },
+
   // Public website details shown on the marketing and legal pages.
   site: {
     legalName: env.SITE_LEGAL_NAME || 'Sadir',

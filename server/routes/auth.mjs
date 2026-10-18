@@ -34,7 +34,7 @@ async function clearLegacyPassword(id) {
 }
 const LOCK_MINUTES = 15
 
-function issueSession(res, profile) {
+export function issueSession(res, profile) {
   const payload = buildSessionPayload(
     { profileId: profile.id, workspaceId: profile.workspace_id, sessionVersion: profile.session_version },
     config.sessionTtlDays,

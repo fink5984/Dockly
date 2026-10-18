@@ -56,6 +56,8 @@ const he = {
     welcomeBack: 'שמחים לראות אותך שוב', signInSubtitle: 'כניסה לסביבת העבודה שלך ב-Sadir', noAccount: 'חדשים ב-Sadir?', haveAccount: 'כבר יש לך חשבון?',
     forgot: 'שכחת סיסמה?', createTitle: 'פתיחת סביבת עבודה', createSubtitle: 'איסוף מסמכים וחתימות מלקוחות — תוך דקות.',
     passwordHint: 'לפחות 8 תווים', showPassword: 'הצגת הסיסמה', hidePassword: 'הסתרת הסיסמה',
+    or: 'או', signInWithPasskey: 'כניסה עם טביעת אצבע או זיהוי פנים', passkeyFailed: 'הכניסה עם טביעת האצבע לא הצליחה. נסו שוב או היכנסו עם הסיסמה.',
+    passkeyUnknown: 'מפתח הגישה הזה כבר לא מקושר לחשבון. היכנסו עם הסיסמה והוסיפו אותו מחדש בהגדרות.',
     invalidCredentials: 'דוא"ל או סיסמה שגויים', locked: 'יותר מדי ניסיונות. נסו שוב בעוד כמה דקות.', emailTaken: 'כבר קיים חשבון עם כתובת זו',
     forgotTitle: 'איפוס סיסמה', forgotBody: 'מטעמי אבטחה, איפוס סיסמה מתבצע על ידי הבעלים או המנהל של סביבת העבודה. בקשו מהם לשלוח לכם הזמנה חדשה, או פנו לתמיכה של Sadir מהדוא"ל הרשום.', backToSignIn: 'חזרה לכניסה',
     inviteTitle: 'הצטרפות ל-{{workspace}}', inviteSubtitle: 'הוזמנת בתפקיד {{role}}. הגדירו שם וסיסמה כדי להמשיך.', acceptInvite: 'הצטרפות',

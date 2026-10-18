@@ -6,6 +6,7 @@ import { startLive, stopLive, subscribeLive } from '@/lib/live'
 import type { Language, Role, User, Workspace } from '@/types'
 import type { BillingSummary } from '@/types/billing'
 import { disablePush } from '@/lib/push'
+import { signInWithPasskey } from '@/lib/passkeys'
 
 interface AuthContextType {
   user: User | null
@@ -17,6 +18,8 @@ interface AuthContextType {
   /** Workspace exists but onboarding (business name) isn't complete. */
   isOnboarding: boolean
   signIn: (email: string, password: string) => Promise<void>
+  /** Fingerprint / face / device-lock sign-in with a passkey saved on this device. */
+  signInWithPasskey: () => Promise<void>
   signUp: (d: { email: string; password: string; name: string; phone?: string; language?: Language; attribution?: Record<string, string> }) => Promise<void>
   acceptInvite: (token: string, name: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -68,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isOnboarding: Boolean(state.user && state.workspace && !state.workspace.name),
     signIn: async (email, password) => { clearCache(); apply(await authApi.signIn(email, password)) },
+    signInWithPasskey: async () => { const me = await signInWithPasskey(); clearCache(); apply(me) },
     signUp: async (d) => { clearCache(); apply(await authApi.signUp(d)) },
     acceptInvite: async (token, name, password) => { clearCache(); apply(await authApi.acceptInvite(token, name, password)) },
     signOut: async () => {

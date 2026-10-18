@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
-import { User, Building2, Palette, Users, Zap, Plug, Shield, Upload, Trash2, CheckCircle2, AlertTriangle, MessageCircle, Mail, Copy, UserPlus, XCircle, LogOut } from 'lucide-react'
+import { User, Building2, Palette, Users, Zap, Plug, Shield, Upload, Trash2, CheckCircle2, AlertTriangle, MessageCircle, Mail, Copy, UserPlus, XCircle, LogOut, Fingerprint } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp } from '@/contexts/AppContext'
 import { useApi, invalidate } from '@/hooks/useApi'
-import { authApi, workspaceApi, pushApi } from '@/services'
+import { authApi, workspaceApi, pushApi, passkeyApi } from '@/services'
 import { ApiError } from '@/lib/api'
 import { Card, CardHeader, CardBody } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -18,6 +18,7 @@ import { ErrorState, Skeleton } from '@/components/ui/States'
 import { brandStyle } from '@/pages/portal/PublicShell'
 import type { AutomationSettings, Role, Language } from '@/types'
 import { PUSH_EVENTS, type PushEvent } from '@shared/push.mjs'
+import { passkeysSupported, registerPasskey, isPasskeyCancel, isPasskeyDuplicate } from '@/lib/passkeys'
 import { PAID_STATUSES, disablePush, enablePush, isIos, isPushOnHere, isStandalone, pushSupported } from '@/lib/push'
 
 const SECTIONS = [
@@ -125,6 +126,65 @@ function PushCard() {
   )
 }
 
+/** Passkeys: sign in with fingerprint / face / device lock instead of the password. */
+function PasskeyCard() {
+  const { t, fmt } = useI18n()
+  const { toast, toastError } = useApp()
+  const { data, refetch } = useApi('passkeys', passkeyApi.list)
+  const [adding, setAdding] = useState(false)
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null)
+  if (!passkeysSupported() || !data) return null
+
+  const close = () => { setAdding(false); setPassword(''); setError('') }
+  const add = async () => {
+    setError('')
+    setBusy(true)
+    try {
+      await registerPasskey(password)
+      close()
+      refetch()
+      toast({ tone: 'success', title: t('settings.passkeys.added') })
+    } catch (e) {
+      if (isPasskeyCancel(e)) return
+      const code = e instanceof ApiError ? e.code : ''
+      setError(code === 'invalid_current_password' ? t('settings.passkeys.wrongPassword')
+        : code === 'passkey_exists' || isPasskeyDuplicate(e) ? t('settings.passkeys.exists')
+        : code === 'too_many_passkeys' ? t('settings.passkeys.tooMany') : t('settings.passkeys.failed'))
+    } finally { setBusy(false) }
+  }
+  return (
+    <Card id="passkeys" className="overflow-hidden">
+      <CardHeader title={t('settings.passkeys.title')} description={t('settings.passkeys.hint')}
+        action={<Button size="sm" variant="primary" icon={<Fingerprint className="size-4" />} onClick={() => setAdding(true)}>{t('settings.passkeys.add')}</Button>} />
+      {data.passkeys.length === 0 ? <CardBody><p className="text-sm text-fg-3">{t('settings.passkeys.empty')}</p></CardBody> : (
+        <ul className="divide-y divide-line border-t border-line">
+          {data.passkeys.map((k) => (
+            <li key={k.id} className="flex items-center gap-3 px-5 py-3">
+              <span className="flex size-8 items-center justify-center rounded-full bg-surface-2 text-fg-3"><Fingerprint className="size-4" /></span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{k.name || t('settings.passkeys.unnamed')}{k.synced && <span className="ms-1.5 text-xs text-fg-4">· {t('settings.passkeys.synced')}</span>}</p>
+                <p className="truncate text-xs text-fg-3">{t('settings.passkeys.addedOn', { date: fmt.date(k.createdAt) })}{k.lastUsedAt ? ` · ${t('settings.passkeys.lastUsed', { date: fmt.relative(k.lastUsedAt) })}` : ''}</p>
+              </div>
+              <Button size="sm" variant="ghost" className="text-danger-fg" onClick={() => setRemoving({ id: k.id, name: k.name || t('settings.passkeys.unnamed') })}>{t('common.remove')}</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Dialog open={adding} onClose={close} title={t('settings.passkeys.add')} description={t('settings.passkeys.confirmHint')}
+        footer={<><Button onClick={close}>{t('common.cancel')}</Button><Button variant="primary" loading={busy} onClick={add} disabled={!password}>{t('common.next')}</Button></>}>
+        <form onSubmit={(e) => { e.preventDefault(); if (password) add() }}>
+          <Input label={t('settings.password.current')} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} error={error} autoFocus />
+        </form>
+      </Dialog>
+      <ConfirmDialog open={Boolean(removing)} onClose={() => setRemoving(null)} title={t('settings.passkeys.removeTitle', { name: removing?.name || '' })} description={t('settings.passkeys.removeHint')} confirmLabel={t('common.remove')}
+        onConfirm={async () => { try { await passkeyApi.remove(removing!.id); refetch() } catch (e) { toastError(e, t('common.error')); throw e } }} />
+    </Card>
+  )
+}
+
 function ProfileSection() {
   const { t } = useI18n()
   const { user, setUser } = useAuth()
@@ -159,6 +219,7 @@ function ProfileSection() {
         <SaveBar dirty={dirty} busy={busy} onSave={save} onReset={() => setF({ name: user?.name || '', phone: user?.phone || '' })} />
       </Card>
       <PushCard />
+      <PasskeyCard />
       <Card>
         <CardHeader title={t('settings.password.title')} description={t('settings.password.hint')} />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">

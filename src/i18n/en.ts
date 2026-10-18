@@ -56,6 +56,8 @@ const en = {
     welcomeBack: 'Welcome back', signInSubtitle: 'Sign in to your Sadir workspace', noAccount: 'New to Sadir?', haveAccount: 'Already have an account?',
     forgot: 'Forgot password?', createTitle: 'Create your workspace', createSubtitle: 'Collect documents and signatures from clients — in minutes.',
     passwordHint: 'At least 8 characters', showPassword: 'Show password', hidePassword: 'Hide password',
+    or: 'or', signInWithPasskey: 'Sign in with fingerprint or face', passkeyFailed: 'Couldn’t sign in with the fingerprint. Try again or use your password.',
+    passkeyUnknown: 'This passkey isn’t linked to an account anymore. Sign in with your password and add it again in Settings.',
     invalidCredentials: 'Incorrect email or password', locked: 'Too many attempts. Try again in a few minutes.', emailTaken: 'An account with this email already exists',
     forgotTitle: 'Reset your password', forgotBody: 'For security, password resets are handled by your workspace owner or admin. Ask them to send you a new invitation, or contact Sadir support from your registered email.', backToSignIn: 'Back to sign in',
     inviteTitle: 'Join {{workspace}}', inviteSubtitle: 'You were invited as {{role}}. Set your name and password to continue.', acceptInvite: 'Join workspace',

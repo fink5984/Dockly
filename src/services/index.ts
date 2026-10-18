@@ -11,6 +11,7 @@ import type {
 import type { BillingState, CheckoutSession, ChangeResult, Invoice, BillingSummary } from '@/types/billing'
 import type { Catalog, Interval, QuoteLine } from '@shared/billing/pricing.mjs'
 import type { PushEvent } from '@shared/push.mjs'
+import type { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON, RegistrationResponseJSON, AuthenticationResponseJSON } from '@simplewebauthn/browser'
 
 const qs = (params: Record<string, string | number | undefined | null>) => {
   const s = new URLSearchParams()
@@ -31,6 +32,17 @@ export const authApi = {
   changePassword: (currentPassword: string, newPassword: string) => api.post<{ ok: boolean }>('/api/auth/change-password', { currentPassword, newPassword }),
   invite: (token: string) => api.get<{ email: string; name: string; role: Role; workspaceName: string }>(`/api/auth/invite/${encodeURIComponent(token)}`),
   acceptInvite: (token: string, name: string, password: string) => api.post<Me>(`/api/auth/invite/${encodeURIComponent(token)}/accept`, { name, password }),
+}
+
+export interface Passkey { id: string; name: string; synced: boolean; createdAt: string; lastUsedAt: string | null }
+
+export const passkeyApi = {
+  list: () => api.get<{ passkeys: Passkey[] }>('/api/auth/passkeys'),
+  registerOptions: (password: string) => api.post<{ challengeId: string; options: PublicKeyCredentialCreationOptionsJSON }>('/api/auth/passkeys/register/options', { password }),
+  registerVerify: (challengeId: string, response: RegistrationResponseJSON) => api.post<Passkey>('/api/auth/passkeys/register/verify', { challengeId, response }),
+  remove: (id: string) => api.del<{ ok: boolean }>(`/api/auth/passkeys/${id}`),
+  signInOptions: () => api.post<{ challengeId: string; options: PublicKeyCredentialRequestOptionsJSON }>('/api/auth/passkeys/signin/options'),
+  signInVerify: (challengeId: string, response: AuthenticationResponseJSON) => api.post<Me>('/api/auth/passkeys/signin/verify', { challengeId, response }),
 }
 
 export const workspaceApi = {

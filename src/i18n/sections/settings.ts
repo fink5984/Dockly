@@ -22,6 +22,15 @@ export default {
     },
     password: { title: 'Password', hint: 'Changing your password signs you out on other devices.', current: 'Current password', new: 'New password', change: 'Change password' },
     passwordChanged: 'Password changed — other devices were signed out',
+    passkeys: {
+      title: 'Fingerprint & face sign-in', hint: 'Sign in with your device’s fingerprint, face or screen lock instead of typing your password. Your password keeps working.',
+      add: 'Add this device', confirmHint: 'Enter your current password to confirm, then follow your device’s prompt.',
+      empty: 'No devices yet. Add this device to sign in with your fingerprint next time.',
+      unnamed: 'Passkey', synced: 'synced across your devices', addedOn: 'Added {{date}}', lastUsed: 'last used {{date}}',
+      added: 'Fingerprint sign-in is set up on this device', wrongPassword: 'Current password is incorrect',
+      exists: 'This device is already set up', tooMany: 'You’ve reached the limit. Remove a device first.', failed: 'Couldn’t set up the fingerprint. Try again.',
+      removeTitle: 'Remove “{{name}}”?', removeHint: 'You won’t be able to sign in with it anymore. You can also delete it from your device’s password manager.',
+    },
     workspace: { title: 'Workspace', hint: 'Business details shown to clients.', timezone: 'Time zone', timezoneHint: 'Used for reminders and quiet hours' },
     branding: {
       title: 'Branding', hint: 'Make the client portal and signing pages look like you.', logo: 'Logo', uploadLogo: 'Upload logo', logoHint: 'PNG, JPG or WebP, up to 2 MB. Square works best.',
@@ -83,6 +92,15 @@ export default {
     },
     password: { title: 'סיסמה', hint: 'שינוי הסיסמה מנתק אותך ממכשירים אחרים.', current: 'סיסמה נוכחית', new: 'סיסמה חדשה', change: 'שינוי סיסמה' },
     passwordChanged: 'הסיסמה שונתה — מכשירים אחרים נותקו',
+    passkeys: {
+      title: 'כניסה עם טביעת אצבע וזיהוי פנים', hint: 'היכנסו עם טביעת האצבע, זיהוי הפנים או נעילת המסך של המכשיר במקום להקליד סיסמה. הסיסמה ממשיכה לעבוד.',
+      add: 'הוספת המכשיר הזה', confirmHint: 'הזינו את הסיסמה הנוכחית לאישור, ואז פעלו לפי ההנחיות במכשיר.',
+      empty: 'עדיין אין מכשירים. הוסיפו את המכשיר הזה כדי להיכנס בפעם הבאה עם טביעת אצבע.',
+      unnamed: 'מפתח גישה', synced: 'מסונכרן בין המכשירים שלך', addedOn: 'נוסף {{date}}', lastUsed: 'שימוש אחרון {{date}}',
+      added: 'כניסה עם טביעת אצבע הוגדרה במכשיר הזה', wrongPassword: 'הסיסמה הנוכחית שגויה',
+      exists: 'המכשיר הזה כבר מוגדר', tooMany: 'הגעתם למגבלה. הסירו מכשיר קודם.', failed: 'לא הצלחנו להגדיר טביעת אצבע. נסו שוב.',
+      removeTitle: 'להסיר את „{{name}}”?', removeHint: 'לא תהיה אפשרות להיכנס איתו יותר. אפשר גם למחוק אותו ממנהל הסיסמאות של המכשיר.',
+    },
     workspace: { title: 'סביבת עבודה', hint: 'פרטי העסק שמוצגים ללקוחות.', timezone: 'אזור זמן', timezoneHint: 'משמש לתזכורות ולשעות שקטות' },
     branding: {
       title: 'מיתוג', hint: 'התאימו את פורטל הלקוח ועמודי החתימה למראה העסק.', logo: 'לוגו', uploadLogo: 'העלאת לוגו', logoHint: 'PNG, JPG או WebP, עד 2MB. לוגו מרובע נראה הכי טוב.',
