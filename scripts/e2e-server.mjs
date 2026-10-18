@@ -24,7 +24,10 @@ const storageDir = resolve(import.meta.dirname, '..', '.data', 'e2e-storage')
 rmSync(storageDir, { recursive: true, force: true })
 Object.assign(process.env, {
   NODE_ENV: 'development', DATABASE_URL: url, DATABASE_SSL: 'false', PORT, SESSION_SECRET: randomBytes(32).toString('hex'),
-  APP_BASE_URL: `http://127.0.0.1:${PORT}`, STORAGE_DRIVER: 'local', LOCAL_STORAGE_DIR: storageDir,
+  APP_BASE_URL: `http://127.0.0.1:${PORT}`,
+  // Passkeys need a domain, not an IP: passkey specs open the app on localhost.
+  ALLOWED_ORIGINS: `http://localhost:${PORT}`, WEBAUTHN_RP_ID: 'localhost',
+  STORAGE_DRIVER: 'local', LOCAL_STORAGE_DIR: storageDir,
   WHATSAPP_MODE: 'log', AUTOMATION_ENABLED: 'false', DISABLE_RATE_LIMIT: 'true', AWS_ACCESS_KEY_ID: '', AWS_SECRET_ACCESS_KEY: '', RESEND_API_KEY: '',
 })
 const { runMigrations } = await import('../server/db/migrate.mjs')

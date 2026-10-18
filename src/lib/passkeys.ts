@@ -4,6 +4,7 @@
  */
 import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startAuthentication, startRegistration, WebAuthnError } from '@simplewebauthn/browser'
 import { passkeyApi, type Me, type Passkey } from '@/services'
+import { ApiError } from '@/lib/api'
 
 export const passkeysSupported = () => browserSupportsWebAuthn()
 
@@ -22,6 +23,22 @@ export function isPasskeyCancel(err: unknown): boolean {
 /** This device already holds a passkey for the account (registration refused by the browser). */
 export const isPasskeyDuplicate = (err: unknown) => err instanceof WebAuthnError && err.code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED'
 
+/** Short technical reason for a failed passkey step, shown under the error and sent to the server log. */
+export function passkeyErrorDetail(err: unknown): string {
+  if (err instanceof ApiError) return [err.code, (err.details?.reason as string) || ''].filter(Boolean).join(': ')
+  if (err instanceof WebAuthnError) {
+    const cause = err.cause as Error | undefined
+    return `${err.code}${cause ? ` (${cause.name}: ${cause.message})` : ''}`
+  }
+  const e = err as Error | undefined
+  return e ? `${e.name}: ${e.message}` : String(err)
+}
+
+/** Best-effort: record why a passkey step failed on this device (never throws). */
+export function reportPasskeyError(stage: 'register' | 'signin', err: unknown) {
+  passkeyApi.reportError(stage, passkeyErrorDetail(err).slice(0, 500)).catch(() => {})
+}
+
 export async function registerPasskey(password: string): Promise<Passkey> {
   const { challengeId, options } = await passkeyApi.registerOptions(password)
   const response = await startRegistration({ optionsJSON: options })
@@ -32,4 +49,29 @@ export async function signInWithPasskey(): Promise<Me> {
   const { challengeId, options } = await passkeyApi.signInOptions()
   const response = await startAuthentication({ optionsJSON: options })
   return passkeyApi.signInVerify(challengeId, response)
+}
+
+// ── "Turn on fingerprint sign-in?" offer after a password sign-in ──
+// Remembered per user on this device only (browser storage): whether this
+// device already has a passkey, or the user said "not now" recently.
+const OFFER_SNOOZE_MS = 30 * 24 * 60 * 60 * 1000
+const offerKey = (userId: string) => `dockly.passkeyOffer.${userId}`
+
+function readOffer(userId: string): { state: 'done' | 'snoozed'; at: number } | null {
+  try { return JSON.parse(localStorage.getItem(offerKey(userId)) || 'null') } catch { return null }
+}
+function writeOffer(userId: string, state: 'done' | 'snoozed') {
+  try { localStorage.setItem(offerKey(userId), JSON.stringify({ state, at: Date.now() })) } catch { /* storage unavailable */ }
+}
+
+/** This device holds a passkey for the user: never offer again here. */
+export const markPasskeyOnDevice = (userId: string) => writeOffer(userId, 'done')
+/** "Not now": ask again in 30 days. */
+export const snoozePasskeyOffer = (userId: string) => writeOffer(userId, 'snoozed')
+
+export async function shouldOfferPasskey(userId: string): Promise<boolean> {
+  const seen = readOffer(userId)
+  if (seen?.state === 'done') return false
+  if (seen?.state === 'snoozed' && Date.now() - seen.at < OFFER_SNOOZE_MS) return false
+  return deviceHasBiometrics()
 }

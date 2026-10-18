@@ -6,7 +6,7 @@ import { startLive, stopLive, subscribeLive } from '@/lib/live'
 import type { Language, Role, User, Workspace } from '@/types'
 import type { BillingSummary } from '@/types/billing'
 import { disablePush } from '@/lib/push'
-import { signInWithPasskey } from '@/lib/passkeys'
+import { markPasskeyOnDevice, signInWithPasskey } from '@/lib/passkeys'
 
 interface AuthContextType {
   user: User | null
@@ -17,7 +17,12 @@ interface AuthContextType {
   isLoading: boolean
   /** Workspace exists but onboarding (business name) isn't complete. */
   isOnboarding: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  /**
+   * Password sign-in. With `defer`, the session is created but the app isn't
+   * entered until `enter(me)` (lets the sign-in page ask a follow-up first).
+   */
+  signIn: (email: string, password: string, opts?: { defer?: boolean }) => Promise<Me>
+  enter: (me: Me) => void
   /** Fingerprint / face / device-lock sign-in with a passkey saved on this device. */
   signInWithPasskey: () => Promise<void>
   signUp: (d: { email: string; password: string; name: string; phone?: string; language?: Language; attribution?: Record<string, string> }) => Promise<void>
@@ -70,8 +75,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: Boolean(state.user),
     isLoading,
     isOnboarding: Boolean(state.user && state.workspace && !state.workspace.name),
-    signIn: async (email, password) => { clearCache(); apply(await authApi.signIn(email, password)) },
-    signInWithPasskey: async () => { const me = await signInWithPasskey(); clearCache(); apply(me) },
+    signIn: async (email, password, opts) => {
+      const me = await authApi.signIn(email, password)
+      clearCache()
+      if (!opts?.defer) apply(me)
+      return me
+    },
+    enter: (me) => { clearCache(); apply(me) },
+    signInWithPasskey: async () => {
+      const me = await signInWithPasskey()
+      if (me.user) markPasskeyOnDevice(me.user.id)
+      clearCache()
+      apply(me)
+    },
     signUp: async (d) => { clearCache(); apply(await authApi.signUp(d)) },
     acceptInvite: async (token, name, password) => { clearCache(); apply(await authApi.acceptInvite(token, name, password)) },
     signOut: async () => {

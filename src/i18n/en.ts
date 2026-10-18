@@ -57,6 +57,11 @@ const en = {
     forgot: 'Forgot password?', createTitle: 'Create your workspace', createSubtitle: 'Collect documents and signatures from clients — in minutes.',
     passwordHint: 'At least 8 characters', showPassword: 'Show password', hidePassword: 'Hide password',
     or: 'or', signInWithPasskey: 'Sign in with fingerprint or face', passkeyFailed: 'Couldn’t sign in with the fingerprint. Try again or use your password.',
+    offer: {
+      title: 'Sign in faster next time', body: 'Turn on fingerprint or face sign-in on this device, so you won’t need to type your password.',
+      enable: 'Turn on fingerprint sign-in', notNow: 'Not now', later: 'You can always turn it on later in Settings → Profile.',
+      enabled: 'Fingerprint sign-in is on for this device', failed: 'Couldn’t turn on fingerprint sign-in. Try again, or continue without it.',
+    },
     passkeyUnknown: 'This passkey isn’t linked to an account anymore. Sign in with your password and add it again in Settings.',
     invalidCredentials: 'Incorrect email or password', locked: 'Too many attempts. Try again in a few minutes.', emailTaken: 'An account with this email already exists',
     forgotTitle: 'Reset your password', forgotBody: 'For security, password resets are handled by your workspace owner or admin. Ask them to send you a new invitation, or contact Sadir support from your registered email.', backToSignIn: 'Back to sign in',

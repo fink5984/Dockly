@@ -18,7 +18,7 @@ import { ErrorState, Skeleton } from '@/components/ui/States'
 import { brandStyle } from '@/pages/portal/PublicShell'
 import type { AutomationSettings, Role, Language } from '@/types'
 import { PUSH_EVENTS, type PushEvent } from '@shared/push.mjs'
-import { passkeysSupported, registerPasskey, isPasskeyCancel, isPasskeyDuplicate } from '@/lib/passkeys'
+import { passkeysSupported, registerPasskey, isPasskeyCancel, isPasskeyDuplicate, markPasskeyOnDevice, passkeyErrorDetail, reportPasskeyError } from '@/lib/passkeys'
 import { PAID_STATUSES, disablePush, enablePush, isIos, isPushOnHere, isStandalone, pushSupported } from '@/lib/push'
 
 const SECTIONS = [
@@ -129,30 +129,37 @@ function PushCard() {
 /** Passkeys: sign in with fingerprint / face / device lock instead of the password. */
 function PasskeyCard() {
   const { t, fmt } = useI18n()
+  const { user } = useAuth()
   const { toast, toastError } = useApp()
   const { data, refetch } = useApi('passkeys', passkeyApi.list)
   const [adding, setAdding] = useState(false)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  // Technical reason for an unexpected failure, so a screenshot tells support what went wrong.
+  const [detail, setDetail] = useState('')
   const [busy, setBusy] = useState(false)
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null)
   if (!passkeysSupported() || !data) return null
 
-  const close = () => { setAdding(false); setPassword(''); setError('') }
+  const close = () => { setAdding(false); setPassword(''); setError(''); setDetail('') }
   const add = async () => {
     setError('')
+    setDetail('')
     setBusy(true)
     try {
       await registerPasskey(password)
+      if (user) markPasskeyOnDevice(user.id)
       close()
       refetch()
       toast({ tone: 'success', title: t('settings.passkeys.added') })
     } catch (e) {
       if (isPasskeyCancel(e)) return
       const code = e instanceof ApiError ? e.code : ''
-      setError(code === 'invalid_current_password' ? t('settings.passkeys.wrongPassword')
+      const known = code === 'invalid_current_password' ? t('settings.passkeys.wrongPassword')
         : code === 'passkey_exists' || isPasskeyDuplicate(e) ? t('settings.passkeys.exists')
-        : code === 'too_many_passkeys' ? t('settings.passkeys.tooMany') : t('settings.passkeys.failed'))
+        : code === 'too_many_passkeys' ? t('settings.passkeys.tooMany') : ''
+      setError(known || t('settings.passkeys.failed'))
+      if (!known) { setDetail(passkeyErrorDetail(e)); reportPasskeyError('register', e) }
     } finally { setBusy(false) }
   }
   return (
@@ -177,6 +184,7 @@ function PasskeyCard() {
         footer={<><Button onClick={close}>{t('common.cancel')}</Button><Button variant="primary" loading={busy} onClick={add} disabled={!password}>{t('common.next')}</Button></>}>
         <form onSubmit={(e) => { e.preventDefault(); if (password) add() }}>
           <Input label={t('settings.password.current')} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} error={error} autoFocus />
+          {detail && <p dir="ltr" className="mt-1.5 break-all font-mono text-[11px] text-fg-4">{detail}</p>}
         </form>
       </Dialog>
       <ConfirmDialog open={Boolean(removing)} onClose={() => setRemoving(null)} title={t('settings.passkeys.removeTitle', { name: removing?.name || '' })} description={t('settings.passkeys.removeHint')} confirmLabel={t('common.remove')}

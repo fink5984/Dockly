@@ -131,6 +131,17 @@ describe.skipIf(skipIntegration())('passkeys (fingerprint sign-in)', () => {
     expect(noUv.r.status).toBe(401)
   })
 
+  it('explains a failed registration and accepts browser-side error reports', async () => {
+    const owner = await newOwner(base)
+    const opts = await owner.post('/api/auth/passkeys/register/options', { password: PASSWORD })
+    const bad = await owner.post('/api/auth/passkeys/register/verify', { challengeId: opts.data.challengeId, response: new VirtualAuthenticator().register(opts.data.options, { origin: 'https://evil.example' }) })
+    expect(bad.status).toBe(400)
+    expect(bad.data.error.code).toBe('passkey_failed')
+    expect(bad.data.error.details.reason).toMatch(/origin/i)
+    const report = await owner.post('/api/auth/passkeys/client-error', { stage: 'register', detail: 'ERROR_AUTHENTICATOR_GENERAL_ERROR (UnknownError: x)' })
+    expect(report.status).toBe(200)
+  })
+
   it('rejects a cloned authenticator (signature counter went backwards)', async () => {
     const owner = await newOwner(base)
     const { device } = await addPasskey(owner)

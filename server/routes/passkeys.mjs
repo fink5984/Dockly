@@ -129,7 +129,7 @@ router.post('/register/verify', requireAuth, async (req, res) => {
     })
   } catch (err) {
     logger.warn('passkey_register_failed', { userId: req.user.id, reason: err.message })
-    throw badRequest('passkey_failed', 'The passkey could not be verified')
+    throw badRequest('passkey_failed', 'The passkey could not be verified', { reason: String(err.message).slice(0, 300) })
   }
   if (!verification.verified) throw badRequest('passkey_failed', 'The passkey could not be verified')
 
@@ -149,6 +149,15 @@ router.post('/register/verify', requireAuth, async (req, res) => {
 router.delete('/:id', requireAuth, async (req, res) => {
   const id = requireUuid(req.params.id)
   await query('DELETE FROM webauthn_credentials WHERE id = $1 AND user_id = $2', [id, req.user.id])
+  res.json({ ok: true })
+})
+
+/** A ceremony failed in the browser (never reaches verify): record why, for support. */
+router.post('/client-error', rateLimit({ name: 'passkey-client-error', limit: 20, windowMs: 10 * 60 * 1000 }), async (req, res) => {
+  const body = parse(z.object({ stage: z.enum(['register', 'signin']), detail: z.string().max(500) }), req.body)
+  logger.warn('passkey_client_error', {
+    stage: body.stage, detail: body.detail, userId: req.user?.id, ua: String(req.get('user-agent') || '').slice(0, 300),
+  })
   res.json({ ok: true })
 })
 
